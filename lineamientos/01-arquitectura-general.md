@@ -1,7 +1,7 @@
-# Arquitectura General del Proyecto BSC - MaxPoint BackOffice
+# Arquitectura General del Proyecto BSC BackOffice
 
 ## Descripcion del Proyecto
-Sistema de gestion BackOffice para MaxPoint/KFC, construido con arquitectura de microservicios containerizada.
+Sistema de gestion BackOffice para BSC, construido con arquitectura de microservicios containerizada.
 
 ## Stack Tecnologico
 

@@ -1,12 +1,56 @@
 # Lineamientos Backend - .NET Core 8 con MongoDB
 
 ## Principios Generales
-- Clean Architecture con separacion estricta de capas
+- **Arquitectura Hexagonal** (Ports & Adapters) para garantizar flexibilidad y desacoplamiento
 - Inyeccion de dependencias nativa de .NET
 - Async/await en todas las operaciones I/O
 - Validaciones con FluentValidation
 - Logging estructurado con Serilog
 - Manejo global de excepciones via middleware
+- **Swagger/OpenAPI** obligatorio para documentacion de todos los endpoints
+
+## Arquitectura Hexagonal
+
+La arquitectura hexagonal separa el dominio de los detalles de infraestructura mediante puertos (interfaces) y adaptadores (implementaciones).
+
+```
+                    ┌─────────────────────────────┐
+   HTTP Request ──> │  Adaptadores de Entrada      │
+   (Controllers)    │  (API Controllers, Filters)  │
+                    └──────────┬──────────────────┘
+                               │ usa Puertos de Entrada
+                    ┌──────────▼──────────────────┐
+                    │  Application (Use Cases)      │
+                    │  Commands, Queries, Services  │
+                    └──────────┬──────────────────┘
+                               │ define Puertos de Salida
+                    ┌──────────▼──────────────────┐
+                    │  Domain (Entidades, VOs)      │
+                    │  Reglas de negocio puras       │
+                    └──────────┬──────────────────┘
+                               │ implementado por
+                    ┌──────────▼──────────────────┐
+   MongoDB <─────── │  Adaptadores de Salida        │
+   APIs Externas    │  (Repositories, Services)     │
+                    └─────────────────────────────┘
+```
+
+### Capas y Dependencias
+- **Domain:** No depende de nada. Contiene entidades, value objects, interfaces de repositorio (puertos de salida)
+- **Application:** Depende solo de Domain. Contiene casos de uso, DTOs, validadores, interfaces de servicios (puertos de entrada)
+- **Infrastructure:** Implementa los puertos de salida definidos en Domain (adaptadores de salida: repos MongoDB, servicios externos)
+- **API:** Adaptadores de entrada. Controllers que invocan casos de uso via puertos de entrada
+
+### Regla de dependencia
+Las dependencias SIEMPRE apuntan hacia adentro: API -> Application -> Domain <- Infrastructure
+
+## Swagger / OpenAPI
+- **Obligatorio** en todos los endpoints
+- Configurar en `Program.cs` con `Swashbuckle.AspNetCore`
+- Documentar con atributos: `[ProducesResponseType]`, `[SwaggerOperation]`
+- Incluir descripciones en controllers y DTOs con `/// <summary>`
+- Agrupar endpoints por controller/tag
+- Swagger UI disponible en `/swagger`
 
 ## Estructura de la Solucion
 
@@ -85,7 +129,7 @@ BSC.API/
 {
   "MongoDbSettings": {
     "ConnectionString": "mongodb://bsc_mongo:27017",
-    "DatabaseName": "bsc_maxpoint"
+    "DatabaseName": "bsc_db"
   }
 }
 ```
@@ -146,9 +190,25 @@ public class ApiResponse<T>
 - Naming convention: `MetodoAProbar_Escenario_ResultadoEsperado`
 - Usar `WebApplicationFactory` para tests de integracion de la API
 
-## Docker
+## Docker y Compilacion
 - Imagen base: `mcr.microsoft.com/dotnet/aspnet:8.0`
 - Build image: `mcr.microsoft.com/dotnet/sdk:8.0`
 - Multi-stage build para optimizar tamano
 - Exponer puerto 8080
 - Variables de entorno para configuracion sensible
+
+### Cuando recompilar el backend
+El backend se construye como imagen Docker. **Cada vez que se modifique codigo en `backend/`**, se debe reconstruir la imagen:
+
+```bash
+docker compose build bsc_backend
+docker compose up -d bsc_backend
+```
+
+Esto aplica cuando:
+- Se agregan/modifican Controllers, Commands, Queries, DTOs, Entities
+- Se cambian dependencias NuGet (`.csproj`)
+- Se modifican archivos de configuracion (`appsettings.json`, `Program.cs`)
+- Se agregan/modifican Middlewares, Validators, Repositories
+
+**No es necesario** recompilar si solo cambian variables de entorno definidas en `docker-compose.yml` (basta con `docker compose up -d bsc_backend`).

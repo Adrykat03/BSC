@@ -1,4 +1,4 @@
-# BSC MaxPoint BackOffice - Registro de Funcionalidades
+# BSC BackOffice - Registro de Funcionalidades
 
 > Este archivo lleva el registro de todas las funcionalidades desarrolladas en el proyecto.
 > Se actualiza al finalizar cada iteracion aprobada.

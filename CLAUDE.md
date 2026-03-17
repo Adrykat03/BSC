@@ -1,7 +1,7 @@
-# BSC MaxPoint BackOffice - Instrucciones para Claude
+# BSC BackOffice - Instrucciones para Claude
 
 ## Proyecto
-Sistema de gestion BackOffice para MaxPoint/KFC. Backend en .NET Core 8 con MongoDB, Frontend en React con design system propio.
+Sistema de gestion BackOffice para BSC. Backend en .NET Core 8 con MongoDB, Frontend en React con design system propio.
 
 ## Roles de Agentes
 

@@ -32,14 +32,14 @@
 ```
 MONGO_INITDB_ROOT_USERNAME=bsc_admin
 MONGO_INITDB_ROOT_PASSWORD=bsc_pass_2024
-MONGO_INITDB_DATABASE=bsc_maxpoint
+MONGO_INITDB_DATABASE=bsc_db
 ```
 
 ### Backend
 ```
 ASPNETCORE_ENVIRONMENT=Development
 MongoDbSettings__ConnectionString=mongodb://bsc_admin:bsc_pass_2024@bsc_mongo:27017
-MongoDbSettings__DatabaseName=bsc_maxpoint
+MongoDbSettings__DatabaseName=bsc_db
 ```
 
 ### Frontend

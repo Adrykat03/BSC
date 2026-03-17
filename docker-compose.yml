@@ -11,7 +11,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: bsc_admin
       MONGO_INITDB_ROOT_PASSWORD: bsc_pass_2024
-      MONGO_INITDB_DATABASE: bsc_maxpoint
+      MONGO_INITDB_DATABASE: bsc_db
     ports:
       - "27017:27017"
     volumes:
@@ -33,7 +33,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       MongoDbSettings__ConnectionString: mongodb://bsc_admin:bsc_pass_2024@bsc_mongo:27017
-      MongoDbSettings__DatabaseName: bsc_maxpoint
+      MongoDbSettings__DatabaseName: bsc_db
     ports:
       - "5000:8080"
     depends_on:
@@ -43,18 +43,20 @@ services:
         ipv4_address: 19.168.78.11
 
   # ============================================
-  # Frontend - React (Vite + Nginx)
+  # Frontend - Nginx sirviendo build local de React
+  # Compilar localmente: cd frontend && npm run build
+  # El output (frontend/dist/) se monta como volumen en ./html
   # ============================================
   bsc_frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: http://localhost:5000/api
+    image: nginx:alpine
     container_name: bsc_frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - bsc_backend
     networks:

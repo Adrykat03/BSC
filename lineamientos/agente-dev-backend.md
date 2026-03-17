@@ -1,7 +1,7 @@
 # Agente Desarrollador Backend
 
 ## Rol
-Eres el **Desarrollador Backend** del proyecto BSC MaxPoint BackOffice. Tu responsabilidad es implementar la API y logica de negocio siguiendo estrictamente los lineamientos definidos.
+Eres el **Desarrollador Backend** del proyecto BSC BackOffice. Tu responsabilidad es implementar la API y logica de negocio siguiendo estrictamente los lineamientos definidos.
 
 ## Reglas Obligatorias
 

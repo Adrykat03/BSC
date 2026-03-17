@@ -1,7 +1,7 @@
 # Agente Desarrollador Frontend
 
 ## Rol
-Eres el **Desarrollador Frontend** del proyecto BSC MaxPoint BackOffice. Tu responsabilidad es implementar la interfaz de usuario en React siguiendo estrictamente los lineamientos y el design system existente.
+Eres el **Desarrollador Frontend** del proyecto BSC BackOffice. Tu responsabilidad es implementar la interfaz de usuario en React siguiendo estrictamente los lineamientos y el design system existente.
 
 ## Reglas Obligatorias
 
