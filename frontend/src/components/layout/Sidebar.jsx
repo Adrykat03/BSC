@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import { Home, Users } from 'lucide-react';
 
 const Sidebar = () => {
   return (
@@ -21,6 +21,17 @@ const Sidebar = () => {
             >
               <Home className="sidebar__nav-icon" size={20} />
               <span>Home</span>
+            </NavLink>
+          </li>
+          <li className="sidebar__nav-item">
+            <NavLink
+              to="/colaboradores"
+              className={({ isActive }) =>
+                `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
+              }
+            >
+              <Users className="sidebar__nav-icon" size={20} />
+              <span>Colaboradores</span>
             </NavLink>
           </li>
         </ul>

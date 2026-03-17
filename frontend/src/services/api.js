@@ -1,10 +1,20 @@
 const API_BASE_URL = '/api';
 
+async function handleResponse(response) {
+  const data = await response.json();
+  if (!response.ok) {
+    const error = new Error(data.message || `HTTP ${response.status}`);
+    error.errors = data.errors || [];
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
 export const apiClient = {
   async get(endpoint) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    return handleResponse(response);
   },
 
   async post(endpoint, data) {
@@ -13,8 +23,7 @@ export const apiClient = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    return handleResponse(response);
   },
 
   async put(endpoint, data) {
@@ -23,15 +32,13 @@ export const apiClient = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    return handleResponse(response);
   },
 
   async delete(endpoint) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    return handleResponse(response);
   },
 };

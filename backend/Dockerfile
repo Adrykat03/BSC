@@ -12,7 +12,7 @@ RUN dotnet restore src/BSC.API/BSC.API.csproj
 
 # Copiar todo el código fuente y compilar
 COPY src/ src/
-RUN dotnet publish src/BSC.API/BSC.API.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish src/BSC.API/BSC.API.csproj -c Release -o /app/publish
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime

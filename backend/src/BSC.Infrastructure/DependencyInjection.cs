@@ -1,4 +1,7 @@
+using BSC.Domain.Interfaces;
 using BSC.Infrastructure.Persistence;
+using BSC.Infrastructure.Repositories;
+using BSC.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,8 +16,17 @@ public static class DependencyInjection
         var databaseName = configuration["MongoDbSettings:DatabaseName"]
             ?? "bsc_db";
 
+        // Configure MongoDB class maps
+        MongoDbMappings.Configure();
+
         var mongoDbContext = new MongoDbContext(connectionString, databaseName);
         services.AddSingleton(mongoDbContext);
+
+        // Repositories
+        services.AddScoped<IColaboradorRepository, ColaboradorRepository>();
+
+        // Services
+        services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 
         return services;
     }

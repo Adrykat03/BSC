@@ -36,6 +36,21 @@ public class ExceptionHandlingMiddleware
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
+
+        if (exception is Application.Exceptions.ValidationException validationException)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+            var validationResponse = ApiResponse<object>.Fail(
+                "Se produjeron errores de validación.",
+                validationException.Errors
+            );
+
+            var validationJson = JsonSerializer.Serialize(validationResponse, _jsonOptions);
+            await context.Response.WriteAsync(validationJson);
+            return;
+        }
+
         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
         var response = ApiResponse<object>.Fail(

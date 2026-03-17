@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 
 const pageTitles = {
   '/': 'Home',
+  '/colaboradores': 'Colaboradores',
 };
 
 const Header = () => {
