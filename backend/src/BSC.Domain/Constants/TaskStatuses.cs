@@ -11,6 +11,7 @@ public static class TaskStatuses
     public const string Reasignada = "Reasignada";
     public const string CompletaValidada = "Completa - Validada";
     public const string Completa = "Completa";
+    public const string Cancelada = "Cancelada";
 
     public static readonly string[] All = new[]
     {
@@ -19,7 +20,8 @@ public static class TaskStatuses
         CompletaPorValidar,
         Reasignada,
         CompletaValidada,
-        Completa
+        Completa,
+        Cancelada
     };
 
     public static bool IsValid(string status) => All.Contains(status);

@@ -11,6 +11,7 @@ namespace BSC.Application.Commands.UploadEvidence;
 public class UploadEvidenceCommand : IRequest<ApiResponse<TaskItemDto>>
 {
     public string TaskId { get; set; } = string.Empty;
-    public IFormFile EvidenceFile { get; set; } = null!;
+    public List<IFormFile>? EvidenceFiles { get; set; }
+    public string? EvidenceText { get; set; }
     public string UploaderEmail { get; set; } = string.Empty;
 }

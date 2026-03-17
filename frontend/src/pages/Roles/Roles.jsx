@@ -204,14 +204,14 @@ const Roles = () => {
                             <button
                               className="btn btn--icon btn--sm btn--ghost"
                               onClick={() => openEditModal(role)}
-                              title="Editar"
+                              data-tooltip="Editar"
                             >
                               <Pencil size={16} />
                             </button>
                             <button
                               className="btn btn--icon btn--sm btn--ghost text-error"
                               onClick={() => handleDelete(role)}
-                              title="Eliminar"
+                              data-tooltip="Eliminar"
                             >
                               <Trash2 size={16} />
                             </button>

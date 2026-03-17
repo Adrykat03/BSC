@@ -1,6 +1,7 @@
 using BSC.Application.DTOs;
 using BSC.Application.Mappings;
 using BSC.Domain.Interfaces;
+using BSC.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -51,50 +52,75 @@ public class UploadEvidenceCommandHandler : IRequestHandler<UploadEvidenceComman
             );
         }
 
-        // Validar archivo
-        if (request.EvidenceFile == null || request.EvidenceFile.Length == 0)
+        // Validar que al menos se envie archivo o texto
+        var hasFiles = request.EvidenceFiles != null && request.EvidenceFiles.Count > 0 && request.EvidenceFiles.Any(f => f.Length > 0);
+        var hasText = !string.IsNullOrWhiteSpace(request.EvidenceText);
+
+        if (!hasFiles && !hasText)
         {
             return ApiResponse<TaskItemDto>.Fail(
-                "Archivo requerido.",
-                new List<string> { "Debe proporcionar un archivo de evidencia." }
+                "Evidencia requerida.",
+                new List<string> { "Debe proporcionar al menos un archivo de evidencia o un texto de evidencia." }
             );
         }
 
-        if (request.EvidenceFile.Length > MaxFileSize)
+        // Procesar archivos si se proporcionan (se AGREGAN a los existentes)
+        if (hasFiles)
         {
-            return ApiResponse<TaskItemDto>.Fail(
-                "El archivo excede el tamano maximo permitido.",
-                new List<string> { "El tamano maximo permitido es 10MB." }
-            );
+            foreach (var file in request.EvidenceFiles!)
+            {
+                if (file.Length > MaxFileSize)
+                {
+                    return ApiResponse<TaskItemDto>.Fail(
+                        "El archivo excede el tamano maximo permitido.",
+                        new List<string> { $"El archivo '{file.FileName}' excede el tamano maximo de 10MB." }
+                    );
+                }
+
+                var extension = Path.GetExtension(file.FileName);
+                if (!AllowedExtensions.Contains(extension))
+                {
+                    return ApiResponse<TaskItemDto>.Fail(
+                        "Tipo de archivo no permitido.",
+                        new List<string> { $"El archivo '{file.FileName}' tiene un tipo no permitido. Los tipos permitidos son: pdf, jpg, jpeg, png, doc, docx, xls, xlsx." }
+                    );
+                }
+            }
+
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            Directory.CreateDirectory(Path.Combine(FilesBasePath, EvidenciasRelativeDir));
+
+            for (int i = 0; i < request.EvidenceFiles!.Count; i++)
+            {
+                var file = request.EvidenceFiles[i];
+                if (file.Length == 0) continue;
+
+                var safeFileName = Path.GetFileName(file.FileName);
+                var diskFileName = $"{taskItem.Id}_{timestamp}_{i}_{safeFileName}";
+                var relativePath = Path.Combine(EvidenciasRelativeDir, diskFileName);
+                var absolutePath = Path.Combine(FilesBasePath, relativePath);
+
+                using (var stream = new FileStream(absolutePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream, cancellationToken);
+                }
+
+                taskItem.EvidenceFiles.Add(new FileAttachment
+                {
+                    FileName = file.FileName,
+                    FilePath = relativePath,
+                    ContentType = file.ContentType,
+                    UploadedAt = DateTime.UtcNow
+                });
+            }
         }
 
-        var extension = Path.GetExtension(request.EvidenceFile.FileName);
-        if (!AllowedExtensions.Contains(extension))
+        // Guardar texto de evidencia si se proporciona
+        if (hasText)
         {
-            return ApiResponse<TaskItemDto>.Fail(
-                "Tipo de archivo no permitido.",
-                new List<string> { "Los tipos permitidos son: pdf, jpg, jpeg, png, doc, docx, xls, xlsx." }
-            );
+            taskItem.EvidenceText = request.EvidenceText;
         }
 
-        // NO eliminar archivo anterior — los archivos nunca se borran del disco
-
-        // Guardar archivo de evidencia con timestamp para evitar colisiones
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var safeFileName = Path.GetFileName(request.EvidenceFile.FileName);
-        var diskFileName = $"{taskItem.Id}_{timestamp}_{safeFileName}";
-        var relativePath = Path.Combine(EvidenciasRelativeDir, diskFileName);
-        var absolutePath = Path.Combine(FilesBasePath, relativePath);
-
-        Directory.CreateDirectory(Path.Combine(FilesBasePath, EvidenciasRelativeDir));
-        using (var stream = new FileStream(absolutePath, FileMode.Create))
-        {
-            await request.EvidenceFile.CopyToAsync(stream, cancellationToken);
-        }
-
-        taskItem.EvidenceFileName = request.EvidenceFile.FileName;
-        taskItem.EvidenceFilePath = relativePath;
-        taskItem.EvidenceContentType = request.EvidenceFile.ContentType;
         taskItem.UpdatedAt = DateTime.UtcNow;
         taskItem.UpdatedBy = request.UploaderEmail;
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import {
   Plus, Pencil, Trash2, ClipboardList, ChevronLeft, ChevronRight,
-  Download, Upload, UserPlus, RefreshCw, FileText,
+  Eye, Search, History,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import toast, { Toaster } from 'react-hot-toast';
@@ -19,6 +19,7 @@ const STATUS_BADGE_MAP = {
   'Reasignada': 'badge badge--blocked',
   'Completa - Validada': 'badge badge--active',
   'Completa': 'badge badge--published',
+  'Cancelada': 'badge badge--error',
 };
 
 const getBadgeClass = (status) => STATUS_BADGE_MAP[status] || 'badge badge--inactive';
@@ -64,6 +65,33 @@ const Tasks = () => {
   const [evidenceModalOpen, setEvidenceModalOpen] = useState(false);
   const [evidenceTask, setEvidenceTask] = useState(null);
   const [evidenceFile, setEvidenceFile] = useState(null);
+
+  // Detail view modal (Colaborador)
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailTask, setDetailTask] = useState(null);
+
+  // Row selection (visual only)
+  const [selectedRowId, setSelectedRowId] = useState(null);
+
+  // History modal
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyTask, setHistoryTask] = useState(null);
+
+  // Filters
+  const [searchText, setSearchText] = useState('');
+  const [filterStatus, setFilterStatus] = useState(''); // '' = todas
+  const [filterDate, setFilterDate] = useState(''); // '' = todas, 'hoy', 'ayer', 'semana'
+
+  // Close inline modals with Escape
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        if (historyModalOpen) { setHistoryModalOpen(false); setHistoryTask(null); }
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [historyModalOpen]);
 
   const isGerente = role === 'Gerente';
   const isLider = role === 'Lider';
@@ -143,9 +171,11 @@ const Tasks = () => {
     try {
       setSaving(true);
       if (isEditing) {
+        formData.append('updatedByEmail', email);
         await tasksService.update(selectedTask.id, formData);
         toast.success('Tarea actualizada exitosamente');
       } else {
+        formData.append('createdByEmail', email);
         await tasksService.create(formData);
         toast.success('Tarea creada exitosamente');
       }
@@ -158,27 +188,44 @@ const Tasks = () => {
     }
   };
 
-  // ---- Delete (Gerente only) ----
+  // ---- Delete or Cancel (Gerente only) ----
   const handleDelete = async (task) => {
+    const isCreada = task.status === 'Creada';
+    const title = isCreada ? 'Eliminar tarea' : 'Cancelar tarea';
+    const text = isCreada
+      ? `¿Esta seguro de eliminar la tarea "${task.title}"? Esta accion no se puede deshacer.`
+      : `¿Esta seguro de cancelar la tarea "${task.title}"? Pasara a estado Cancelada.`;
+    const confirmText = isCreada ? 'Si, eliminar' : 'Si, cancelar';
+
     const result = await Swal.fire({
-      title: 'Eliminar tarea',
-      text: `¿Esta seguro de eliminar la tarea "${task.title}"? Esta accion no se puede deshacer.`,
+      title,
+      text,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#EF4444',
       cancelButtonColor: '#6B7280',
-      confirmButtonText: 'Si, eliminar',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: confirmText,
+      cancelButtonText: 'Volver',
     });
     if (!result.isConfirmed) return;
 
     try {
-      await tasksService.delete(task.id);
-      toast.success('Tarea eliminada exitosamente');
+      if (isCreada) {
+        await tasksService.delete(task.id);
+        toast.success('Tarea eliminada exitosamente');
+      } else {
+        await tasksService.changeStatus(task.id, {
+          newStatus: 'Cancelada',
+          changedByEmail: email,
+          changedByRole: role,
+          comment: 'Tarea cancelada por el Gerente',
+        });
+        toast.success('Tarea cancelada exitosamente');
+      }
       const newPage = tasks.length === 1 && page > 1 ? page - 1 : page;
       await loadTasks(newPage);
     } catch (err) {
-      toast.error(`Error al eliminar la tarea: ${err.message}`);
+      toast.error(`Error: ${err.message}`);
     }
   };
 
@@ -221,12 +268,15 @@ const Tasks = () => {
       // Gerente assigns to Lider first, then Lider to Colaborador
       let targetRole = '';
       if (isGerente) {
-        targetRole = task.leaderName ? 'Colaborador' : 'Lider';
+        targetRole = task.assignedLeaderName ? 'Colaborador' : 'Lider';
       } else if (isLider) {
         targetRole = 'Colaborador';
       }
       const filtered = targetRole
-        ? data.filter((c) => c.rolName === targetRole)
+        ? data.filter((c) => {
+            const names = c.rolNames || (c.rolName ? [c.rolName] : []);
+            return names.includes(targetRole);
+          })
         : data;
       setColaboradores(filtered);
     } catch (err) {
@@ -275,26 +325,48 @@ const Tasks = () => {
     }
   };
 
-  // ---- Downloads ----
-  const handleDownloadEvidence = async (task) => {
-    try {
-      await tasksService.downloadEvidence(task.id);
-    } catch (err) {
-      toast.error(`Error al descargar evidencia: ${err.message}`);
-    }
-  };
-
-  const handleDownloadInsumo = async (task) => {
-    try {
-      await tasksService.downloadInsumo(task.id);
-    } catch (err) {
-      toast.error(`Error al descargar insumo: ${err.message}`);
-    }
-  };
+  // Downloads are now handled inside the TaskModal via tasksService.downloadFile
 
   const formatTime = (hours) => {
     if (hours === null || hours === undefined || hours === '') return '-';
     return `${hours}h`;
+  };
+
+  /**
+   * Urgency based on dueDate and estimatedTime.
+   * - timeToDeadline: ms until dueDate
+   * - estimatedMs: estimatedTime in ms
+   * - level: 'normal' (timeToDeadline > 2x estimated), 'warning' (1x-2x estimated), 'danger' (<= estimated)
+   */
+  const getUrgency = (task) => {
+    if (!task.dueDate) return { level: 'normal', dueDate: null };
+    if (['Completa', 'Completa - Validada'].includes(task.status)) return { level: 'normal', dueDate: task.dueDate };
+    const deadline = new Date(task.dueDate).getTime();
+    const now = Date.now();
+    const timeToDeadline = deadline - now;
+    const estimatedMs = (task.estimatedTime || 0) * 60 * 60 * 1000;
+    let level = 'normal';
+    if (estimatedMs > 0) {
+      if (timeToDeadline <= estimatedMs) level = 'danger';
+      else if (timeToDeadline <= estimatedMs * 2) level = 'warning';
+    } else {
+      // No estimated time — just check if overdue
+      if (timeToDeadline <= 0) level = 'danger';
+    }
+    return { level, dueDate: task.dueDate };
+  };
+
+  const getRowBgColor = (level) => {
+    if (level === 'danger') return 'rgba(239,68,68,0.08)';
+    if (level === 'warning') return 'rgba(245,158,11,0.08)';
+    return undefined;
+  };
+
+  const formatDueDate = (dueDate) => {
+    if (!dueDate) return '-';
+    const d = new Date(dueDate);
+    return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+      ' ' + d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
   };
 
   // ---- Render ----
@@ -321,6 +393,47 @@ const Tasks = () => {
     );
   }
 
+  // ---- Filter logic (client-side on loaded data) ----
+  const VISIBLE_STATUSES = (() => {
+    if (isGerente) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada', 'Completa', 'Cancelada'];
+    if (isLider) return ['Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'];
+    if (isColaborador) return ['Asignada', 'Completa - Por Validar', 'Reasignada'];
+    return [];
+  })();
+  const DATE_OPTIONS = [
+    { value: '', label: 'Todas' },
+    { value: 'hoy', label: 'Hoy' },
+    { value: 'ayer', label: 'Ayer' },
+    { value: 'semana', label: 'Esta semana' },
+  ];
+
+  const matchesDate = (task) => {
+    if (!filterDate) return true;
+    const created = new Date(task.createdAt);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - today.getDay());
+    if (filterDate === 'hoy') return created >= today;
+    if (filterDate === 'ayer') return created >= yesterday && created < today;
+    if (filterDate === 'semana') return created >= weekStart;
+    return true;
+  };
+
+  const filteredTasks = tasks.filter((task) => {
+    if (filterStatus && task.status !== filterStatus) return false;
+    if (!matchesDate(task)) return false;
+    if (searchText.trim()) {
+      const q = searchText.toLowerCase();
+      const matchTitle = (task.title || '').toLowerCase().includes(q);
+      const matchAssigned = (task.assignedToName || '').toLowerCase().includes(q);
+      const matchLeader = (task.assignedLeaderName || '').toLowerCase().includes(q);
+      const matchDesc = (task.description || '').toLowerCase().includes(q);
+      if (!matchTitle && !matchAssigned && !matchLeader && !matchDesc) return false;
+    }
+    return true;
+  });
+
   const startItem = (page - 1) * PAGE_SIZE + 1;
   const endItem = Math.min(page * PAGE_SIZE, totalCount);
 
@@ -343,9 +456,47 @@ const Tasks = () => {
         )}
       </div>
 
+      {/* ── Toolbar: Search + Filters in one row ── */}
+      <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div className="header__search" style={{ flex: 1 }}>
+          <input
+            type="text"
+            className="header__search-input"
+            placeholder="Buscar.."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: '100%' }}
+          />
+          <Search size={18} className="header__search-icon" />
+        </div>
+
+        <select
+          className="form-control form-select"
+          value={filterStatus}
+          onChange={(e) => { setFilterStatus(e.target.value); setSearchText(''); }}
+          style={{ width: '220px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px' }}
+        >
+          <option value="">Estado: Todas</option>
+          {VISIBLE_STATUSES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+
+        <select
+          className="form-control form-select"
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+          style={{ width: '180px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px' }}
+        >
+          {DATE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>Fecha: {opt.label}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="card">
         <div className="card__body">
-          {tasks.length === 0 && !loading ? (
+          {filteredTasks.length === 0 && !loading ? (
             <div className="empty-state">
               <ClipboardList size={48} className="empty-state__icon" />
               <h3 className="empty-state__title">No hay tareas</h3>
@@ -362,115 +513,95 @@ const Tasks = () => {
                   <thead>
                     <tr>
                       <th>Titulo</th>
-                      <th>Asignado a</th>
+                      {(isGerente || isLider) && <th>Asignado a</th>}
                       <th>Lider</th>
                       <th>Estado</th>
-                      <th>Tiempo estimado</th>
-                      <th>Evidencia</th>
-                      <th>Insumos</th>
+                      <th>Entrega</th>
+                      <th data-tooltip="Tiempo estimado (horas)">&#128339;</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {tasks.map((task) => {
+                    {[...filteredTasks]
+                      .map((t) => ({ ...t, _urgency: getUrgency(t) }))
+                      .sort((a, b) => {
+                        const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+                        const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+                        return aDate - bDate;
+                      })
+                      .map((task) => {
                       const transitions = getStatusTransitions(task.status, role);
+                      const isSelected = selectedRowId === task.id;
+                      const urgencyBg = getRowBgColor(task._urgency.level);
                       return (
-                        <tr key={task.id}>
+                        <tr
+                          key={task.id}
+                          onClick={() => setSelectedRowId(isSelected ? null : task.id)}
+                          style={{
+                            cursor: 'pointer',
+                            backgroundColor: urgencyBg,
+                            outline: isSelected ? '3px solid #166534' : 'none',
+                            outlineOffset: '-3px',
+                            transition: 'outline 150ms',
+                          }}
+                        >
                           <td className="font-semibold">{task.title}</td>
+                          {(isGerente || isLider) && (
+                            <td className="text-secondary">
+                              {task.assignedToName || 'Sin asignar'}
+                            </td>
+                          )}
                           <td className="text-secondary">
-                            {task.assignedTo || 'Sin asignar'}
-                          </td>
-                          <td className="text-secondary">
-                            {task.leaderName || '-'}
+                            {task.assignedLeaderName || '-'}
                           </td>
                           <td>
                             <span className={getBadgeClass(task.status)}>
                               {task.status}
                             </span>
                           </td>
+                          <td className="text-secondary" style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
+                            {formatDueDate(task.dueDate)}
+                          </td>
                           <td>{formatTime(task.estimatedTime)}</td>
                           <td>
-                            {task.evidenceFileName ? (
-                              <button
-                                className="btn btn--icon btn--sm btn--ghost"
-                                onClick={() => handleDownloadEvidence(task)}
-                                title={`Descargar ${task.evidenceFileName}`}
-                              >
-                                <Download size={16} />
-                              </button>
-                            ) : (
-                              <span className="text-secondary">-</span>
-                            )}
-                          </td>
-                          <td>
-                            {task.insumoFileName ? (
-                              <button
-                                className="btn btn--icon btn--sm btn--ghost"
-                                onClick={() => handleDownloadInsumo(task)}
-                                title={`Descargar ${task.insumoFileName}`}
-                              >
-                                <Download size={16} />
-                              </button>
-                            ) : (
-                              <span className="text-secondary">-</span>
-                            )}
-                          </td>
-                          <td>
                             <div className="table__actions">
-                              {/* Assign button — Gerente and Lider */}
-                              {(isGerente || isLider) && (
-                                <button
-                                  className="btn btn--icon btn--sm btn--ghost"
-                                  onClick={() => openAssignModal(task)}
-                                  title="Asignar"
-                                >
-                                  <UserPlus size={16} />
-                                </button>
-                              )}
-
                               {/* Edit button — Gerente (full) or Lider (limited) */}
                               {(isGerente || isLider) && (
                                 <button
                                   className="btn btn--icon btn--sm btn--ghost"
-                                  onClick={() => openEditModal(task)}
-                                  title="Editar"
+                                  onClick={(e) => { e.stopPropagation(); openEditModal(task); }}
+                                  data-tooltip="Editar"
                                 >
                                   <Pencil size={16} />
                                 </button>
                               )}
 
-                              {/* Upload evidence — Colaborador */}
+                              {/* View detail — Colaborador */}
                               {isColaborador && (
                                 <button
                                   className="btn btn--icon btn--sm btn--ghost"
-                                  onClick={() => openEvidenceModal(task)}
-                                  title="Subir evidencia"
+                                  onClick={(e) => { e.stopPropagation(); setDetailTask(task); setDetailModalOpen(true); }}
+                                  data-tooltip="Ver detalle"
                                 >
-                                  <Upload size={16} />
+                                  <Eye size={16} />
                                 </button>
                               )}
 
-                              {/* Status transitions */}
-                              {transitions.map((newStatus) => (
-                                <button
-                                  key={newStatus}
-                                  className="btn btn--sm btn--outline-primary"
-                                  onClick={() => handleChangeStatus(task, newStatus)}
-                                  title={`Cambiar a ${newStatus}`}
-                                >
-                                  <RefreshCw size={14} />
-                                  {newStatus.length > 16
-                                    ? newStatus.substring(0, 16) + '...'
-                                    : newStatus}
-                                </button>
-                              ))}
+                              {/* History */}
+                              <button
+                                className="btn btn--icon btn--sm btn--ghost"
+                                onClick={(e) => { e.stopPropagation(); setHistoryTask(task); setHistoryModalOpen(true); }}
+                                data-tooltip="Historial"
+                              >
+                                <History size={16} />
+                              </button>
 
                               {/* Delete — Gerente only */}
                               {isGerente && (
                                 <button
                                   className="btn btn--icon btn--sm btn--ghost text-error"
-                                  onClick={() => handleDelete(task)}
-                                  title="Eliminar"
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(task); }}
+                                  data-tooltip="Eliminar"
                                 >
                                   <Trash2 size={16} />
                                 </button>
@@ -521,151 +652,140 @@ const Tasks = () => {
         </div>
       </div>
 
-      {/* Create / Edit modal — Gerente creates, Lider edits */}
+      {/* Create / Edit / Detail modal */}
       <TaskModal
-        isOpen={modalOpen}
-        onClose={closeModal}
+        isOpen={modalOpen || detailModalOpen}
+        onClose={() => { closeModal(); setDetailModalOpen(false); setDetailTask(null); }}
         onSubmit={handleSubmit}
-        task={selectedTask}
+        onUploadEvidence={async (taskId, file, text) => {
+          try {
+            await tasksService.uploadEvidence(taskId, file, email, text);
+            toast.success('Evidencia guardada exitosamente');
+            setDetailModalOpen(false);
+            setDetailTask(null);
+            setModalOpen(false);
+            await loadTasks(page);
+          } catch (err) {
+            toast.error(`Error al guardar evidencia: ${err.message}`);
+          }
+        }}
+        onChangeStatus={async (t, newStatus) => {
+          await handleChangeStatus(t, newStatus);
+          setDetailModalOpen(false);
+          setDetailTask(null);
+          setModalOpen(false);
+        }}
+        onAssign={async (t, assigneeId) => {
+          try {
+            await tasksService.assignTask(t.id, {
+              assigneeId,
+              assignerEmail: email,
+              assignerRole: role,
+            });
+            toast.success('Tarea asignada exitosamente');
+            await loadTasks(page);
+          } catch (err) {
+            toast.error(`Error al asignar: ${err.message}`);
+          }
+        }}
+        task={detailModalOpen ? detailTask : selectedTask}
         loading={saving}
         userRole={role}
+        userEmail={email}
       />
 
-      {/* Assign modal */}
-      {assignModalOpen && (
+
+      {/* ── History modal ── */}
+      {historyModalOpen && historyTask && (
         <>
-          <div
-            className="modal-backdrop modal-backdrop--open"
-            onClick={() => setAssignModalOpen(false)}
-          />
-          <div className="modal modal--open">
+          <div className="modal-backdrop modal-backdrop--open" />
+          <div className="modal modal--open" style={{ maxWidth: '650px' }}>
             <div className="modal__header">
-              <h3 className="modal__title">Asignar tarea</h3>
+              <h3 className="modal__title">Historial — {historyTask.title}</h3>
               <button
                 className="modal__close"
-                onClick={() => setAssignModalOpen(false)}
+                onClick={() => { setHistoryModalOpen(false); setHistoryTask(null); }}
                 type="button"
               >
                 &times;
               </button>
             </div>
-            <div className="modal__body">
-              <p className="text-sm mb-4">
-                Tarea: <strong>{assignTask?.title}</strong>
-              </p>
-              {loadingColaboradores ? (
-                <div className="text-center p-6">Cargando colaboradores...</div>
-              ) : colaboradores.length === 0 ? (
-                <div className="alert alert--warning">
-                  <div className="alert__content">
-                    <div className="alert__message">
-                      No hay colaboradores disponibles con el rol requerido.
-                    </div>
-                  </div>
+            <div className="modal__body" style={{ overflowY: 'auto', maxHeight: '60vh' }}>
+              {/* Current state */}
+              <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-success)' }}>
+                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Estado actual</span>
+                <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span className={getBadgeClass(historyTask.status)}>{historyTask.status}</span>
+                  {historyTask.assignedLeaderName && <span style={{ fontSize: '13px' }}>Lider: <strong>{historyTask.assignedLeaderName}</strong></span>}
+                  {historyTask.assignedToName && <span style={{ fontSize: '13px' }}>Colaborador: <strong>{historyTask.assignedToName}</strong></span>}
+                </div>
+              </div>
+
+              {/* Timeline */}
+              {historyTask.statusHistory && historyTask.statusHistory.length > 0 ? (
+                <div>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '12px' }}>Historial de cambios</span>
+                  {[...historyTask.statusHistory].reverse().map((entry, idx) => {
+                    const isLast = idx === 0;
+                    const date = new Date(entry.changedAt);
+                    const dateStr = date.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const timeStr = date.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          gap: '12px',
+                          padding: '10px 0',
+                          borderBottom: '1px solid var(--color-border-light)',
+                          opacity: isLast ? 1 : 0.7,
+                        }}
+                      >
+                        {/* Timeline dot */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20px', flexShrink: 0 }}>
+                          <div style={{
+                            width: '10px', height: '10px', borderRadius: '50%',
+                            backgroundColor: isLast ? 'var(--color-success)' : 'var(--color-border-main)',
+                            marginTop: '4px',
+                          }} />
+                          {idx < historyTask.statusHistory.length - 1 && (
+                            <div style={{ width: '2px', flex: 1, backgroundColor: 'var(--color-border-light)', marginTop: '4px' }} />
+                          )}
+                        </div>
+                        {/* Content */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                            <span className={getBadgeClass(entry.fromStatus)} style={{ fontSize: '10px' }}>{entry.fromStatus}</span>
+                            <span style={{ fontSize: '12px', color: '#6B7280' }}>→</span>
+                            <span className={getBadgeClass(entry.toStatus)} style={{ fontSize: '10px' }}>{entry.toStatus}</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                            <strong>{entry.changedByName}</strong> — {dateStr} {timeStr}
+                          </div>
+                          {entry.comment && (
+                            <div style={{ fontSize: '12px', color: '#9CA3AF', fontStyle: 'italic', marginTop: '2px' }}>
+                              {entry.comment}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="form-group mb-4">
-                  <label className="form-label">Colaborador</label>
-                  <select
-                    className="form-control form-select"
-                    value={selectedColaborador}
-                    onChange={(e) => setSelectedColaborador(e.target.value)}
-                  >
-                    <option value="">Seleccione...</option>
-                    {colaboradores.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombreCompleto} — {c.rolName}
-                      </option>
-                    ))}
-                  </select>
+                <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '24px 0' }}>
+                  No hay cambios de estado registrados
                 </div>
               )}
-            </div>
-            <div className="modal__footer">
-              <button
-                className="btn btn--secondary"
-                onClick={() => setAssignModalOpen(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn btn--primary"
-                disabled={!selectedColaborador}
-                onClick={handleAssign}
-              >
-                <UserPlus size={16} />
-                Asignar
-              </button>
-            </div>
-          </div>
-        </>
-      )}
 
-      {/* Evidence upload modal — Colaborador */}
-      {evidenceModalOpen && (
-        <>
-          <div
-            className="modal-backdrop modal-backdrop--open"
-            onClick={() => setEvidenceModalOpen(false)}
-          />
-          <div className="modal modal--open">
-            <div className="modal__header">
-              <h3 className="modal__title">Subir evidencia</h3>
-              <button
-                className="modal__close"
-                onClick={() => setEvidenceModalOpen(false)}
-                type="button"
-              >
-                &times;
-              </button>
-            </div>
-            <div className="modal__body">
-              <p className="text-sm mb-4">
-                Tarea: <strong>{evidenceTask?.title}</strong>
-              </p>
-              <div className="form-group">
-                <div style={{ paddingTop: '24px' }}>
-                  <label
-                    className="upload-zone"
-                    style={{ padding: 'var(--spacing-4)', cursor: 'pointer' }}
-                  >
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                      onChange={(e) => setEvidenceFile(e.target.files[0] || null)}
-                      style={{ display: 'none' }}
-                    />
-                    <Upload
-                      size={24}
-                      className="upload-zone__icon"
-                      style={{ marginBottom: '0' }}
-                    />
-                    <span className="upload-zone__text">
-                      {evidenceFile
-                        ? evidenceFile.name
-                        : 'Clic para seleccionar archivo'}
-                    </span>
-                    <span className="upload-zone__hint">
-                      PDF, JPG, PNG, DOC, DOCX, XLS, XLSX (max 10MB)
-                    </span>
-                  </label>
-                </div>
+              {/* Creation info */}
+              <div style={{ marginTop: '16px', padding: '10px 0', borderTop: '1px solid var(--color-border-light)', fontSize: '12px', color: '#6B7280' }}>
+                Creada: {new Date(historyTask.createdAt).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date(historyTask.createdAt).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
             <div className="modal__footer">
-              <button
-                className="btn btn--secondary"
-                onClick={() => setEvidenceModalOpen(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn btn--primary"
-                disabled={!evidenceFile}
-                onClick={handleUploadEvidence}
-              >
-                <Upload size={16} />
-                Subir
+              <button className="btn btn--secondary" onClick={() => { setHistoryModalOpen(false); setHistoryTask(null); }}>
+                Cerrar
               </button>
             </div>
           </div>

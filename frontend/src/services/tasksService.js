@@ -58,10 +58,14 @@ export const tasksService = {
     return response;
   },
 
-  async uploadEvidence(taskId, file, uploaderEmail) {
+  async uploadEvidence(taskId, files, uploaderEmail, evidenceText) {
     const formData = new FormData();
-    formData.append('evidence', file);
+    if (files) {
+      const fileList = Array.isArray(files) ? files : [files];
+      fileList.forEach(f => formData.append('EvidenceFiles', f));
+    }
     formData.append('uploaderEmail', uploaderEmail);
+    if (evidenceText) formData.append('evidenceText', evidenceText);
     const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${taskId}/evidence`, {
       method: 'POST',
       body: formData,
@@ -70,11 +74,11 @@ export const tasksService = {
     return response.json();
   },
 
-  async downloadEvidence(id) {
-    const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${id}/evidence`);
+  async downloadFile(taskId, fileId) {
+    const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${taskId}/files/${fileId}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const disposition = response.headers.get('Content-Disposition');
-    let filename = 'evidencia';
+    let filename = 'archivo';
     if (disposition) {
       const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
       if (match && match[1]) {
@@ -92,25 +96,17 @@ export const tasksService = {
     window.URL.revokeObjectURL(url);
   },
 
-  async downloadInsumo(id) {
-    const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${id}/insumo`);
+  async removeFile(taskId, fileId, fileType, requesterEmail, requesterRole) {
+    const params = new URLSearchParams({
+      fileType,
+      requesterEmail,
+      requesterRole,
+    });
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINT}/${taskId}/files/${fileId}?${params.toString()}`,
+      { method: 'DELETE' },
+    );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const disposition = response.headers.get('Content-Disposition');
-    let filename = 'insumo';
-    if (disposition) {
-      const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-      if (match && match[1]) {
-        filename = match[1].replace(/['"]/g, '');
-      }
-    }
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    return response;
   },
 };

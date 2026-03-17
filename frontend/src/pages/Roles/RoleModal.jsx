@@ -5,6 +5,12 @@ const RoleModal = ({ isOpen, onClose, onSubmit, role, loading }) => {
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [errors, setErrors] = useState({});
 
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    if (isOpen) document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
+
   const isEditing = Boolean(role);
 
   useEffect(() => {

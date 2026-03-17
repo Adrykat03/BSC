@@ -120,20 +120,19 @@ public class AssignTaskCommandHandler : IRequestHandler<AssignTaskCommand, ApiRe
             );
         }
 
-        // Agregar al historial si hubo cambio de estado
-        if (statusChanged)
+        // Siempre agregar al historial — registra cada asignacion
+        taskItem.StatusHistory.Add(new StatusChange
         {
-            taskItem.StatusHistory.Add(new StatusChange
-            {
-                FromStatus = previousStatus,
-                ToStatus = taskItem.Status,
-                ChangedById = assignerId,
-                ChangedByName = assignerName,
-                ChangedByEmail = request.AssignerEmail,
-                ChangedAt = DateTime.UtcNow,
-                Comment = $"Tarea asignada a {assignee.NombreCompleto}"
-            });
-        }
+            FromStatus = previousStatus,
+            ToStatus = taskItem.Status,
+            ChangedById = assignerId,
+            ChangedByName = assignerName,
+            ChangedByEmail = request.AssignerEmail,
+            ChangedAt = DateTime.UtcNow,
+            Comment = statusChanged
+                ? $"Tarea asignada a {assignee.NombreCompleto}"
+                : $"Reasignada a {assignee.NombreCompleto}"
+        });
 
         taskItem.UpdatedAt = DateTime.UtcNow;
         taskItem.UpdatedBy = request.AssignerEmail;

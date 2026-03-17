@@ -2,6 +2,7 @@ using BSC.Application.Commands.AssignTask;
 using BSC.Application.Commands.ChangeTaskStatus;
 using BSC.Application.Commands.CreateTaskItem;
 using BSC.Application.Commands.DeleteTaskItem;
+using BSC.Application.Commands.RemoveFileAttachment;
 using BSC.Application.Commands.UpdateTaskItem;
 using BSC.Application.Commands.UploadEvidence;
 using BSC.Application.DTOs;
@@ -23,6 +24,8 @@ public class TasksController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ITaskItemRepository _taskItemRepository;
+
+    private const string FilesBasePath = "/app/files";
 
     public TasksController(IMediator mediator, ITaskItemRepository taskItemRepository)
     {
@@ -77,7 +80,7 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Crea una nueva tarea. Soporta multipart/form-data para adjuntar archivo de insumo.
+    /// Crea una nueva tarea. Soporta multipart/form-data para adjuntar archivos de insumo.
     /// </summary>
     /// <param name="command">Datos de la tarea a crear.</param>
     /// <returns>Tarea creada.</returns>
@@ -96,7 +99,8 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Actualiza una tarea existente. Soporta multipart/form-data para adjuntar archivo de insumo.
+    /// Actualiza una tarea existente. Soporta multipart/form-data para adjuntar archivos de insumo y evidencia.
+    /// Los archivos nuevos se AGREGAN a los existentes, no los reemplazan.
     /// No permite cambiar el estado (usar PUT /api/tasks/{id}/status para eso).
     /// </summary>
     /// <param name="id">ID de la tarea a actualizar.</param>
@@ -177,9 +181,10 @@ public class TasksController : ControllerBase
 
     /// <summary>
     /// Sube evidencia para una tarea. Solo el colaborador asignado puede hacerlo.
+    /// Soporta multiples archivos que se AGREGAN a los existentes.
     /// </summary>
     /// <param name="id">ID de la tarea.</param>
-    /// <param name="command">Archivo de evidencia y datos del uploader.</param>
+    /// <param name="command">Archivos de evidencia y datos del uploader.</param>
     /// <returns>Tarea con evidencia actualizada.</returns>
     [HttpPost("{id}/evidence")]
     [Consumes("multipart/form-data")]
@@ -202,17 +207,16 @@ public class TasksController : ControllerBase
         return Ok(result);
     }
 
-    private const string FilesBasePath = "/app/files";
-
     /// <summary>
-    /// Descarga el archivo de evidencia de una tarea.
+    /// Descarga un archivo especifico por su FileId. Busca en ambas listas (insumos y evidencias).
     /// </summary>
     /// <param name="id">ID de la tarea.</param>
-    /// <returns>Archivo de evidencia.</returns>
-    [HttpGet("{id}/evidence")]
+    /// <param name="fileId">ID del archivo adjunto.</param>
+    /// <returns>Archivo para descarga.</returns>
+    [HttpGet("{id}/files/{fileId}")]
     [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DownloadEvidence(string id)
+    public async Task<IActionResult> DownloadFile(string id, string fileId)
     {
         var taskItem = await _taskItemRepository.GetByIdAsync(id);
         if (taskItem == null)
@@ -223,16 +227,20 @@ public class TasksController : ControllerBase
             ));
         }
 
-        if (string.IsNullOrEmpty(taskItem.EvidenceFilePath))
+        // Buscar el archivo en ambas listas
+        var file = taskItem.InsumoFiles.FirstOrDefault(f => f.Id == fileId)
+                ?? taskItem.EvidenceFiles.FirstOrDefault(f => f.Id == fileId);
+
+        if (file == null)
         {
             return NotFound(ApiResponse<object>.Fail(
-                "Evidencia no encontrada.",
-                new List<string> { "La tarea no tiene un archivo de evidencia asociado." }
+                "Archivo no encontrado.",
+                new List<string> { $"No se encontro un archivo con el ID '{fileId}' en la tarea." }
             ));
         }
 
         // Construir ruta absoluta desde path relativo y validar path traversal
-        var absolutePath = Path.GetFullPath(Path.Combine(FilesBasePath, taskItem.EvidenceFilePath));
+        var absolutePath = Path.GetFullPath(Path.Combine(FilesBasePath, file.FilePath));
         var baseFull = Path.GetFullPath(FilesBasePath) + Path.DirectorySeparatorChar;
         if (!absolutePath.StartsWith(baseFull))
         {
@@ -245,63 +253,55 @@ public class TasksController : ControllerBase
         if (!System.IO.File.Exists(absolutePath))
         {
             return NotFound(ApiResponse<object>.Fail(
-                "Evidencia no encontrada.",
-                new List<string> { "El archivo de evidencia no existe en el servidor." }
+                "Archivo no encontrado.",
+                new List<string> { "El archivo no existe en el servidor." }
             ));
         }
 
         var stream = new FileStream(absolutePath, FileMode.Open, FileAccess.Read);
-        return File(stream, taskItem.EvidenceContentType ?? "application/octet-stream", taskItem.EvidenceFileName);
+        return File(stream, file.ContentType ?? "application/octet-stream", file.FileName);
     }
 
     /// <summary>
-    /// Descarga el archivo de insumo de una tarea.
+    /// Elimina un archivo adjunto de una tarea (solo la referencia en MongoDB, NO el archivo fisico).
     /// </summary>
     /// <param name="id">ID de la tarea.</param>
-    /// <returns>Archivo de insumo.</returns>
-    [HttpGet("{id}/insumo")]
-    [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DownloadInsumo(string id)
+    /// <param name="fileId">ID del archivo a eliminar.</param>
+    /// <param name="fileType">Tipo de archivo: "insumo" o "evidence".</param>
+    /// <param name="requesterEmail">Email del solicitante.</param>
+    /// <param name="requesterRole">Rol del solicitante.</param>
+    /// <returns>Tarea actualizada.</returns>
+    [HttpDelete("{id}/files/{fileId}")]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveFile(
+        string id,
+        string fileId,
+        [FromQuery] string fileType,
+        [FromQuery] string requesterEmail,
+        [FromQuery] string requesterRole)
     {
-        var taskItem = await _taskItemRepository.GetByIdAsync(id);
-        if (taskItem == null)
+        var command = new RemoveFileAttachmentCommand
         {
-            return NotFound(ApiResponse<object>.Fail(
-                "Tarea no encontrada.",
-                new List<string> { $"No se encontro una tarea con el ID '{id}'." }
-            ));
+            TaskId = id,
+            FileId = fileId,
+            FileType = fileType,
+            RequesterEmail = requesterEmail,
+            RequesterRole = requesterRole
+        };
+
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+        {
+            if (result.Message.Contains("no encontrad", StringComparison.OrdinalIgnoreCase))
+                return NotFound(result);
+
+            return BadRequest(result);
         }
 
-        if (string.IsNullOrEmpty(taskItem.InsumoFilePath))
-        {
-            return NotFound(ApiResponse<object>.Fail(
-                "Insumo no encontrado.",
-                new List<string> { "La tarea no tiene un archivo de insumo asociado." }
-            ));
-        }
-
-        // Construir ruta absoluta desde path relativo y validar path traversal
-        var absolutePath = Path.GetFullPath(Path.Combine(FilesBasePath, taskItem.InsumoFilePath));
-        var baseFull = Path.GetFullPath(FilesBasePath) + Path.DirectorySeparatorChar;
-        if (!absolutePath.StartsWith(baseFull))
-        {
-            return BadRequest(ApiResponse<object>.Fail(
-                "Ruta de archivo invalida.",
-                new List<string> { "La ruta del archivo no es valida." }
-            ));
-        }
-
-        if (!System.IO.File.Exists(absolutePath))
-        {
-            return NotFound(ApiResponse<object>.Fail(
-                "Insumo no encontrado.",
-                new List<string> { "El archivo de insumo no existe en el servidor." }
-            ));
-        }
-
-        var stream = new FileStream(absolutePath, FileMode.Open, FileAccess.Read);
-        return File(stream, taskItem.InsumoContentType ?? "application/octet-stream", taskItem.InsumoFileName);
+        return Ok(result);
     }
 
     /// <summary>

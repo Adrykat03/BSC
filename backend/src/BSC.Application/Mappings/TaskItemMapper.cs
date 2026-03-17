@@ -22,13 +22,23 @@ public static class TaskItemMapper
             AssignedToId = taskItem.AssignedToId,
             AssignedToName = taskItem.AssignedToName,
             AssignedToEmail = taskItem.AssignedToEmail,
+            DueDate = taskItem.DueDate,
             EstimatedTime = taskItem.EstimatedTime,
             ActualTime = taskItem.ActualTime,
             Insumos = taskItem.Insumos,
-            InsumoFileName = taskItem.InsumoFileName,
-            HasInsumo = !string.IsNullOrEmpty(taskItem.InsumoFilePath),
-            EvidenceFileName = taskItem.EvidenceFileName,
-            HasEvidence = !string.IsNullOrEmpty(taskItem.EvidenceFilePath),
+            InsumoFiles = taskItem.InsumoFiles?.Select(f => new FileAttachmentDto
+            {
+                Id = f.Id,
+                FileName = f.FileName,
+                UploadedAt = f.UploadedAt
+            }).ToList() ?? new List<FileAttachmentDto>(),
+            EvidenceFiles = taskItem.EvidenceFiles?.Select(f => new FileAttachmentDto
+            {
+                Id = f.Id,
+                FileName = f.FileName,
+                UploadedAt = f.UploadedAt
+            }).ToList() ?? new List<FileAttachmentDto>(),
+            EvidenceText = taskItem.EvidenceText,
             StatusHistory = taskItem.StatusHistory?.Select(sh => new StatusChangeDto
             {
                 FromStatus = sh.FromStatus,

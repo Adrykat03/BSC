@@ -20,17 +20,17 @@ public class TaskItemDto
     public string? AssignedToName { get; set; }
     public string? AssignedToEmail { get; set; }
 
+    public DateTime? DueDate { get; set; }
     public decimal? EstimatedTime { get; set; }
     public decimal? ActualTime { get; set; }
 
     // Insumos
     public string? Insumos { get; set; }
-    public string? InsumoFileName { get; set; }
-    public bool HasInsumo { get; set; }
+    public List<FileAttachmentDto> InsumoFiles { get; set; } = new();
 
     // Evidencia
-    public string? EvidenceFileName { get; set; }
-    public bool HasEvidence { get; set; }
+    public List<FileAttachmentDto> EvidenceFiles { get; set; } = new();
+    public string? EvidenceText { get; set; }
 
     // Historial de estados
     public List<StatusChangeDto> StatusHistory { get; set; } = new();
@@ -38,6 +38,16 @@ public class TaskItemDto
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// DTO para un archivo adjunto (insumo o evidencia).
+/// </summary>
+public class FileAttachmentDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+    public DateTime UploadedAt { get; set; }
 }
 
 /// <summary>

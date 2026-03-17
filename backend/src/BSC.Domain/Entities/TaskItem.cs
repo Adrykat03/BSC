@@ -7,6 +7,7 @@ namespace BSC.Domain.Entities;
 /// <summary>
 /// Entidad de dominio que representa una tarea del sistema.
 /// </summary>
+[BsonIgnoreExtraElements]
 public class TaskItem
 {
     [BsonId]
@@ -42,6 +43,9 @@ public class TaskItem
     [BsonElement("assignedToEmail")]
     public string? AssignedToEmail { get; set; }
 
+    [BsonElement("dueDate")]
+    public DateTime? DueDate { get; set; }
+
     [BsonElement("estimatedTime")]
     public decimal? EstimatedTime { get; set; }
 
@@ -52,24 +56,15 @@ public class TaskItem
     [BsonElement("insumos")]
     public string? Insumos { get; set; }
 
-    [BsonElement("insumoFileName")]
-    public string? InsumoFileName { get; set; }
-
-    [BsonElement("insumoFilePath")]
-    public string? InsumoFilePath { get; set; }
-
-    [BsonElement("insumoContentType")]
-    public string? InsumoContentType { get; set; }
+    [BsonElement("insumoFiles")]
+    public List<FileAttachment> InsumoFiles { get; set; } = new();
 
     // Evidencia (la sube el Colaborador al completar)
-    [BsonElement("evidenceFileName")]
-    public string? EvidenceFileName { get; set; }
+    [BsonElement("evidenceFiles")]
+    public List<FileAttachment> EvidenceFiles { get; set; } = new();
 
-    [BsonElement("evidenceFilePath")]
-    public string? EvidenceFilePath { get; set; }
-
-    [BsonElement("evidenceContentType")]
-    public string? EvidenceContentType { get; set; }
+    [BsonElement("evidenceText")]
+    public string? EvidenceText { get; set; }
 
     // Historial de cambios de estado (append-only)
     [BsonElement("statusHistory")]

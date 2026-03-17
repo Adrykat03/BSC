@@ -16,7 +16,8 @@ public class UploadEvidenceCommandValidator : AbstractValidator<UploadEvidenceCo
             .NotEmpty().WithMessage("El email del colaborador es requerido.")
             .EmailAddress().WithMessage("El email del colaborador no es valido.");
 
-        RuleFor(x => x.EvidenceFile)
-            .NotNull().WithMessage("El archivo de evidencia es requerido.");
+        RuleFor(x => x)
+            .Must(x => (x.EvidenceFiles != null && x.EvidenceFiles.Count > 0) || !string.IsNullOrWhiteSpace(x.EvidenceText))
+            .WithMessage("Debe proporcionar al menos un archivo de evidencia o un texto de evidencia.");
     }
 }

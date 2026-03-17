@@ -13,6 +13,12 @@ const passwordRules = [
 const GERENTE_NAME = 'Gerente';
 
 const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) => {
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    if (isOpen) document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
+
   const [formData, setFormData] = useState({
     nombreCompleto: '',
     cedula: '',

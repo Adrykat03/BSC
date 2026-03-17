@@ -15,7 +15,12 @@ public static class TaskStateTransitions
         {
             (TaskStatuses.Creada, TaskStatuses.Asignada),
             (TaskStatuses.CompletaValidada, TaskStatuses.Completa),
-            (TaskStatuses.CompletaValidada, TaskStatuses.Reasignada)
+            (TaskStatuses.CompletaValidada, TaskStatuses.Reasignada),
+            // Cancelar desde cualquier estado activo
+            (TaskStatuses.Asignada, TaskStatuses.Cancelada),
+            (TaskStatuses.CompletaPorValidar, TaskStatuses.Cancelada),
+            (TaskStatuses.Reasignada, TaskStatuses.Cancelada),
+            (TaskStatuses.CompletaValidada, TaskStatuses.Cancelada),
         },
         [RolLider] = new List<(string, string)>
         {
