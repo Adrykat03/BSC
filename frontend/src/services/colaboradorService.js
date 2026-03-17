@@ -3,9 +3,27 @@ import { apiClient } from './api';
 const ENDPOINT = '/colaboradores';
 
 export const colaboradorService = {
-  getAll: () => apiClient.get(ENDPOINT),
-  getById: (id) => apiClient.get(`${ENDPOINT}/${id}`),
-  create: (data) => apiClient.post(ENDPOINT, data),
-  update: (id, data) => apiClient.put(`${ENDPOINT}/${id}`, data),
-  delete: (id) => apiClient.delete(`${ENDPOINT}/${id}`),
+  async getAll() {
+    const response = await apiClient.get(ENDPOINT);
+    return response.data ?? [];
+  },
+
+  async getById(id) {
+    const response = await apiClient.get(`${ENDPOINT}/${id}`);
+    return response.data;
+  },
+
+  async create(data) {
+    const response = await apiClient.post(ENDPOINT, data);
+    return response.data;
+  },
+
+  async update(id, data) {
+    const response = await apiClient.put(`${ENDPOINT}/${id}`, data);
+    return response.data;
+  },
+
+  async delete(id) {
+    return apiClient.delete(`${ENDPOINT}/${id}`);
+  },
 };

@@ -12,6 +12,8 @@ public class Colaborador
 
     public string Correo { get; set; } = string.Empty;
 
+    public string RolId { get; set; } = string.Empty;
+
     public string PasswordHash { get; set; } = string.Empty;
 
     // Audit fields

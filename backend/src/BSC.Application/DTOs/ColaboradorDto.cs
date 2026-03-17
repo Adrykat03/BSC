@@ -7,6 +7,8 @@ public class ColaboradorDto
     public string Cedula { get; set; } = string.Empty;
     public string Area { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
+    public string RolId { get; set; } = string.Empty;
+    public string RolName { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

@@ -10,4 +10,5 @@ public class UpdateColaboradorCommand : IRequest<ApiResponse<ColaboradorDto>>
     public string Cedula { get; set; } = string.Empty;
     public string Area { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
+    public string RolId { get; set; } = string.Empty;
 }

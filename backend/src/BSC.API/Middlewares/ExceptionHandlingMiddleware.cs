@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using BSC.Application.DTOs;
+using FluentValidation;
 
 namespace BSC.API.Middlewares;
 
@@ -26,11 +27,31 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (ValidationException ex)
+        {
+            _logger.LogWarning("Error de validación: {Errors}", string.Join(", ", ex.Errors.Select(e => e.ErrorMessage)));
+            await HandleValidationExceptionAsync(context, ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error no controlado: {Message}", ex.Message);
             await HandleExceptionAsync(context, ex);
         }
+    }
+
+    private static async Task HandleValidationExceptionAsync(HttpContext context, ValidationException exception)
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+        var errors = exception.Errors
+            .Select(e => e.ErrorMessage)
+            .ToList();
+
+        var response = ApiResponse<object>.Fail("Error de validación.", errors);
+
+        var json = JsonSerializer.Serialize(response, _jsonOptions);
+        await context.Response.WriteAsync(json);
     }
 
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)

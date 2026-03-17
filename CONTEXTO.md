@@ -8,7 +8,9 @@
 | ID | Nombre | Estado | Fecha |
 |----|--------|--------|-------|
 | FUNC-000 | Estructura base del proyecto | Completada | 2026-03-16 |
-| FUNC-001 | CRUD Colaboradores | Completada | 2026-03-17 |
+| FUNC-001 | Gestion de Roles | En Progreso | 2026-03-17 |
+| FUNC-002 | CRUD Colaboradores | Completada | 2026-03-17 |
+| FUNC-003 | Gestion de Tareas | En Progreso | 2026-03-17 |
 
 ---
 
@@ -22,9 +24,18 @@
 - **Frontend:** Proyecto Vite + React 18. Layout con sidebar (menu Home) + header + content area. Pagina Home llama a /api/health y muestra resultado. Design system integrado desde /style/. Routing con react-router-dom v6 y lazy loading.
 - **Security:** Aprobado. SonarQube configurado (http://localhost:9000). Re-scan limpio: 0 vulnerabilidades, 0 hotspots, 0 code smells en backend. Frontend: 1 code smell menor (contraste CSS). Correcciones aplicadas: credenciales removidas de codigo, Dockerfile con usuario no-root, Swagger condicionado a Development, security headers agregados, exception message generico al cliente.
 
+### [FUNC-001] Gestion de Roles
+- **Estado:** En Progreso
+- **Fecha:** 2026-03-17
+- **Descripcion:** CRUD de roles para el sistema BackOffice. Permite crear, listar, editar y eliminar roles con nombre, descripcion y permisos asociados.
+- **Backend:** Pendiente. No hay endpoints implementados aun.
+- **Frontend:** Pagina placeholder Roles.jsx ("Hola Mundo") con ruta /roles y lazy loading. Sidebar actualizado con icono Shield y enlace a Roles. Header muestra titulo "Roles" en la ruta. Build generado.
+- **Security:** Pendiente
+- **Notas:** Puertos Docker actualizados (MongoDB: 27018, API: 5001, Frontend: 3001). Script start-pm.sh agregado.
+
 ---
 
-### [FUNC-001] CRUD Colaboradores
+### [FUNC-002] CRUD Colaboradores
 - **Estado:** Completada
 - **Fecha:** 2026-03-17
 - **Descripcion:** Gestion completa de colaboradores del area. Primera entidad del sistema que establece los patrones base (repositorio, validacion, pipeline MediatR) reutilizables en funcionalidades futuras.
@@ -44,6 +55,16 @@
   - **Validacion frontend:** Nombre, cedula (10 digitos), area, correo (formato), password (min 8, solo al crear)
   - **Design system:** Usa clases del design system (card, table, btn, form-group, form-input, modal, alert). Sin inline styles.
 - **Security:** Aprobado. 0 criticos, 0 altos, 3 medios corregidos (complejidad password, validacion cedula/password frontend), 3 bajos documentados (Authorize pendiente hasta implementar auth, CreatedBy hardcodeado "system" hasta implementar auth, inline style eliminado).
+
+---
+
+### [FUNC-003] Gestion de Tareas
+- **Estado:** En Progreso
+- **Fecha:** 2026-03-17
+- **Descripcion:** CRUD de tareas para el sistema BackOffice. Permite crear, listar, editar y eliminar tareas.
+- **Backend:** Pendiente.
+- **Frontend:** Pagina placeholder Tasks.jsx con ruta /tasks y lazy loading. Sidebar actualizado con icono ClipboardList y enlace a Tareas.
+- **Security:** Pendiente
 
 ---
 

@@ -8,11 +8,16 @@ namespace BSC.Application.Features.Colaboradores.Commands.Update;
 public class UpdateColaboradorHandler : IRequestHandler<UpdateColaboradorCommand, ApiResponse<ColaboradorDto>>
 {
     private readonly IColaboradorRepository _repository;
+    private readonly IRoleRepository _roleRepository;
     private readonly ILogger<UpdateColaboradorHandler> _logger;
 
-    public UpdateColaboradorHandler(IColaboradorRepository repository, ILogger<UpdateColaboradorHandler> logger)
+    public UpdateColaboradorHandler(
+        IColaboradorRepository repository,
+        IRoleRepository roleRepository,
+        ILogger<UpdateColaboradorHandler> logger)
     {
         _repository = repository;
+        _roleRepository = roleRepository;
         _logger = logger;
     }
 
@@ -23,6 +28,13 @@ public class UpdateColaboradorHandler : IRequestHandler<UpdateColaboradorCommand
         if (colaborador == null || colaborador.IsDeleted)
         {
             return ApiResponse<ColaboradorDto>.Fail("Colaborador no encontrado.");
+        }
+
+        // Validate role exists
+        var role = await _roleRepository.GetByIdAsync(request.RolId);
+        if (role == null || role.IsDeleted)
+        {
+            return ApiResponse<ColaboradorDto>.Fail("El rol especificado no existe.");
         }
 
         // Check cedula uniqueness excluding current
@@ -43,6 +55,7 @@ public class UpdateColaboradorHandler : IRequestHandler<UpdateColaboradorCommand
         colaborador.Cedula = request.Cedula;
         colaborador.Area = request.Area;
         colaborador.Correo = request.Correo;
+        colaborador.RolId = request.RolId;
         colaborador.UpdatedAt = DateTime.UtcNow;
         colaborador.UpdatedBy = "system";
 
@@ -57,6 +70,8 @@ public class UpdateColaboradorHandler : IRequestHandler<UpdateColaboradorCommand
             Cedula = colaborador.Cedula,
             Area = colaborador.Area,
             Correo = colaborador.Correo,
+            RolId = colaborador.RolId,
+            RolName = role.Name,
             CreatedAt = colaborador.CreatedAt,
             UpdatedAt = colaborador.UpdatedAt
         };

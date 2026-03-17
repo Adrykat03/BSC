@@ -7,4 +7,5 @@ public class CreateColaboradorDto
     public string Area { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
+    public string RolId { get; set; } = string.Empty;
 }

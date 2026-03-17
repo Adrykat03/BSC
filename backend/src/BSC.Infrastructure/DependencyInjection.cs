@@ -1,5 +1,6 @@
 using BSC.Domain.Interfaces;
 using BSC.Infrastructure.Persistence;
+using BSC.Infrastructure.Persistence.Repositories;
 using BSC.Infrastructure.Repositories;
 using BSC.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
@@ -23,6 +24,8 @@ public static class DependencyInjection
         services.AddSingleton(mongoDbContext);
 
         // Repositories
+        services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<ITaskItemRepository, TaskItemRepository>();
         services.AddScoped<IColaboradorRepository, ColaboradorRepository>();
 
         // Services

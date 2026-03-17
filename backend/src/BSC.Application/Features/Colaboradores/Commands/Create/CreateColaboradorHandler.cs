@@ -9,21 +9,31 @@ namespace BSC.Application.Features.Colaboradores.Commands.Create;
 public class CreateColaboradorHandler : IRequestHandler<CreateColaboradorCommand, ApiResponse<ColaboradorDto>>
 {
     private readonly IColaboradorRepository _repository;
+    private readonly IRoleRepository _roleRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<CreateColaboradorHandler> _logger;
 
     public CreateColaboradorHandler(
         IColaboradorRepository repository,
+        IRoleRepository roleRepository,
         IPasswordHasher passwordHasher,
         ILogger<CreateColaboradorHandler> logger)
     {
         _repository = repository;
+        _roleRepository = roleRepository;
         _passwordHasher = passwordHasher;
         _logger = logger;
     }
 
     public async Task<ApiResponse<ColaboradorDto>> Handle(CreateColaboradorCommand request, CancellationToken cancellationToken)
     {
+        // Validate role exists
+        var role = await _roleRepository.GetByIdAsync(request.RolId);
+        if (role == null || role.IsDeleted)
+        {
+            return ApiResponse<ColaboradorDto>.Fail("El rol especificado no existe.");
+        }
+
         // Check cedula uniqueness
         var existingByCedula = await _repository.GetByCedulaAsync(request.Cedula);
         if (existingByCedula != null)
@@ -44,6 +54,7 @@ public class CreateColaboradorHandler : IRequestHandler<CreateColaboradorCommand
             Cedula = request.Cedula,
             Area = request.Area,
             Correo = request.Correo,
+            RolId = request.RolId,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "system",
@@ -61,6 +72,8 @@ public class CreateColaboradorHandler : IRequestHandler<CreateColaboradorCommand
             Cedula = colaborador.Cedula,
             Area = colaborador.Area,
             Correo = colaborador.Correo,
+            RolId = colaborador.RolId,
+            RolName = role.Name,
             CreatedAt = colaborador.CreatedAt,
             UpdatedAt = colaborador.UpdatedAt
         };

@@ -2,6 +2,8 @@ import { useLocation } from 'react-router-dom';
 
 const pageTitles = {
   '/': 'Home',
+  '/roles': 'Roles',
+  '/tasks': 'Tareas',
   '/colaboradores': 'Colaboradores',
 };
 
