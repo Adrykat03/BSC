@@ -17,13 +17,15 @@ Esperar ~5 segundos a que MongoDB inicie completamente.
 
 ### 2. Ejecutar el seed
 
+**IMPORTANTE:** El seed elimina automaticamente el contenido de las colecciones `Roles`, `Colaboradores` y `TaskItems` antes de insertar los datos de prueba. Si tiene datos que desea conservar, respalde la base antes de ejecutar.
+
 ```bash
 docker exec bsc_mongo mongosh "mongodb://bsc_admin:bsc_pass_2024@localhost:27017/bsc_db?authSource=admin" /seeds/seed_prueba.js
 ```
 
 Esto limpia la base de datos y crea:
-- **3 Roles:** Gerente, Lider, Colaborador
-- **15 Colaboradores** con sus roles asignados
+- **4 Roles:** Administrador, Gerente, Lider, Colaborador
+- **16 Colaboradores** con sus roles asignados
 
 ### 3. Verificar
 
@@ -33,6 +35,7 @@ Acceder a http://localhost:3000 y seleccionar un usuario.
 
 | Nombre | Correo | Rol(es) |
 |--------|--------|---------|
+| Maria Espinoza | maria.espinoza@bsc.com | Administrador |
 | Carlos Mendoza | carlos.mendoza@bsc.com | Gerente |
 | Ana Torres | ana.torres@bsc.com | Lider |
 | Marco Reyes | marco.reyes@bsc.com | Lider |
@@ -51,12 +54,24 @@ Acceder a http://localhost:3000 y seleccionar un usuario.
 
 **Password de todos:** `Test1234!`
 
+## Roles del sistema
+
+| Rol | Descripcion | Menu visible |
+|-----|-------------|--------------|
+| Administrador | Gestiona roles y colaboradores. No participa en tareas. | Home, Roles, Colaboradores |
+| Gerente | Crea tareas, asigna a lideres, aprobacion final. | Home, Tareas |
+| Lider | Valida tareas, asigna a colaboradores, supervisa. | Home, Tareas |
+| Colaborador | Ejecuta tareas, sube evidencias, reporta avance. | Home, Tareas |
+
+**Nota:** Administrador y Gerente son roles exclusivos (no se combinan con otros). Lider y Colaborador se pueden combinar.
+
 ## Flujo de prueba sugerido
 
-1. **Gerente (Carlos Mendoza):** Crear tareas, asignar a Lideres
-2. **Lider (Ana Torres):** Ver tareas asignadas, asignar a Colaboradores, validar entregas
-3. **Colaborador (Sofia Herrera):** Ver tareas asignadas, subir evidencias, marcar como completadas
-4. **Multi-rol (Laura Vega):** Probar cambio de rol desde el header (Lider ↔ Colaborador)
+1. **Administrador (Maria Espinoza):** Gestionar roles y colaboradores
+2. **Gerente (Carlos Mendoza):** Crear tareas, asignar a Lideres
+3. **Lider (Ana Torres):** Ver tareas asignadas, asignar a Colaboradores, validar entregas
+4. **Colaborador (Sofia Herrera):** Ver tareas asignadas, subir evidencias, marcar como completadas
+5. **Multi-rol (Laura Vega):** Probar cambio de rol desde el header (Lider <-> Colaborador)
 
 ## Resetear datos
 
