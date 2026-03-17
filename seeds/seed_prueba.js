@@ -46,16 +46,28 @@ db.Roles.insertMany([
     updatedBy: "system",
     isDeleted: false,
     deletedAt: null
+  },
+  {
+    name: "Administrador",
+    description: "Gestiona roles y colaboradores del sistema. No participa en tareas.",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdBy: "system",
+    updatedBy: "system",
+    isDeleted: false,
+    deletedAt: null
   }
 ]);
 
 var gerenteRolId = db.Roles.findOne({name: "Gerente"})._id.toString();
 var liderRolId = db.Roles.findOne({name: "Lider"})._id.toString();
 var colaboradorRolId = db.Roles.findOne({name: "Colaborador"})._id.toString();
+var adminRolId = db.Roles.findOne({name: "Administrador"})._id.toString();
 
 print("  Gerente ID: " + gerenteRolId);
 print("  Lider ID: " + liderRolId);
 print("  Colaborador ID: " + colaboradorRolId);
+print("  Administrador ID: " + adminRolId);
 
 // ============================================
 // COLABORADORES
@@ -81,6 +93,9 @@ function insertColaborador(nombre, cedula, area, correo, rolIds) {
     DeletedAt: null
   });
 }
+
+// 1 Administrador (rol exclusivo)
+insertColaborador("Maria Espinoza", "1700112233", "Sistemas", "maria.espinoza@bsc.com", [adminRolId]);
 
 // 1 Gerente (rol exclusivo)
 insertColaborador("Carlos Mendoza", "1712345678", "Direccion General", "carlos.mendoza@bsc.com", [gerenteRolId]);
@@ -112,6 +127,7 @@ print("");
 print("=== Seed completado ===");
 print("Roles: " + db.Roles.countDocuments());
 print("Colaboradores: " + db.Colaboradores.countDocuments());
+print("  - Administradores: " + db.Colaboradores.countDocuments({RolIds: adminRolId}));
 print("  - Gerentes: " + db.Colaboradores.countDocuments({RolIds: gerenteRolId}));
 print("  - Lideres: " + db.Colaboradores.countDocuments({RolIds: liderRolId}));
 print("  - Colaboradores: " + db.Colaboradores.countDocuments({RolIds: colaboradorRolId}));

@@ -10,7 +10,7 @@ const passwordRules = [
   { label: 'Al menos un caracter especial (@$!%*?&#)', test: (v) => /[@$!%*?&#]/.test(v) },
 ];
 
-const GERENTE_NAME = 'Gerente';
+const EXCLUSIVE_ROLES = ['Gerente', 'Administrador'];
 
 const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) => {
   useEffect(() => {
@@ -76,12 +76,10 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
 
   const allPasswordRulesMet = passwordRules.every((rule) => rule.test(formData.password));
 
-  // Determine if Gerente is selected
-  const gerenteRole = roles.find((r) => r.name === GERENTE_NAME);
-  const isGerenteSelected = gerenteRole ? formData.rolIds.includes(gerenteRole.id) : false;
-  const hasNonGerenteSelected = formData.rolIds.some(
-    (id) => !gerenteRole || id !== gerenteRole.id
-  );
+  // Determine if an exclusive role is selected
+  const exclusiveRoleIds = roles.filter((r) => EXCLUSIVE_ROLES.includes(r.name)).map((r) => r.id);
+  const selectedExclusiveId = formData.rolIds.find((id) => exclusiveRoleIds.includes(id));
+  const hasNonExclusiveSelected = formData.rolIds.some((id) => !exclusiveRoleIds.includes(id));
 
   const handleRoleToggle = (roleId) => {
     const role = roles.find((r) => r.id === roleId);
@@ -90,20 +88,18 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
     setFormData((prev) => {
       const isSelected = prev.rolIds.includes(roleId);
 
-      if (role.name === GERENTE_NAME) {
-        // Si clickea Gerente: toggle exclusivo (desmarca todo lo demás)
+      if (EXCLUSIVE_ROLES.includes(role.name)) {
+        // Exclusive role: toggle solo, desmarca todo lo demás
         return { ...prev, rolIds: isSelected ? [] : [roleId] };
       }
 
-      // Si clickea Líder o Colaborador: desmarca Gerente si estaba
+      // Non-exclusive: desmarca cualquier rol exclusivo que estuviera
       let newRolIds;
       if (isSelected) {
         newRolIds = prev.rolIds.filter((id) => id !== roleId);
       } else {
-        const withoutGerente = prev.rolIds.filter(
-          (id) => !gerenteRole || id !== gerenteRole.id
-        );
-        newRolIds = [...withoutGerente, roleId];
+        const withoutExclusive = prev.rolIds.filter((id) => !exclusiveRoleIds.includes(id));
+        newRolIds = [...withoutExclusive, roleId];
       }
       return { ...prev, rolIds: newRolIds };
     });
