@@ -1,7 +1,8 @@
 const API_BASE_URL = '/api';
 
 async function handleResponse(response) {
-  const data = await response.json();
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
   if (!response.ok) {
     const error = new Error(data.message || `HTTP ${response.status}`);
     error.errors = data.errors || [];
