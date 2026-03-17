@@ -39,6 +39,7 @@ public static class TaskItemMapper
                 UploadedAt = f.UploadedAt
             }).ToList() ?? new List<FileAttachmentDto>(),
             EvidenceText = taskItem.EvidenceText,
+            Observations = taskItem.Observations,
             StatusHistory = taskItem.StatusHistory?.Select(sh => new StatusChangeDto
             {
                 FromStatus = sh.FromStatus,

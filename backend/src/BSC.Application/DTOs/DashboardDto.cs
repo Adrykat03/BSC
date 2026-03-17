@@ -11,6 +11,11 @@ public class DashboardDto
     public List<CollaboratorHeatmapItem> CollaboratorHeatmap { get; set; } = new();
 
     /// <summary>
+    /// Mapa de calor: colaboradores con tareas activas (no Completa ni Cancelada).
+    /// </summary>
+    public List<CollaboratorHeatmapItem> CollaboratorHeatmapActive { get; set; } = new();
+
+    /// <summary>
     /// Tiempo promedio (horas) que las tareas pasan en cada estado.
     /// </summary>
     public List<StatusAvgTimeItem> AvgTimeByStatus { get; set; } = new();

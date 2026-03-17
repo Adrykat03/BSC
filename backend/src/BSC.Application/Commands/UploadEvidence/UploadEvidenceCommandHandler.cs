@@ -17,12 +17,7 @@ public class UploadEvidenceCommandHandler : IRequestHandler<UploadEvidenceComman
     private readonly ITaskItemRepository _taskItemRepository;
     private readonly ILogger<UploadEvidenceCommandHandler> _logger;
 
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".xls", ".xlsx"
-    };
-
-    private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
+    private const long MaxFileSize = 20 * 1024 * 1024; // 20MB
     private const string FilesBasePath = "/app/files";
     private const string EvidenciasRelativeDir = "evidencias";
 
@@ -74,19 +69,11 @@ public class UploadEvidenceCommandHandler : IRequestHandler<UploadEvidenceComman
                 {
                     return ApiResponse<TaskItemDto>.Fail(
                         "El archivo excede el tamano maximo permitido.",
-                        new List<string> { $"El archivo '{file.FileName}' excede el tamano maximo de 10MB." }
+                        new List<string> { $"El archivo '{file.FileName}' excede el tamano maximo de 20MB." }
                     );
                 }
 
                 var extension = Path.GetExtension(file.FileName);
-                if (!AllowedExtensions.Contains(extension))
-                {
-                    return ApiResponse<TaskItemDto>.Fail(
-                        "Tipo de archivo no permitido.",
-                        new List<string> { $"El archivo '{file.FileName}' tiene un tipo no permitido. Los tipos permitidos son: pdf, jpg, jpeg, png, doc, docx, xls, xlsx." }
-                    );
-                }
-
                 using var validationStream = file.OpenReadStream();
                 if (!FileValidationHelper.ValidateMagicBytes(validationStream, extension))
                 {

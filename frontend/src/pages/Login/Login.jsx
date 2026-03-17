@@ -1,10 +1,11 @@
 import { useState, useContext } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import SessionContext from '../../context/SessionContext';
 import './Login.css';
 
 const Login = () => {
   const { login, isAuthenticated } = useContext(SessionContext);
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,6 +27,7 @@ const Login = () => {
     try {
       setLoading(true);
       await login(email, password);
+      navigate('/', { replace: true });
     } catch (err) {
       const msg =
         err.status === 401

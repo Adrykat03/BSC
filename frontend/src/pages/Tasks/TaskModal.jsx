@@ -5,18 +5,7 @@ import toast from 'react-hot-toast';
 import { tasksService } from '../../services/tasksService';
 import { colaboradorService } from '../../services/colaboradorService';
 
-const ALLOWED_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-];
-
-const ALLOWED_EXTENSIONS = '.pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx';
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 /* ────────────────────────────────────────────
    Label helper
@@ -56,11 +45,8 @@ const FileDropZone = ({
   const [dragging, setDragging] = useState(false);
 
   const validateFile = (f) => {
-    if (!ALLOWED_TYPES.includes(f.type)) {
-      return 'Tipo de archivo no permitido. Use: PDF, JPG, PNG, DOC, DOCX, XLS, XLSX';
-    }
     if (f.size > MAX_FILE_SIZE) {
-      return 'El archivo no debe superar los 10MB';
+      return 'El archivo no debe superar los 20MB';
     }
     return null;
   };
@@ -151,7 +137,7 @@ const FileDropZone = ({
         </span>
         {!hasFiles && (
           <span style={{ fontSize: '11px', color: 'var(--color-text-disabled)' }}>
-            PDF, JPG, PNG, DOC, DOCX, XLS, XLSX (max 10MB)
+            Cualquier tipo de archivo (max 20MB)
           </span>
         )}
       </div>
@@ -159,7 +145,6 @@ const FileDropZone = ({
       <input
         ref={inputRef}
         type="file"
-        accept={ALLOWED_EXTENSIONS}
         multiple
         onChange={handleInputChange}
         style={{ display: 'none' }}
@@ -350,6 +335,7 @@ const TaskModal = ({
     dueDate: '',
     insumos: '',
     evidenceText: '',
+    observations: '',
   });
   const [insumoFiles, setInsumoFiles] = useState([]);
   const [evidenceFiles, setEvidenceFiles] = useState([]);
@@ -422,6 +408,7 @@ const TaskModal = ({
         dueDate: dueDateStr,
         insumos: task.insumos || '',
         evidenceText: task.evidenceText || '',
+        observations: task.observations || '',
       });
       setExistingInsumoFiles(task.insumoFiles || []);
       setExistingEvidenceFiles(task.evidenceFiles || []);
@@ -433,6 +420,7 @@ const TaskModal = ({
         dueDate: '',
         insumos: '',
         evidenceText: '',
+        observations: '',
       });
       setExistingInsumoFiles([]);
       setExistingEvidenceFiles([]);
@@ -452,16 +440,12 @@ const TaskModal = ({
     }
 
     insumoFiles.forEach((f) => {
-      if (!ALLOWED_TYPES.includes(f.type))
-        newErrors.insumoFile = 'Tipo de archivo no permitido';
       if (f.size > MAX_FILE_SIZE)
-        newErrors.insumoFile = 'El archivo no debe superar los 10MB';
+        newErrors.insumoFile = 'El archivo no debe superar los 20MB';
     });
     evidenceFiles.forEach((f) => {
-      if (!ALLOWED_TYPES.includes(f.type))
-        newErrors.evidenceFile = 'Tipo de archivo no permitido';
       if (f.size > MAX_FILE_SIZE)
-        newErrors.evidenceFile = 'El archivo no debe superar los 10MB';
+        newErrors.evidenceFile = 'El archivo no debe superar los 20MB';
     });
 
     setErrors(newErrors);
@@ -561,8 +545,15 @@ const TaskModal = ({
     if (formData.insumos.trim()) {
       data.append('insumos', formData.insumos.trim());
     }
+    if (formData.observations.trim()) {
+      data.append('observations', formData.observations.trim());
+    }
     // Multiple insumo files
     insumoFiles.forEach(f => data.append('InsumoFiles', f));
+    /* When creating, include assigneeId if a leader was selected */
+    if (!isEditing && selectedAssignee) {
+      data.append('assigneeId', selectedAssignee);
+    }
     /* Lider can also send evidence */
     if (isLider) {
       if (formData.evidenceText.trim()) {
@@ -597,7 +588,7 @@ const TaskModal = ({
       <div className={`modal-backdrop ${isOpen ? 'modal-backdrop--open' : ''}`} />
       <div
         className={`modal ${isOpen ? 'modal--open' : ''}`}
-        style={{ maxWidth: '800px' }}
+        style={{ maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
         {/* ── Header ── */}
         <div className="modal__header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
@@ -607,8 +598,22 @@ const TaskModal = ({
               <X size={18} />
             </button>
           </div>
-          {/* Assign select — Gerente/Lider when editing */}
-          {isEditing && (isGerente || isLider) && (
+          {/* Assigned leader label — shown when editing and leader is already assigned */}
+          {isEditing && (isGerente || isLider) && task?.assignedLeaderName && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                fontSize: '10px', fontWeight: 'bold', color: '#6B7280',
+                textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+              }}>
+                Lider asignado:
+              </span>
+              <span className="badge badge--active" style={{ fontSize: '12px' }}>
+                {task.assignedLeaderName}
+              </span>
+            </div>
+          )}
+          {/* Assign select — Gerente when creating, Gerente/Lider when editing */}
+          {((isEditing && (isGerente || isLider)) || (!isEditing && isGerente)) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{
                 fontSize: '10px', fontWeight: 'bold', color: '#6B7280',
@@ -621,7 +626,7 @@ const TaskModal = ({
                 value={selectedAssignee}
                 onChange={(e) => {
                   setSelectedAssignee(e.target.value);
-                  if (e.target.value && onAssign) {
+                  if (isEditing && e.target.value && onAssign) {
                     onAssign(task, e.target.value);
                   }
                 }}
@@ -647,8 +652,8 @@ const TaskModal = ({
           )}
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="modal__body" style={{ overflowY: 'auto', maxHeight: '70vh' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div className="modal__body">
             {/* ── Row 1: Titulo (50%) + Fecha entrega (30%) + Tiempo estimado (20%) ── */}
             <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
               <div style={{ width: 'calc(50% - 16px)', flexShrink: 0 }}>
@@ -675,8 +680,8 @@ const TaskModal = ({
                   className="form-control"
                   value={formData.dueDate}
                   onChange={handleChange}
-                  readOnly={isColaborador}
-                  style={isColaborador ? readOnlyStyle : undefined}
+                  readOnly={isColaborador || isLider}
+                  style={(isColaborador || isLider) ? readOnlyStyle : undefined}
                 />
               </div>
               <div style={{ flex: 2, minWidth: 0 }}>
@@ -690,8 +695,8 @@ const TaskModal = ({
                   placeholder="Ej: 8"
                   min="0"
                   step="0.5"
-                  readOnly={!isGerente}
-                  style={!isGerente ? readOnlyStyle : undefined}
+                  readOnly={isColaborador}
+                  style={isColaborador ? readOnlyStyle : undefined}
                 />
               </div>
             </div>
@@ -766,6 +771,19 @@ const TaskModal = ({
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* ── Row: Observaciones (100%) ── */}
+            <div style={{ marginBottom: '16px' }}>
+              <Label>Observaciones</Label>
+              <textarea
+                name="observations"
+                className="form-control form-textarea"
+                value={formData.observations}
+                onChange={handleChange}
+                placeholder="Observaciones sobre la tarea"
+                style={{ resize: 'none', height: '80px' }}
+              />
             </div>
 
             {/* ── Row 3: Evidencia texto (50%) + Evidencia archivo (50%) — Lider/Colaborador ── */}

@@ -188,14 +188,17 @@ const Home = () => {
           {/* Highlight Cards */}
           <HighlightCards highlights={dashboard.highlights} />
 
-          {/* Heatmap */}
+          {/* Heatmap with tabs */}
           <div className="card mb-6">
             <div className="card__header">
               <h2 className="card__title">Carga de trabajo por colaborador</h2>
               <p className="card__subtitle">Intensidad basada en cantidad de tareas asignadas</p>
             </div>
             <div className="card__body">
-              <HeatMap data={dashboard.collaboratorHeatmap} />
+              <HeatMapTabs
+                activeData={dashboard.collaboratorHeatmapActive}
+                historicData={dashboard.collaboratorHeatmap}
+              />
             </div>
           </div>
 
@@ -292,6 +295,35 @@ const HighlightCards = ({ highlights }) => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+/* ========================================
+   HeatMap Tabs Component
+   ======================================== */
+const HeatMapTabs = ({ activeData, historicData }) => {
+  const [activeTab, setActiveTab] = useState('actual');
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+        <button
+          className={`btn btn--sm ${activeTab === 'actual' ? 'btn--primary' : 'btn--ghost'}`}
+          onClick={() => setActiveTab('actual')}
+          type="button"
+        >
+          Actual
+        </button>
+        <button
+          className={`btn btn--sm ${activeTab === 'historico' ? 'btn--primary' : 'btn--ghost'}`}
+          onClick={() => setActiveTab('historico')}
+          type="button"
+        >
+          Histórico
+        </button>
+      </div>
+      <HeatMap data={activeTab === 'actual' ? activeData : historicData} />
     </div>
   );
 };

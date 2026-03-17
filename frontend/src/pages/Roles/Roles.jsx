@@ -160,7 +160,7 @@ const Roles = () => {
 
   return (
     <div>
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
 
       <div className="page-header">
         <div>

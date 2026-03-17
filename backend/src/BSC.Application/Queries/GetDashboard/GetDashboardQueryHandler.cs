@@ -26,10 +26,15 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
         _logger.LogInformation("Calculando estadísticas del dashboard. From={From}, To={To}", request.From, request.To);
 
         var tasks = await _taskItemRepository.GetAllForDashboardAsync(request.From, request.To);
+        // Active heatmap always uses ALL tasks (no date filter) to reflect current workload
+        var allTasks = (request.From.HasValue || request.To.HasValue)
+            ? await _taskItemRepository.GetAllForDashboardAsync(null, null)
+            : tasks;
 
         var dashboard = new DashboardDto
         {
             CollaboratorHeatmap = CalculateCollaboratorHeatmap(tasks),
+            CollaboratorHeatmapActive = CalculateCollaboratorHeatmapActive(allTasks),
             AvgTimeByStatus = CalculateAvgTimeByStatus(tasks),
             TasksByCollaboratorAndStatus = CalculateTasksByCollaboratorAndStatus(tasks),
             TasksByStatus = CalculateTasksByStatus(tasks),
@@ -47,6 +52,25 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
     {
         return tasks
             .Where(t => !string.IsNullOrEmpty(t.AssignedToName))
+            .GroupBy(t => t.AssignedToName!)
+            .Select(g => new CollaboratorHeatmapItem
+            {
+                Name = g.Key,
+                TaskCount = g.Count()
+            })
+            .OrderByDescending(x => x.TaskCount)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Mapa de calor de tareas activas: excluye Completa y Cancelada.
+    /// </summary>
+    private static List<CollaboratorHeatmapItem> CalculateCollaboratorHeatmapActive(List<TaskItem> tasks)
+    {
+        return tasks
+            .Where(t => !string.IsNullOrEmpty(t.AssignedToName)
+                && t.Status != TaskStatuses.Completa
+                && t.Status != TaskStatuses.Cancelada)
             .GroupBy(t => t.AssignedToName!)
             .Select(g => new CollaboratorHeatmapItem
             {

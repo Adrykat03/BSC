@@ -21,6 +21,12 @@ public static class TaskStateTransitions
             (TaskStatuses.CompletaPorValidar, TaskStatuses.Cancelada),
             (TaskStatuses.Reasignada, TaskStatuses.Cancelada),
             (TaskStatuses.CompletaValidada, TaskStatuses.Cancelada),
+            // Restaurar desde Cancelada (el frontend determina el estado correcto desde el historial)
+            (TaskStatuses.Cancelada, TaskStatuses.Creada),
+            (TaskStatuses.Cancelada, TaskStatuses.Asignada),
+            (TaskStatuses.Cancelada, TaskStatuses.CompletaPorValidar),
+            (TaskStatuses.Cancelada, TaskStatuses.Reasignada),
+            (TaskStatuses.Cancelada, TaskStatuses.CompletaValidada),
         },
         [RolLider] = new List<(string, string)>
         {

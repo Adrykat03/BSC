@@ -14,6 +14,7 @@ public class CreateTaskItemCommand : IRequest<ApiResponse<TaskItemDto>>
     public DateTime? DueDate { get; set; }
     public decimal? EstimatedTime { get; set; }
     public string? Insumos { get; set; }
+    public string? Observations { get; set; }
     public List<IFormFile>? InsumoFiles { get; set; }
     public string CreatedByEmail { get; set; } = string.Empty;
 }

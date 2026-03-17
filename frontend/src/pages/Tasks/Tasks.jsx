@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import {
   Plus, Pencil, Trash2, ClipboardList, ChevronLeft, ChevronRight,
-  Eye, Search, History,
+  Eye, Search, History, Undo2,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import toast, { Toaster } from 'react-hot-toast';
@@ -154,20 +154,6 @@ const Tasks = () => {
   const handleSubmit = async (formData) => {
     const isEditing = Boolean(selectedTask);
 
-    if (isEditing) {
-      const result = await Swal.fire({
-        title: 'Confirmar actualizacion',
-        text: `Se actualizara la tarea "${selectedTask.title}". ¿Desea continuar?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#E31837',
-        cancelButtonColor: '#6B7280',
-        confirmButtonText: 'Si, actualizar',
-        cancelButtonText: 'Cancelar',
-      });
-      if (!result.isConfirmed) return;
-    }
-
     try {
       setSaving(true);
       if (isEditing) {
@@ -176,8 +162,18 @@ const Tasks = () => {
         toast.success('Tarea actualizada exitosamente');
       } else {
         formData.append('createdByEmail', email);
-        await tasksService.create(formData);
+        const result = await tasksService.create(formData);
         toast.success('Tarea creada exitosamente');
+        // If a leader was selected during creation, assign immediately
+        const assigneeId = formData.get('assigneeId');
+        if (assigneeId && result?.data?.id) {
+          try {
+            await tasksService.assignTask(result.data.id, { assigneeId });
+            toast.success('Lider asignado exitosamente');
+          } catch (assignErr) {
+            toast.error(`Tarea creada pero error al asignar lider: ${assignErr.message}`);
+          }
+        }
       }
       closeModal();
       await loadTasks(isEditing ? page : 1);
@@ -190,12 +186,12 @@ const Tasks = () => {
 
   // ---- Delete or Cancel (Gerente only) ----
   const handleDelete = async (task) => {
-    const isCreada = task.status === 'Creada';
-    const title = isCreada ? 'Eliminar tarea' : 'Cancelar tarea';
-    const text = isCreada
+    const isNotAssigned = !task.assignedLeaderId && !task.assignedToId;
+    const title = isNotAssigned ? 'Eliminar tarea' : 'Cancelar tarea';
+    const text = isNotAssigned
       ? `¿Esta seguro de eliminar la tarea "${task.title}"? Esta accion no se puede deshacer.`
       : `¿Esta seguro de cancelar la tarea "${task.title}"? Pasara a estado Cancelada.`;
-    const confirmText = isCreada ? 'Si, eliminar' : 'Si, cancelar';
+    const confirmText = isNotAssigned ? 'Si, eliminar' : 'Si, cancelar';
 
     const result = await Swal.fire({
       title,
@@ -210,7 +206,7 @@ const Tasks = () => {
     if (!result.isConfirmed) return;
 
     try {
-      if (isCreada) {
+      if (isNotAssigned) {
         await tasksService.delete(task.id);
         toast.success('Tarea eliminada exitosamente');
       } else {
@@ -224,6 +220,42 @@ const Tasks = () => {
       await loadTasks(newPage);
     } catch (err) {
       toast.error(`Error: ${err.message}`);
+    }
+  };
+
+  // ---- Restore cancelled task (Gerente only) ----
+  const handleRestore = async (task) => {
+    // Find the last status before cancellation from statusHistory
+    let previousStatus = 'Creada'; // fallback
+    if (task.statusHistory && task.statusHistory.length > 0) {
+      // Find the last entry where toStatus is 'Cancelada'
+      const cancelEntry = [...task.statusHistory].reverse().find(e => e.toStatus === 'Cancelada');
+      if (cancelEntry) {
+        previousStatus = cancelEntry.fromStatus;
+      }
+    }
+
+    const result = await Swal.fire({
+      title: 'Restaurar tarea',
+      text: `¿Restaurar "${task.title}" al estado "${previousStatus}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#E31837',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Si, restaurar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      await tasksService.changeStatus(task.id, {
+        newStatus: previousStatus,
+        comment: `Tarea restaurada desde Cancelada a ${previousStatus}`,
+      });
+      toast.success(`Tarea restaurada a "${previousStatus}"`);
+      await loadTasks(page);
+    } catch (err) {
+      toast.error(`Error al restaurar: ${err.message}`);
     }
   };
 
@@ -415,6 +447,8 @@ const Tasks = () => {
   };
 
   const filteredTasks = tasks.filter((task) => {
+    // Canceladas solo visibles para Gerente
+    if (task.status === 'Cancelada' && !isGerente) return false;
     if (filterStatus && task.status !== filterStatus) return false;
     if (!matchesDate(task)) return false;
     if (searchText.trim()) {
@@ -433,13 +467,13 @@ const Tasks = () => {
 
   return (
     <div>
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
 
       <div className="page-header">
         <div>
           <h1 className="page-header__title">Tareas</h1>
           <p className="page-header__subtitle">
-            Gestion de tareas del sistema — Rol: {role}
+            Gestion de tareas del sistema
           </p>
         </div>
         {isGerente && (
@@ -590,8 +624,19 @@ const Tasks = () => {
                                 <History size={16} />
                               </button>
 
-                              {/* Delete — Gerente only */}
-                              {isGerente && (
+                              {/* Restore — Gerente only, cancelled tasks */}
+                              {isGerente && task.status === 'Cancelada' && (
+                                <button
+                                  className="btn btn--icon btn--sm btn--ghost"
+                                  onClick={(e) => { e.stopPropagation(); handleRestore(task); }}
+                                  data-tooltip="Restaurar"
+                                >
+                                  <Undo2 size={16} />
+                                </button>
+                              )}
+
+                              {/* Delete — Gerente only, not for cancelled tasks */}
+                              {isGerente && task.status !== 'Cancelada' && (
                                 <button
                                   className="btn btn--icon btn--sm btn--ghost text-error"
                                   onClick={(e) => { e.stopPropagation(); handleDelete(task); }}
@@ -702,7 +747,7 @@ const Tasks = () => {
                 &times;
               </button>
             </div>
-            <div className="modal__body" style={{ overflowY: 'auto', maxHeight: '60vh' }}>
+            <div className="modal__body">
               {/* Current state */}
               <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-success)' }}>
                 <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Estado actual</span>

@@ -32,6 +32,9 @@ public class TaskItemDto
     public List<FileAttachmentDto> EvidenceFiles { get; set; } = new();
     public string? EvidenceText { get; set; }
 
+    // Observaciones
+    public string? Observations { get; set; }
+
     // Historial de estados
     public List<StatusChangeDto> StatusHistory { get; set; } = new();
 

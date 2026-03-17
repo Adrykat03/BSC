@@ -73,7 +73,9 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             );
         }
 
-        var activeRole = roleNames.First();
+        // Default to highest-privilege role: Administrador > Gerente > Lider > Colaborador
+        var rolePriority = new[] { "Administrador", "Gerente", "Lider", "Colaborador" };
+        var activeRole = rolePriority.FirstOrDefault(r => roleNames.Contains(r)) ?? roleNames.First();
         var token = _jwtTokenService.GenerateToken(
             colaborador.Id,
             colaborador.NombreCompleto,

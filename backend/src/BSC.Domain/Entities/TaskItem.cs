@@ -70,6 +70,9 @@ public class TaskItem
     [BsonElement("statusHistory")]
     public List<StatusChange> StatusHistory { get; set; } = new();
 
+    [BsonElement("observations")]
+    public string? Observations { get; set; }
+
     // Campos de auditoria
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; }

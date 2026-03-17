@@ -41,7 +41,21 @@ public class TasksController : ControllerBase
     private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
     private string GetUserName() => User.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
     private string GetUserEmail() => User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
-    private string GetUserRole() => User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+    private string GetUserRole()
+    {
+        var raw = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+        // Handle case where role claim contains a JSON array like ["Gerente"]
+        if (raw.StartsWith("["))
+        {
+            try
+            {
+                var roles = JsonSerializer.Deserialize<List<string>>(raw);
+                return roles?.FirstOrDefault() ?? string.Empty;
+            }
+            catch { return raw; }
+        }
+        return raw;
+    }
 
     /// <summary>
     /// Obtiene las estadísticas del dashboard de tareas.
