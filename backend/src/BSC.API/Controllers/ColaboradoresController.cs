@@ -5,11 +5,13 @@ using BSC.Application.Features.Colaboradores.Commands.Update;
 using BSC.Application.Features.Colaboradores.Queries.GetAll;
 using BSC.Application.Features.Colaboradores.Queries.GetById;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BSC.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class ColaboradoresController : ControllerBase
 {

@@ -101,7 +101,7 @@ const Tasks = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await tasksService.getAll(currentPage, PAGE_SIZE, email, role);
+      const data = await tasksService.getAll(currentPage, PAGE_SIZE);
       setTasks(data.items ?? []);
       setTotalPages(data.totalPages);
       setTotalCount(data.totalCount);
@@ -111,7 +111,7 @@ const Tasks = () => {
     } finally {
       setLoading(false);
     }
-  }, [email, role]);
+  }, []);
 
   useEffect(() => {
     loadTasks();
@@ -216,8 +216,6 @@ const Tasks = () => {
       } else {
         await tasksService.changeStatus(task.id, {
           newStatus: 'Cancelada',
-          changedByEmail: email,
-          changedByRole: role,
           comment: 'Tarea cancelada por el Gerente',
         });
         toast.success('Tarea cancelada exitosamente');
@@ -246,8 +244,6 @@ const Tasks = () => {
     try {
       await tasksService.changeStatus(task.id, {
         newStatus,
-        changedByEmail: email,
-        changedByRole: role,
         comment: '',
       });
       toast.success(`Estado cambiado a "${newStatus}"`);
@@ -292,8 +288,6 @@ const Tasks = () => {
     try {
       await tasksService.assignTask(assignTask.id, {
         assigneeId: selectedColaborador,
-        assignerEmail: email,
-        assignerRole: role,
       });
       toast.success('Tarea asignada exitosamente');
       setAssignModalOpen(false);
@@ -314,7 +308,7 @@ const Tasks = () => {
   const handleUploadEvidence = async () => {
     if (!evidenceFile || !evidenceTask) return;
     try {
-      await tasksService.uploadEvidence(evidenceTask.id, evidenceFile, email);
+      await tasksService.uploadEvidence(evidenceTask.id, evidenceFile);
       toast.success('Evidencia subida exitosamente');
       setEvidenceModalOpen(false);
       setEvidenceTask(null);
@@ -659,7 +653,7 @@ const Tasks = () => {
         onSubmit={handleSubmit}
         onUploadEvidence={async (taskId, file, text) => {
           try {
-            await tasksService.uploadEvidence(taskId, file, email, text);
+            await tasksService.uploadEvidence(taskId, file, text);
             toast.success('Evidencia guardada exitosamente');
             setDetailModalOpen(false);
             setDetailTask(null);
@@ -679,8 +673,6 @@ const Tasks = () => {
           try {
             await tasksService.assignTask(t.id, {
               assigneeId,
-              assignerEmail: email,
-              assignerRole: role,
             });
             toast.success('Tarea asignada exitosamente');
             await loadTasks(page);

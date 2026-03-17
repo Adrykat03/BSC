@@ -2,12 +2,16 @@ import { apiClient } from './api';
 
 const API_BASE_URL = '/api';
 const ENDPOINT = '/tasks';
+const TOKEN_KEY = 'fp_token';
+
+function getAuthHeader() {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export const tasksService = {
-  async getAll(page = 1, pageSize = 20, userEmail = null, userRole = null) {
-    let url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
-    if (userEmail) url += `&userEmail=${encodeURIComponent(userEmail)}`;
-    if (userRole) url += `&userRole=${encodeURIComponent(userRole)}`;
+  async getAll(page = 1, pageSize = 20) {
+    const url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
     const response = await apiClient.get(url);
     return response.data ?? { items: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 };
   },
@@ -20,6 +24,7 @@ export const tasksService = {
   async create(formData) {
     const response = await fetch(`${API_BASE_URL}${ENDPOINT}`, {
       method: 'POST',
+      headers: getAuthHeader(),
       body: formData,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -29,6 +34,7 @@ export const tasksService = {
   async update(id, formData) {
     const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${id}`, {
       method: 'PUT',
+      headers: getAuthHeader(),
       body: formData,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -39,35 +45,31 @@ export const tasksService = {
     return apiClient.delete(`${ENDPOINT}/${id}`);
   },
 
-  async changeStatus(taskId, { newStatus, changedByEmail, changedByRole, comment }) {
+  async changeStatus(taskId, { newStatus, comment }) {
     const response = await apiClient.put(`${ENDPOINT}/${taskId}/status`, {
       newStatus,
-      changedByEmail,
-      changedByRole,
       comment,
     });
     return response;
   },
 
-  async assignTask(taskId, { assigneeId, assignerEmail, assignerRole }) {
+  async assignTask(taskId, { assigneeId }) {
     const response = await apiClient.put(`${ENDPOINT}/${taskId}/assign`, {
       assigneeId,
-      assignerEmail,
-      assignerRole,
     });
     return response;
   },
 
-  async uploadEvidence(taskId, files, uploaderEmail, evidenceText) {
+  async uploadEvidence(taskId, files, evidenceText) {
     const formData = new FormData();
     if (files) {
       const fileList = Array.isArray(files) ? files : [files];
-      fileList.forEach(f => formData.append('EvidenceFiles', f));
+      fileList.forEach((f) => formData.append('EvidenceFiles', f));
     }
-    formData.append('uploaderEmail', uploaderEmail);
     if (evidenceText) formData.append('evidenceText', evidenceText);
     const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${taskId}/evidence`, {
       method: 'POST',
+      headers: getAuthHeader(),
       body: formData,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -75,7 +77,9 @@ export const tasksService = {
   },
 
   async downloadFile(taskId, fileId) {
-    const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${taskId}/files/${fileId}`);
+    const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${taskId}/files/${fileId}`, {
+      headers: getAuthHeader(),
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const disposition = response.headers.get('Content-Disposition');
     let filename = 'archivo';
@@ -96,15 +100,14 @@ export const tasksService = {
     window.URL.revokeObjectURL(url);
   },
 
-  async removeFile(taskId, fileId, fileType, requesterEmail, requesterRole) {
-    const params = new URLSearchParams({
-      fileType,
-      requesterEmail,
-      requesterRole,
-    });
+  async removeFile(taskId, fileId, fileType) {
+    const params = new URLSearchParams({ fileType });
     const response = await fetch(
       `${API_BASE_URL}${ENDPOINT}/${taskId}/files/${fileId}?${params.toString()}`,
-      { method: 'DELETE' },
+      {
+        method: 'DELETE',
+        headers: getAuthHeader(),
+      }
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response;

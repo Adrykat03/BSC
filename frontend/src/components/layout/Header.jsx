@@ -15,6 +15,7 @@ const Header = () => {
   const title = pageTitles[location.pathname] || 'FlowPulse';
   const { user, logout, switchRole } = useContext(SessionContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [switchingRole, setSwitchingRole] = useState(false);
   const dropdownRef = useRef(null);
 
   const hasMultipleRoles = user?.roles && user.roles.length > 1;
@@ -29,10 +30,15 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSwitchRole = (newRole) => {
-    switchRole(newRole);
-    setDropdownOpen(false);
-    window.location.reload();
+  const handleSwitchRole = async (newRole) => {
+    try {
+      setSwitchingRole(true);
+      await switchRole(newRole);
+      setDropdownOpen(false);
+      window.location.reload();
+    } catch {
+      setSwitchingRole(false);
+    }
   };
 
   return (
@@ -74,8 +80,9 @@ const Header = () => {
                         key={roleName}
                         className="dropdown__item"
                         onClick={() => handleSwitchRole(roleName)}
+                        disabled={switchingRole}
                       >
-                        <RefreshCw size={16} />
+                        <RefreshCw size={16} className={switchingRole ? 'spin' : ''} />
                         {roleName}
                       </button>
                     ))}
@@ -84,7 +91,7 @@ const Header = () => {
               )}
               <button className="dropdown__item" onClick={logout}>
                 <LogOut size={16} />
-                Cerrar sesion
+                Cerrar sesión
               </button>
             </div>
           </div>

@@ -75,7 +75,7 @@ print("  Administrador ID: " + adminRolId);
 print("=== Insertando Colaboradores ===");
 
 // BCrypt hash para "Test1234!" (work factor 11)
-var passHash = "$2a$11$K5Ov0VRkRKxNBR.uCxwJ8OZ0F5Tx3HM7mcF/mWJPqWQzVqp5z8Edi";
+var passHash = "$2a$11$a5hyF1ZDwKovUSJ3DVVjGeuWmpzpzldnGoz8gTa9J6vTY59hyF4o6";
 
 function insertColaborador(nombre, cedula, area, correo, rolIds) {
   db.Colaboradores.insertOne({

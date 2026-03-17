@@ -489,12 +489,7 @@ const TaskModal = ({
     if (!confirm.isConfirmed) return;
 
     try {
-      // Get user info from session storage
-      const session = JSON.parse(sessionStorage.getItem('bsc_session') || '{}');
-      const requesterEmail = session.email || '';
-      const requesterRole = session.role || userRole;
-
-      await tasksService.removeFile(task.id, fileId, fileType, requesterEmail, requesterRole);
+      await tasksService.removeFile(task.id, fileId, fileType);
 
       if (fileType === 'insumo') {
         setExistingInsumoFiles((prev) => prev.filter((f) => f.id !== fileId));

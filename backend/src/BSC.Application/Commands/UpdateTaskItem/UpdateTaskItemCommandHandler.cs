@@ -1,3 +1,4 @@
+using BSC.Application.Common;
 using BSC.Application.DTOs;
 using BSC.Application.Mappings;
 using BSC.Domain.Interfaces;
@@ -72,6 +73,15 @@ public class UpdateTaskItemCommandHandler : IRequestHandler<UpdateTaskItemComman
                         new List<string> { $"El archivo '{file.FileName}' tiene un tipo no permitido. Los tipos permitidos son: pdf, jpg, jpeg, png, doc, docx, xls, xlsx." }
                     );
                 }
+
+                using var validationStream = file.OpenReadStream();
+                if (!FileValidationHelper.ValidateMagicBytes(validationStream, extension))
+                {
+                    return ApiResponse<TaskItemDto>.Fail(
+                        "Archivo invalido.",
+                        new List<string> { $"El archivo '{file.FileName}' no coincide con el tipo esperado ({extension})." }
+                    );
+                }
             }
 
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -119,6 +129,15 @@ public class UpdateTaskItemCommandHandler : IRequestHandler<UpdateTaskItemComman
                     return ApiResponse<TaskItemDto>.Fail(
                         "Tipo de archivo no permitido.",
                         new List<string> { $"El archivo '{file.FileName}' tiene un tipo no permitido. Los tipos permitidos son: pdf, jpg, jpeg, png, doc, docx, xls, xlsx." }
+                    );
+                }
+
+                using var validationStream = file.OpenReadStream();
+                if (!FileValidationHelper.ValidateMagicBytes(validationStream, extension))
+                {
+                    return ApiResponse<TaskItemDto>.Fail(
+                        "Archivo invalido.",
+                        new List<string> { $"El archivo '{file.FileName}' no coincide con el tipo esperado ({extension})." }
                     );
                 }
             }

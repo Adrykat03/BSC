@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using System.Text.Json;
 using BSC.Application.Commands.AssignTask;
 using BSC.Application.Commands.ChangeTaskStatus;
 using BSC.Application.Commands.CreateTaskItem;
@@ -11,6 +13,7 @@ using BSC.Application.Queries.GetTaskItemById;
 using BSC.Application.Queries.GetTaskItems;
 using BSC.Domain.Interfaces;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BSC.API.Controllers;
@@ -20,6 +23,7 @@ namespace BSC.API.Controllers;
 /// Soporta flujo de estados por rol (Gerente, Lider, Colaborador).
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
@@ -33,6 +37,11 @@ public class TasksController : ControllerBase
         _mediator = mediator;
         _taskItemRepository = taskItemRepository;
     }
+
+    private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    private string GetUserName() => User.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
+    private string GetUserEmail() => User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
+    private string GetUserRole() => User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
 
     /// <summary>
     /// Obtiene las estadísticas del dashboard de tareas.
@@ -55,27 +64,23 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene la lista paginada de tareas, filtrada por rol y email del usuario.
+    /// Obtiene la lista paginada de tareas, filtrada por rol y email del usuario autenticado.
     /// </summary>
     /// <param name="page">Numero de pagina (default: 1).</param>
     /// <param name="pageSize">Cantidad de registros por pagina (default: 20, max: 100).</param>
-    /// <param name="userEmail">Email del usuario para filtrar por rol.</param>
-    /// <param name="userRole">Rol del usuario (Gerente, Lider, Colaborador).</param>
     /// <returns>Lista paginada de tareas.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PaginatedResult<TaskItemDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        [FromQuery] string? userEmail = null,
-        [FromQuery] string? userRole = null)
+        [FromQuery] int pageSize = 20)
     {
         var query = new GetTaskItemsQuery
         {
             Page = page,
             PageSize = pageSize,
-            UserEmail = userEmail,
-            UserRole = userRole
+            UserEmail = GetUserEmail(),
+            UserRole = GetUserRole()
         };
         var result = await _mediator.Send(query);
         return Ok(result);
@@ -102,6 +107,7 @@ public class TasksController : ControllerBase
 
     /// <summary>
     /// Crea una nueva tarea. Soporta multipart/form-data para adjuntar archivos de insumo.
+    /// El email del creador se obtiene del JWT.
     /// </summary>
     /// <param name="command">Datos de la tarea a crear.</param>
     /// <returns>Tarea creada.</returns>
@@ -111,6 +117,7 @@ public class TasksController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromForm] CreateTaskItemCommand command)
     {
+        command.CreatedByEmail = GetUserEmail();
         var result = await _mediator.Send(command);
 
         if (!result.Success)
@@ -123,6 +130,7 @@ public class TasksController : ControllerBase
     /// Actualiza una tarea existente. Soporta multipart/form-data para adjuntar archivos de insumo y evidencia.
     /// Los archivos nuevos se AGREGAN a los existentes, no los reemplazan.
     /// No permite cambiar el estado (usar PUT /api/tasks/{id}/status para eso).
+    /// El email del actualizador se obtiene del JWT.
     /// </summary>
     /// <param name="id">ID de la tarea a actualizar.</param>
     /// <param name="command">Datos actualizados de la tarea.</param>
@@ -135,6 +143,7 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> Update(string id, [FromForm] UpdateTaskItemCommand command)
     {
         command.Id = id;
+        command.UpdatedByEmail = GetUserEmail();
         var result = await _mediator.Send(command);
 
         if (!result.Success)
@@ -149,7 +158,8 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Cambia el estado de una tarea. Valida la transicion segun el rol del usuario.
+    /// Cambia el estado de una tarea. Valida la transicion segun el rol del usuario autenticado.
+    /// El email y rol se obtienen del JWT.
     /// </summary>
     /// <param name="id">ID de la tarea.</param>
     /// <param name="command">Datos del cambio de estado.</param>
@@ -161,6 +171,8 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> ChangeStatus(string id, [FromBody] ChangeTaskStatusCommand command)
     {
         command.TaskId = id;
+        command.ChangedByEmail = GetUserEmail();
+        command.ChangedByRole = GetUserRole();
         var result = await _mediator.Send(command);
 
         if (!result.Success)
@@ -176,6 +188,7 @@ public class TasksController : ControllerBase
 
     /// <summary>
     /// Asigna una tarea a un colaborador o lider.
+    /// El email y rol del asignador se obtienen del JWT.
     /// </summary>
     /// <param name="id">ID de la tarea.</param>
     /// <param name="command">Datos de la asignacion.</param>
@@ -187,6 +200,8 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> Assign(string id, [FromBody] AssignTaskCommand command)
     {
         command.TaskId = id;
+        command.AssignerEmail = GetUserEmail();
+        command.AssignerRole = GetUserRole();
         var result = await _mediator.Send(command);
 
         if (!result.Success)
@@ -203,9 +218,10 @@ public class TasksController : ControllerBase
     /// <summary>
     /// Sube evidencia para una tarea. Solo el colaborador asignado puede hacerlo.
     /// Soporta multiples archivos que se AGREGAN a los existentes.
+    /// El email del uploader se obtiene del JWT.
     /// </summary>
     /// <param name="id">ID de la tarea.</param>
-    /// <param name="command">Archivos de evidencia y datos del uploader.</param>
+    /// <param name="command">Archivos de evidencia.</param>
     /// <returns>Tarea con evidencia actualizada.</returns>
     [HttpPost("{id}/evidence")]
     [Consumes("multipart/form-data")]
@@ -215,6 +231,7 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> UploadEvidence(string id, [FromForm] UploadEvidenceCommand command)
     {
         command.TaskId = id;
+        command.UploaderEmail = GetUserEmail();
         var result = await _mediator.Send(command);
 
         if (!result.Success)
@@ -285,12 +302,11 @@ public class TasksController : ControllerBase
 
     /// <summary>
     /// Elimina un archivo adjunto de una tarea (solo la referencia en MongoDB, NO el archivo fisico).
+    /// El email y rol del solicitante se obtienen del JWT.
     /// </summary>
     /// <param name="id">ID de la tarea.</param>
     /// <param name="fileId">ID del archivo a eliminar.</param>
     /// <param name="fileType">Tipo de archivo: "insumo" o "evidence".</param>
-    /// <param name="requesterEmail">Email del solicitante.</param>
-    /// <param name="requesterRole">Rol del solicitante.</param>
     /// <returns>Tarea actualizada.</returns>
     [HttpDelete("{id}/files/{fileId}")]
     [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status200OK)]
@@ -299,17 +315,15 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> RemoveFile(
         string id,
         string fileId,
-        [FromQuery] string fileType,
-        [FromQuery] string requesterEmail,
-        [FromQuery] string requesterRole)
+        [FromQuery] string fileType)
     {
         var command = new RemoveFileAttachmentCommand
         {
             TaskId = id,
             FileId = fileId,
             FileType = fileType,
-            RequesterEmail = requesterEmail,
-            RequesterRole = requesterRole
+            RequesterEmail = GetUserEmail(),
+            RequesterRole = GetUserRole()
         };
 
         var result = await _mediator.Send(command);

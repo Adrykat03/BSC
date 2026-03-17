@@ -5,6 +5,7 @@ using BSC.Application.DTOs;
 using BSC.Application.Queries.GetRoleById;
 using BSC.Application.Queries.GetRoles;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BSC.API.Controllers;
@@ -13,6 +14,7 @@ namespace BSC.API.Controllers;
 /// Controller para la gestion de roles del sistema.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class RolesController : ControllerBase
 {

@@ -1,3 +1,4 @@
+using BSC.Application.Interfaces;
 using BSC.Domain.Interfaces;
 using BSC.Infrastructure.Persistence;
 using BSC.Infrastructure.Persistence.Repositories;
@@ -10,7 +11,13 @@ namespace BSC.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string jwtSecretKey,
+        string jwtIssuer,
+        string jwtAudience,
+        int jwtExpirationMinutes)
     {
         var connectionString = configuration["MongoDbSettings:ConnectionString"]
             ?? "mongodb://localhost:27017";
@@ -30,6 +37,8 @@ public static class DependencyInjection
 
         // Services
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddSingleton<IJwtTokenService>(
+            new JwtTokenService(jwtSecretKey, jwtIssuer, jwtAudience, jwtExpirationMinutes));
 
         return services;
     }
