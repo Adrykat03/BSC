@@ -114,4 +114,20 @@ public class TaskItemRepository : ITaskItemRepository
             .Set(t => t.DeletedAt, DateTime.UtcNow);
         await _collection.UpdateOneAsync(filter, update);
     }
+
+    public async Task<List<TaskItem>> GetAllForDashboardAsync(DateTime? from, DateTime? to)
+    {
+        var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
+
+        if (from.HasValue)
+            filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, from.Value);
+
+        if (to.HasValue)
+            filter &= Builders<TaskItem>.Filter.Lte(t => t.CreatedAt, to.Value);
+
+        return await _collection
+            .Find(filter)
+            .SortByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
 }

@@ -11,8 +11,7 @@ const Sidebar = () => {
   return (
     <div className="sidebar">
       <div className="sidebar__logo">
-        <span className="text-xl font-bold text-brand">BSC</span>
-        <span className="text-sm text-secondary ml-2">BackOffice</span>
+        <img src="/logo.png" alt="FlowPulse" style={{ maxWidth: '100%', height: 'auto', maxHeight: '48px' }} />
       </div>
 
       <nav>

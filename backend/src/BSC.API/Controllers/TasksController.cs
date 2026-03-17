@@ -6,6 +6,7 @@ using BSC.Application.Commands.RemoveFileAttachment;
 using BSC.Application.Commands.UpdateTaskItem;
 using BSC.Application.Commands.UploadEvidence;
 using BSC.Application.DTOs;
+using BSC.Application.Queries.GetDashboard;
 using BSC.Application.Queries.GetTaskItemById;
 using BSC.Application.Queries.GetTaskItems;
 using BSC.Domain.Interfaces;
@@ -31,6 +32,26 @@ public class TasksController : ControllerBase
     {
         _mediator = mediator;
         _taskItemRepository = taskItemRepository;
+    }
+
+    /// <summary>
+    /// Obtiene las estadísticas del dashboard de tareas.
+    /// Soporta filtrado opcional por rango de fechas (from, to) sobre createdAt.
+    /// </summary>
+    /// <param name="from">Fecha inicio del filtro (opcional).</param>
+    /// <param name="to">Fecha fin del filtro (opcional).</param>
+    /// <returns>Estadísticas del dashboard.</returns>
+    [HttpGet("dashboard")]
+    [ProducesResponseType(typeof(ApiResponse<DashboardDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDashboard([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+    {
+        var query = new GetDashboardQuery
+        {
+            From = from,
+            To = to
+        };
+        var result = await _mediator.Send(query);
+        return Ok(result);
     }
 
     /// <summary>

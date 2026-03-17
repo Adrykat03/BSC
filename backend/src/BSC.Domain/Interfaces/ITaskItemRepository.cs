@@ -17,4 +17,5 @@ public interface ITaskItemRepository
     Task<TaskItem> CreateAsync(TaskItem taskItem);
     Task<TaskItem> UpdateAsync(TaskItem taskItem);
     Task DeleteAsync(string id);
+    Task<List<TaskItem>> GetAllForDashboardAsync(DateTime? from, DateTime? to);
 }

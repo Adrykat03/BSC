@@ -12,7 +12,7 @@ const pageTitles = {
 
 const Header = () => {
   const location = useLocation();
-  const title = pageTitles[location.pathname] || 'BSC BackOffice';
+  const title = pageTitles[location.pathname] || 'FlowPulse';
   const { user, logout, switchRole } = useContext(SessionContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
