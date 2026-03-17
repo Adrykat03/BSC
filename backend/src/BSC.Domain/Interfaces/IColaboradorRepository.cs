@@ -11,4 +11,5 @@ public interface IColaboradorRepository
     Task CreateAsync(Colaborador colaborador);
     Task UpdateAsync(Colaborador colaborador);
     Task DeleteAsync(string id);
+    Task<List<Colaborador>> GetByRolIdAsync(string rolId);
 }

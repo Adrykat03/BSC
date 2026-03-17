@@ -29,11 +29,14 @@ public class GetAllColaboradoresHandler : IRequestHandler<GetAllColaboradoresQue
 
         foreach (var c in colaboradores)
         {
-            var rolName = string.Empty;
-            if (!string.IsNullOrEmpty(c.RolId))
+            var rolNames = new List<string>();
+            foreach (var rolId in c.RolIds)
             {
-                var role = await _roleRepository.GetByIdAsync(c.RolId);
-                rolName = role?.Name ?? string.Empty;
+                if (!string.IsNullOrEmpty(rolId))
+                {
+                    var role = await _roleRepository.GetByIdAsync(rolId);
+                    rolNames.Add(role?.Name ?? string.Empty);
+                }
             }
 
             dtos.Add(new ColaboradorDto
@@ -43,8 +46,8 @@ public class GetAllColaboradoresHandler : IRequestHandler<GetAllColaboradoresQue
                 Cedula = c.Cedula,
                 Area = c.Area,
                 Correo = c.Correo,
-                RolId = c.RolId,
-                RolName = rolName,
+                RolIds = c.RolIds,
+                RolNames = rolNames,
                 CreatedAt = c.CreatedAt,
                 UpdatedAt = c.UpdatedAt
             });

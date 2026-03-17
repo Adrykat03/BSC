@@ -13,21 +13,13 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) {
-      document.addEventListener('keydown', handleEsc);
-    }
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
+  // Modal solo se cierra con botones X, Cancelar o Guardar
 
   if (!isOpen) return null;
 
   return (
     <div className="modal">
-      <div className="modal__overlay" onClick={onClose} />
+      <div className="modal__overlay" />
       <div className="modal__content">
         <div className="modal__header">
           <h3 className="modal__title">{title}</h3>

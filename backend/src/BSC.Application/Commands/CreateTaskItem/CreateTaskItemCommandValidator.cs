@@ -10,19 +10,23 @@ public class CreateTaskItemCommandValidator : AbstractValidator<CreateTaskItemCo
     public CreateTaskItemCommandValidator()
     {
         RuleFor(x => x.Title)
-            .NotEmpty().WithMessage("El título es requerido.")
-            .MaximumLength(200).WithMessage("El título no puede exceder 200 caracteres.");
+            .NotEmpty().WithMessage("El titulo es requerido.")
+            .MaximumLength(200).WithMessage("El titulo no puede exceder 200 caracteres.");
 
         RuleFor(x => x.Description)
-            .NotEmpty().WithMessage("La descripción es requerida.")
-            .MaximumLength(2000).WithMessage("La descripción no puede exceder 2000 caracteres.");
-
-        RuleFor(x => x.AssignedTo)
-            .MaximumLength(200).WithMessage("El campo asignado a no puede exceder 200 caracteres.")
-            .When(x => !string.IsNullOrEmpty(x.AssignedTo));
+            .NotEmpty().WithMessage("La descripcion es requerida.")
+            .MaximumLength(2000).WithMessage("La descripcion no puede exceder 2000 caracteres.");
 
         RuleFor(x => x.EstimatedTime)
             .GreaterThan(0).WithMessage("El tiempo estimado debe ser mayor a 0.")
             .When(x => x.EstimatedTime.HasValue);
+
+        RuleFor(x => x.Insumos)
+            .MaximumLength(5000).WithMessage("Los insumos no pueden exceder 5000 caracteres.")
+            .When(x => !string.IsNullOrEmpty(x.Insumos));
+
+        RuleFor(x => x.CreatedByEmail)
+            .NotEmpty().WithMessage("El email del creador es requerido.")
+            .EmailAddress().WithMessage("El email del creador no es valido.");
     }
 }

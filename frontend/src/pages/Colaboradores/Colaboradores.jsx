@@ -215,7 +215,19 @@ const Colaboradores = () => {
                         <td className="text-secondary">{col.cedula}</td>
                         <td className="text-secondary">{col.area}</td>
                         <td className="text-secondary">{col.correo}</td>
-                        <td className="text-secondary">{col.rolName || '—'}</td>
+                        <td>
+                          {col.rolNames && col.rolNames.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                              {col.rolNames.map((rolName, idx) => (
+                                <span key={idx} className="badge badge--active">
+                                  {rolName}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-secondary">{col.rolName || '—'}</span>
+                          )}
+                        </td>
                         <td>
                           <div className="table__actions">
                             <button

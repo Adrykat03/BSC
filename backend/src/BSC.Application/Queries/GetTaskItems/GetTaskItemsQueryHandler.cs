@@ -1,4 +1,7 @@
 using BSC.Application.DTOs;
+using BSC.Application.Mappings;
+using BSC.Domain.Constants;
+using BSC.Domain.Entities;
 using BSC.Domain.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -6,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace BSC.Application.Queries.GetTaskItems;
 
 /// <summary>
-/// Handler para la query de listado de tareas.
+/// Handler para la query de listado de tareas con filtrado por rol.
 /// </summary>
 public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiResponse<PaginatedResult<TaskItemDto>>>
 {
@@ -21,27 +24,55 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
 
     public async Task<ApiResponse<PaginatedResult<TaskItemDto>>> Handle(GetTaskItemsQuery request, CancellationToken cancellationToken)
     {
-        // Limitar pageSize a maximo 100
         var pageSize = Math.Min(request.PageSize, 100);
         var page = Math.Max(request.Page, 1);
 
-        var taskItems = await _taskItemRepository.GetAllAsync(page, pageSize);
-        var totalCount = await _taskItemRepository.GetTotalCountAsync();
+        List<TaskItem> taskItems;
+        int totalCount;
 
-        var dtos = taskItems.Select(t => new TaskItemDto
+        if (!string.IsNullOrEmpty(request.UserEmail) && !string.IsNullOrEmpty(request.UserRole))
         {
-            Id = t.Id,
-            Title = t.Title,
-            Description = t.Description,
-            AssignedTo = t.AssignedTo,
-            Status = t.Status,
-            EstimatedTime = t.EstimatedTime,
-            ActualTime = t.ActualTime,
-            EvidenceFileName = t.EvidenceFileName,
-            HasEvidence = !string.IsNullOrEmpty(t.EvidenceFilePath),
-            CreatedAt = t.CreatedAt,
-            UpdatedAt = t.UpdatedAt
-        }).ToList();
+            switch (request.UserRole)
+            {
+                case TaskStateTransitions.RolGerente:
+                    // Gerente ve todas las tareas
+                    taskItems = await _taskItemRepository.GetAllAsync(page, pageSize);
+                    totalCount = await _taskItemRepository.GetTotalCountAsync();
+                    break;
+
+                case TaskStateTransitions.RolLider:
+                    // Lider ve tareas donde es el lider asignado y status != Completa
+                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, page, pageSize);
+                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail);
+                    break;
+
+                case TaskStateTransitions.RolColaborador:
+                    // Colaborador ve tareas asignadas a el con estados especificos
+                    var allowedStatuses = new List<string>
+                    {
+                        TaskStatuses.Asignada,
+                        TaskStatuses.CompletaPorValidar,
+                        TaskStatuses.Reasignada
+                    };
+                    taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, allowedStatuses, page, pageSize);
+                    totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, allowedStatuses);
+                    break;
+
+                default:
+                    // Rol desconocido, retornar vacio
+                    taskItems = new List<TaskItem>();
+                    totalCount = 0;
+                    break;
+            }
+        }
+        else
+        {
+            // Sin filtro de rol, retornar todas (comportamiento por defecto)
+            taskItems = await _taskItemRepository.GetAllAsync(page, pageSize);
+            totalCount = await _taskItemRepository.GetTotalCountAsync();
+        }
+
+        var dtos = taskItems.Select(TaskItemMapper.ToDto).ToList();
 
         var result = new PaginatedResult<TaskItemDto>
         {

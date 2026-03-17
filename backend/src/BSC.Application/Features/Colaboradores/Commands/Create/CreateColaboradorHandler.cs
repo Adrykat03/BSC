@@ -27,11 +27,23 @@ public class CreateColaboradorHandler : IRequestHandler<CreateColaboradorCommand
 
     public async Task<ApiResponse<ColaboradorDto>> Handle(CreateColaboradorCommand request, CancellationToken cancellationToken)
     {
-        // Validate role exists
-        var role = await _roleRepository.GetByIdAsync(request.RolId);
-        if (role == null || role.IsDeleted)
+        // Validate all roles exist
+        var roles = new List<Role>();
+        foreach (var rolId in request.RolIds)
         {
-            return ApiResponse<ColaboradorDto>.Fail("El rol especificado no existe.");
+            var role = await _roleRepository.GetByIdAsync(rolId);
+            if (role == null || role.IsDeleted)
+            {
+                return ApiResponse<ColaboradorDto>.Fail($"El rol con ID '{rolId}' no existe.");
+            }
+            roles.Add(role);
+        }
+
+        // Validate Gerente exclusivity: if any role is Gerente, it must be the only one
+        var roleNames = roles.Select(r => r.Name).ToList();
+        if (roleNames.Any(n => n.Equals("Gerente", StringComparison.OrdinalIgnoreCase)) && roles.Count > 1)
+        {
+            return ApiResponse<ColaboradorDto>.Fail("El rol 'Gerente' es exclusivo y no puede combinarse con otros roles.");
         }
 
         // Check cedula uniqueness
@@ -54,7 +66,7 @@ public class CreateColaboradorHandler : IRequestHandler<CreateColaboradorCommand
             Cedula = request.Cedula,
             Area = request.Area,
             Correo = request.Correo,
-            RolId = request.RolId,
+            RolIds = request.RolIds,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "system",
@@ -72,8 +84,8 @@ public class CreateColaboradorHandler : IRequestHandler<CreateColaboradorCommand
             Cedula = colaborador.Cedula,
             Area = colaborador.Area,
             Correo = colaborador.Correo,
-            RolId = colaborador.RolId,
-            RolName = role.Name,
+            RolIds = colaborador.RolIds,
+            RolNames = roleNames,
             CreatedAt = colaborador.CreatedAt,
             UpdatedAt = colaborador.UpdatedAt
         };

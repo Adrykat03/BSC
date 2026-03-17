@@ -10,6 +10,8 @@ const passwordRules = [
   { label: 'Al menos un caracter especial (@$!%*?&#)', test: (v) => /[@$!%*?&#]/.test(v) },
 ];
 
+const GERENTE_NAME = 'Gerente';
+
 const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) => {
   const [formData, setFormData] = useState({
     nombreCompleto: '',
@@ -17,7 +19,7 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
     area: '',
     correo: '',
     password: '',
-    rolId: '',
+    rolIds: [],
   });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
@@ -50,7 +52,7 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
         area: colaborador.area || '',
         correo: colaborador.correo || '',
         password: '',
-        rolId: colaborador.rolId || '',
+        rolIds: colaborador.rolIds || (colaborador.rolId ? [colaborador.rolId] : []),
       });
     } else {
       setFormData({
@@ -59,7 +61,7 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
         area: '',
         correo: '',
         password: '',
-        rolId: '',
+        rolIds: [],
       });
     }
     setConfirmPassword('');
@@ -67,6 +69,42 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
   }, [colaborador, isOpen]);
 
   const allPasswordRulesMet = passwordRules.every((rule) => rule.test(formData.password));
+
+  // Determine if Gerente is selected
+  const gerenteRole = roles.find((r) => r.name === GERENTE_NAME);
+  const isGerenteSelected = gerenteRole ? formData.rolIds.includes(gerenteRole.id) : false;
+  const hasNonGerenteSelected = formData.rolIds.some(
+    (id) => !gerenteRole || id !== gerenteRole.id
+  );
+
+  const handleRoleToggle = (roleId) => {
+    const role = roles.find((r) => r.id === roleId);
+    if (!role) return;
+
+    setFormData((prev) => {
+      const isSelected = prev.rolIds.includes(roleId);
+
+      if (role.name === GERENTE_NAME) {
+        // Si clickea Gerente: toggle exclusivo (desmarca todo lo demás)
+        return { ...prev, rolIds: isSelected ? [] : [roleId] };
+      }
+
+      // Si clickea Líder o Colaborador: desmarca Gerente si estaba
+      let newRolIds;
+      if (isSelected) {
+        newRolIds = prev.rolIds.filter((id) => id !== roleId);
+      } else {
+        const withoutGerente = prev.rolIds.filter(
+          (id) => !gerenteRole || id !== gerenteRole.id
+        );
+        newRolIds = [...withoutGerente, roleId];
+      }
+      return { ...prev, rolIds: newRolIds };
+    });
+    if (errors.rolIds) {
+      setErrors((prev) => ({ ...prev, rolIds: '' }));
+    }
+  };
 
   const validate = () => {
     const newErrors = {};
@@ -86,8 +124,8 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
       newErrors.correo = 'El correo no tiene un formato valido';
     }
-    if (!formData.rolId) {
-      newErrors.rolId = 'El rol es requerido';
+    if (formData.rolIds.length === 0) {
+      newErrors.rolIds = 'Debe seleccionar al menos un rol';
     }
     if (!isEditing) {
       if (!formData.password.trim()) {
@@ -135,7 +173,6 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
     <>
       <div
         className={`modal-backdrop ${isOpen ? 'modal-backdrop--open' : ''}`}
-        onClick={onClose}
       />
       <div className={`modal ${isOpen ? 'modal--open' : ''}`}>
         <div className="modal__header">
@@ -209,24 +246,56 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
               )}
             </div>
 
-            <div className="form-group mb-4">
-              <label className="form-label form-label--required">Rol</label>
-              <select
-                name="rolId"
-                className={`form-control form-select ${errors.rolId ? 'form-input--error' : ''}`}
-                value={formData.rolId}
-                onChange={handleChange}
-                disabled={loadingRoles}
-              >
-                <option value="">{loadingRoles ? 'Cargando roles...' : 'Seleccione un rol'}</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-              {errors.rolId && (
-                <span className="form-helper form-helper--error">{errors.rolId}</span>
+            <div className="mb-4">
+              <div style={{ marginBottom: '8px' }}>
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: 'var(--font-weight-bold)',
+                  color: '#6B7280',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}>
+                  Roles <span style={{ color: 'var(--color-error)' }}>*</span>
+                </span>
+              </div>
+              {loadingRoles ? (
+                <div className="text-secondary" style={{ fontSize: 'var(--font-size-sm)' }}>
+                  Cargando roles...
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 0 }}>
+                  {roles.map((role, idx) => {
+                    const selected = formData.rolIds.includes(role.id);
+                    return (
+                      <button
+                        key={role.id}
+                        type="button"
+                        onClick={() => handleRoleToggle(role.id)}
+                        style={{
+                          padding: '8px 20px',
+                          fontSize: 'var(--font-size-sm)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          cursor: 'pointer',
+                          border: '1px solid var(--color-primary)',
+                          borderLeft: idx === 0 ? '1px solid var(--color-primary)' : 'none',
+                          borderRadius: idx === 0
+                            ? 'var(--radius-md) 0 0 var(--radius-md)'
+                            : idx === roles.length - 1
+                              ? '0 var(--radius-md) var(--radius-md) 0'
+                              : '0',
+                          backgroundColor: selected ? 'var(--color-primary)' : 'var(--color-bg-paper)',
+                          color: selected ? 'var(--color-primary-contrast)' : 'var(--color-primary)',
+                          transition: 'all var(--transition-fast)',
+                        }}
+                      >
+                        {role.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {errors.rolIds && (
+                <span className="form-helper form-helper--error">{errors.rolIds}</span>
               )}
             </div>
 

@@ -12,7 +12,7 @@ public class Colaborador
 
     public string Correo { get; set; } = string.Empty;
 
-    public string RolId { get; set; } = string.Empty;
+    public List<string> RolIds { get; set; } = new();
 
     public string PasswordHash { get; set; } = string.Empty;
 

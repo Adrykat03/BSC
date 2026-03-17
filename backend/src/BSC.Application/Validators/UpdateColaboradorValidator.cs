@@ -25,7 +25,9 @@ public class UpdateColaboradorValidator : AbstractValidator<UpdateColaboradorCom
         RuleFor(x => x.Area)
             .NotEmpty().WithMessage("El área es requerida.");
 
-        RuleFor(x => x.RolId)
-            .NotEmpty().WithMessage("El rol es requerido.");
+        RuleFor(x => x.RolIds)
+            .NotEmpty().WithMessage("Debe asignar al menos un rol.")
+            .Must(ids => ids != null && ids.All(id => !string.IsNullOrWhiteSpace(id)))
+            .WithMessage("Cada ID de rol debe ser válido y no estar vacío.");
     }
 }

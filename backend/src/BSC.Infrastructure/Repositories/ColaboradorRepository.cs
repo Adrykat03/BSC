@@ -59,4 +59,11 @@ public class ColaboradorRepository : IColaboradorRepository
             .Set(c => c.DeletedAt, DateTime.UtcNow);
         await _collection.UpdateOneAsync(filter, update);
     }
+
+    public async Task<List<Colaborador>> GetByRolIdAsync(string rolId)
+    {
+        var filter = Builders<Colaborador>.Filter.AnyEq(c => c.RolIds, rolId)
+                     & Builders<Colaborador>.Filter.Eq(c => c.IsDeleted, false);
+        return await _collection.Find(filter).ToListAsync();
+    }
 }

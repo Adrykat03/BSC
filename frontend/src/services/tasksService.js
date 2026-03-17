@@ -4,8 +4,11 @@ const API_BASE_URL = '/api';
 const ENDPOINT = '/tasks';
 
 export const tasksService = {
-  async getAll(page = 1, pageSize = 20) {
-    const response = await apiClient.get(`${ENDPOINT}?page=${page}&pageSize=${pageSize}`);
+  async getAll(page = 1, pageSize = 20, userEmail = null, userRole = null) {
+    let url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
+    if (userEmail) url += `&userEmail=${encodeURIComponent(userEmail)}`;
+    if (userRole) url += `&userRole=${encodeURIComponent(userRole)}`;
+    const response = await apiClient.get(url);
     return response.data ?? { items: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 };
   },
 
@@ -36,11 +39,64 @@ export const tasksService = {
     return apiClient.delete(`${ENDPOINT}/${id}`);
   },
 
+  async changeStatus(taskId, { newStatus, changedByEmail, changedByRole, comment }) {
+    const response = await apiClient.put(`${ENDPOINT}/${taskId}/status`, {
+      newStatus,
+      changedByEmail,
+      changedByRole,
+      comment,
+    });
+    return response;
+  },
+
+  async assignTask(taskId, { assigneeId, assignerEmail, assignerRole }) {
+    const response = await apiClient.put(`${ENDPOINT}/${taskId}/assign`, {
+      assigneeId,
+      assignerEmail,
+      assignerRole,
+    });
+    return response;
+  },
+
+  async uploadEvidence(taskId, file, uploaderEmail) {
+    const formData = new FormData();
+    formData.append('evidence', file);
+    formData.append('uploaderEmail', uploaderEmail);
+    const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${taskId}/evidence`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  },
+
   async downloadEvidence(id) {
     const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${id}/evidence`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const disposition = response.headers.get('Content-Disposition');
     let filename = 'evidencia';
+    if (disposition) {
+      const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (match && match[1]) {
+        filename = match[1].replace(/['"]/g, '');
+      }
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  },
+
+  async downloadInsumo(id) {
+    const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${id}/insumo`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = 'insumo';
     if (disposition) {
       const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
       if (match && match[1]) {

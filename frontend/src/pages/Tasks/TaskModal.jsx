@@ -14,35 +14,37 @@ const ALLOWED_TYPES = [
 const ALLOWED_EXTENSIONS = '.pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-const TaskModal = ({ isOpen, onClose, onSubmit, task, loading }) => {
+const TaskModal = ({ isOpen, onClose, onSubmit, task, loading, userRole = 'Gerente' }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    assignedTo: '',
     estimatedTime: '',
+    insumos: '',
   });
-  const [evidenceFile, setEvidenceFile] = useState(null);
+  const [insumoFile, setInsumoFile] = useState(null);
   const [errors, setErrors] = useState({});
 
   const isEditing = Boolean(task);
+  const isGerente = userRole === 'Gerente';
+  const isLider = userRole === 'Lider';
 
   useEffect(() => {
     if (task) {
       setFormData({
         title: task.title || '',
         description: task.description || '',
-        assignedTo: task.assignedTo || '',
         estimatedTime: task.estimatedTime ?? '',
+        insumos: task.insumos || '',
       });
     } else {
       setFormData({
         title: '',
         description: '',
-        assignedTo: '',
         estimatedTime: '',
+        insumos: '',
       });
     }
-    setEvidenceFile(null);
+    setInsumoFile(null);
     setErrors({});
   }, [task, isOpen]);
 
@@ -54,12 +56,12 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, loading }) => {
     if (!formData.description.trim()) {
       newErrors.description = 'La descripcion es requerida';
     }
-    if (evidenceFile) {
-      if (!ALLOWED_TYPES.includes(evidenceFile.type)) {
-        newErrors.evidence = 'Tipo de archivo no permitido. Use: PDF, JPG, PNG, DOC, DOCX, XLS, XLSX';
+    if (insumoFile) {
+      if (!ALLOWED_TYPES.includes(insumoFile.type)) {
+        newErrors.insumoFile = 'Tipo de archivo no permitido. Use: PDF, JPG, PNG, DOC, DOCX, XLS, XLSX';
       }
-      if (evidenceFile.size > MAX_FILE_SIZE) {
-        newErrors.evidence = 'El archivo no debe superar los 10MB';
+      if (insumoFile.size > MAX_FILE_SIZE) {
+        newErrors.insumoFile = 'El archivo no debe superar los 10MB';
       }
     }
     setErrors(newErrors);
@@ -76,9 +78,9 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, loading }) => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0] || null;
-    setEvidenceFile(file);
-    if (errors.evidence) {
-      setErrors((prev) => ({ ...prev, evidence: '' }));
+    setInsumoFile(file);
+    if (errors.insumoFile) {
+      setErrors((prev) => ({ ...prev, insumoFile: '' }));
     }
   };
 
@@ -89,14 +91,14 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, loading }) => {
     const data = new FormData();
     data.append('title', formData.title.trim());
     data.append('description', formData.description.trim());
-    if (formData.assignedTo) {
-      data.append('assignedTo', formData.assignedTo);
-    }
     if (formData.estimatedTime !== '' && formData.estimatedTime !== null) {
       data.append('estimatedTime', formData.estimatedTime);
     }
-    if (evidenceFile) {
-      data.append('evidence', evidenceFile);
+    if (formData.insumos.trim()) {
+      data.append('insumos', formData.insumos.trim());
+    }
+    if (insumoFile) {
+      data.append('insumoFile', insumoFile);
     }
 
     onSubmit(data);
@@ -104,11 +106,16 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, loading }) => {
 
   if (!isOpen) return null;
 
+  // Lider can only edit title, description, insumos
+  const canEditTitle = isGerente || isLider;
+  const canEditDescription = isGerente || isLider;
+  const canEditEstimatedTime = isGerente;
+  const canEditInsumos = isGerente || isLider;
+
   return (
     <>
       <div
         className={`modal-backdrop ${isOpen ? 'modal-backdrop--open' : ''}`}
-        onClick={onClose}
       />
       <div className={`modal ${isOpen ? 'modal--open' : ''}`}>
         <div className="modal__header">
@@ -131,6 +138,7 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, loading }) => {
                 value={formData.title}
                 onChange={handleChange}
                 placeholder="Titulo de la tarea"
+                disabled={!canEditTitle}
               />
               {errors.title && (
                 <span className="form-helper form-helper--error">{errors.title}</span>
@@ -146,69 +154,76 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, loading }) => {
                 onChange={handleChange}
                 placeholder="Descripcion de la tarea"
                 rows={3}
+                disabled={!canEditDescription}
               />
               {errors.description && (
                 <span className="form-helper form-helper--error">{errors.description}</span>
               )}
             </div>
 
-            <div className="form-group mb-4">
-              <label className="form-label">Persona asignada</label>
-              <select
-                name="assignedTo"
-                className="form-control form-select"
-                value={formData.assignedTo}
-                onChange={handleChange}
-              >
-                <option value="">Sin asignar</option>
-              </select>
-            </div>
-
-            <div className="form-group mb-4">
-              <label className="form-label">Tiempo estimado (horas)</label>
-              <input
-                type="number"
-                name="estimatedTime"
-                className="form-control"
-                value={formData.estimatedTime}
-                onChange={handleChange}
-                placeholder="Ej: 8"
-                min="0"
-                step="0.5"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Evidencia</label>
-              <div style={{ paddingTop: '24px' }}>
-                <label className="upload-zone" style={{ padding: 'var(--spacing-4)', cursor: 'pointer' }}>
-                  <input
-                    type="file"
-                    accept={ALLOWED_EXTENSIONS}
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                  />
-                  <Upload size={24} className="upload-zone__icon" style={{ marginBottom: '0' }} />
-                  <span className="upload-zone__text">
-                    {evidenceFile
-                      ? evidenceFile.name
-                      : 'Clic para seleccionar archivo'}
-                  </span>
-                  <span className="upload-zone__hint">PDF, JPG, PNG, DOC, DOCX, XLS, XLSX (max 10MB)</span>
-                </label>
-                {isEditing && task?.evidenceFileName && !evidenceFile && (
-                  <div className="d-flex items-center gap-2 mt-2">
-                    <FileText size={16} style={{ color: 'var(--color-text-secondary)' }} />
-                    <span className="text-sm text-secondary">
-                      Archivo actual: {task.evidenceFileName}
-                    </span>
-                  </div>
-                )}
-                {errors.evidence && (
-                  <span className="form-helper form-helper--error">{errors.evidence}</span>
-                )}
+            {canEditEstimatedTime && (
+              <div className="form-group mb-4">
+                <label className="form-label">Tiempo estimado (horas)</label>
+                <input
+                  type="number"
+                  name="estimatedTime"
+                  className="form-control"
+                  value={formData.estimatedTime}
+                  onChange={handleChange}
+                  placeholder="Ej: 8"
+                  min="0"
+                  step="0.5"
+                />
               </div>
-            </div>
+            )}
+
+            {canEditInsumos && (
+              <>
+                <div className="form-group mb-4">
+                  <label className="form-label">Insumos (texto)</label>
+                  <textarea
+                    name="insumos"
+                    className="form-control form-textarea"
+                    value={formData.insumos}
+                    onChange={handleChange}
+                    placeholder="Descripcion de insumos necesarios"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Archivo de insumo</label>
+                  <div style={{ paddingTop: '24px' }}>
+                    <label className="upload-zone" style={{ padding: 'var(--spacing-4)', cursor: 'pointer' }}>
+                      <input
+                        type="file"
+                        accept={ALLOWED_EXTENSIONS}
+                        onChange={handleFileChange}
+                        style={{ display: 'none' }}
+                      />
+                      <Upload size={24} className="upload-zone__icon" style={{ marginBottom: '0' }} />
+                      <span className="upload-zone__text">
+                        {insumoFile
+                          ? insumoFile.name
+                          : 'Clic para seleccionar archivo'}
+                      </span>
+                      <span className="upload-zone__hint">PDF, JPG, PNG, DOC, DOCX, XLS, XLSX (max 10MB)</span>
+                    </label>
+                    {isEditing && task?.insumoFileName && !insumoFile && (
+                      <div className="d-flex items-center gap-2 mt-2">
+                        <FileText size={16} style={{ color: 'var(--color-text-secondary)' }} />
+                        <span className="text-sm text-secondary">
+                          Archivo actual: {task.insumoFileName}
+                        </span>
+                      </div>
+                    )}
+                    {errors.insumoFile && (
+                      <span className="form-helper form-helper--error">{errors.insumoFile}</span>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="modal__footer">

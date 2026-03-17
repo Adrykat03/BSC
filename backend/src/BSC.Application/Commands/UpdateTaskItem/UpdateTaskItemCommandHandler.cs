@@ -1,5 +1,5 @@
 using BSC.Application.DTOs;
-using BSC.Domain.Entities;
+using BSC.Application.Mappings;
 using BSC.Domain.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -20,7 +20,8 @@ public class UpdateTaskItemCommandHandler : IRequestHandler<UpdateTaskItemComman
     };
 
     private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
-    private const string UploadsBasePath = "/app/uploads/tasks";
+    private const string FilesBasePath = "/app/files";
+    private const string InsumosRelativeDir = "insumos";
 
     public UpdateTaskItemCommandHandler(ITaskItemRepository taskItemRepository, ILogger<UpdateTaskItemCommandHandler> logger)
     {
@@ -35,28 +36,29 @@ public class UpdateTaskItemCommandHandler : IRequestHandler<UpdateTaskItemComman
         {
             return ApiResponse<TaskItemDto>.Fail(
                 "Tarea no encontrada.",
-                new List<string> { $"No se encontró una tarea con el ID '{request.Id}'." }
+                new List<string> { $"No se encontro una tarea con el ID '{request.Id}'." }
             );
         }
 
         taskItem.Title = request.Title;
         taskItem.Description = request.Description;
-        taskItem.AssignedTo = request.AssignedTo;
         taskItem.EstimatedTime = request.EstimatedTime;
+        taskItem.Insumos = request.Insumos;
         taskItem.UpdatedAt = DateTime.UtcNow;
+        taskItem.UpdatedBy = request.UpdatedByEmail;
 
-        // Procesar archivo de evidencia si se proporciona
-        if (request.Evidence != null && request.Evidence.Length > 0)
+        // Procesar archivo de insumo si se proporciona
+        if (request.InsumoFile != null && request.InsumoFile.Length > 0)
         {
-            if (request.Evidence.Length > MaxFileSize)
+            if (request.InsumoFile.Length > MaxFileSize)
             {
                 return ApiResponse<TaskItemDto>.Fail(
-                    "El archivo excede el tamaño máximo permitido.",
-                    new List<string> { "El tamaño máximo permitido es 10MB." }
+                    "El archivo excede el tamano maximo permitido.",
+                    new List<string> { "El tamano maximo permitido es 10MB." }
                 );
             }
 
-            var extension = Path.GetExtension(request.Evidence.FileName);
+            var extension = Path.GetExtension(request.InsumoFile.FileName);
             if (!AllowedExtensions.Contains(extension))
             {
                 return ApiResponse<TaskItemDto>.Fail(
@@ -65,46 +67,30 @@ public class UpdateTaskItemCommandHandler : IRequestHandler<UpdateTaskItemComman
                 );
             }
 
-            // Eliminar archivo anterior si existe
-            if (!string.IsNullOrEmpty(taskItem.EvidenceFilePath) && File.Exists(taskItem.EvidenceFilePath))
+            // NO eliminar archivo anterior — los archivos nunca se borran del disco
+
+            // Guardar nuevo archivo con timestamp para evitar colisiones
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var safeFileName = Path.GetFileName(request.InsumoFile.FileName);
+            var diskFileName = $"{taskItem.Id}_{timestamp}_{safeFileName}";
+            var relativePath = Path.Combine(InsumosRelativeDir, diskFileName);
+            var absolutePath = Path.Combine(FilesBasePath, relativePath);
+
+            Directory.CreateDirectory(Path.Combine(FilesBasePath, InsumosRelativeDir));
+            using (var stream = new FileStream(absolutePath, FileMode.Create))
             {
-                File.Delete(taskItem.EvidenceFilePath);
+                await request.InsumoFile.CopyToAsync(stream, cancellationToken);
             }
 
-            // Guardar nuevo archivo
-            var fileName = $"{taskItem.Id}{extension}";
-            var filePath = Path.Combine(UploadsBasePath, fileName);
-
-            Directory.CreateDirectory(UploadsBasePath);
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await request.Evidence.CopyToAsync(stream, cancellationToken);
-            }
-
-            taskItem.EvidenceFileName = request.Evidence.FileName;
-            taskItem.EvidenceFilePath = filePath;
-            taskItem.EvidenceContentType = request.Evidence.ContentType;
+            taskItem.InsumoFileName = request.InsumoFile.FileName;
+            taskItem.InsumoFilePath = relativePath;
+            taskItem.InsumoContentType = request.InsumoFile.ContentType;
         }
 
         var updated = await _taskItemRepository.UpdateAsync(taskItem);
 
         _logger.LogInformation("Tarea actualizada exitosamente: {Title} ({TaskId})", updated.Title, updated.Id);
 
-        var dto = new TaskItemDto
-        {
-            Id = updated.Id,
-            Title = updated.Title,
-            Description = updated.Description,
-            AssignedTo = updated.AssignedTo,
-            Status = updated.Status,
-            EstimatedTime = updated.EstimatedTime,
-            ActualTime = updated.ActualTime,
-            EvidenceFileName = updated.EvidenceFileName,
-            HasEvidence = !string.IsNullOrEmpty(updated.EvidenceFilePath),
-            CreatedAt = updated.CreatedAt,
-            UpdatedAt = updated.UpdatedAt
-        };
-
-        return ApiResponse<TaskItemDto>.Ok(dto, "Tarea actualizada exitosamente.");
+        return ApiResponse<TaskItemDto>.Ok(TaskItemMapper.ToDto(updated), "Tarea actualizada exitosamente.");
     }
 }

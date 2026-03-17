@@ -1,4 +1,6 @@
 using BSC.Application.DTOs;
+using BSC.Application.Mappings;
+using BSC.Domain.Constants;
 using BSC.Domain.Entities;
 using BSC.Domain.Interfaces;
 using MediatR;
@@ -20,7 +22,8 @@ public class CreateTaskItemCommandHandler : IRequestHandler<CreateTaskItemComman
     };
 
     private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
-    private const string UploadsBasePath = "/app/uploads/tasks";
+    private const string FilesBasePath = "/app/files";
+    private const string InsumosRelativeDir = "insumos";
 
     public CreateTaskItemCommandHandler(ITaskItemRepository taskItemRepository, ILogger<CreateTaskItemCommandHandler> logger)
     {
@@ -34,25 +37,27 @@ public class CreateTaskItemCommandHandler : IRequestHandler<CreateTaskItemComman
         {
             Title = request.Title,
             Description = request.Description,
-            AssignedTo = request.AssignedTo,
-            Status = "Creada",
+            Status = TaskStatuses.Creada,
             EstimatedTime = request.EstimatedTime,
+            Insumos = request.Insumos,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedBy = request.CreatedByEmail,
+            UpdatedAt = DateTime.UtcNow,
+            UpdatedBy = request.CreatedByEmail
         };
 
-        // Procesar archivo de evidencia si se proporciona
-        if (request.Evidence != null && request.Evidence.Length > 0)
+        // Procesar archivo de insumo si se proporciona
+        if (request.InsumoFile != null && request.InsumoFile.Length > 0)
         {
-            if (request.Evidence.Length > MaxFileSize)
+            if (request.InsumoFile.Length > MaxFileSize)
             {
                 return ApiResponse<TaskItemDto>.Fail(
-                    "El archivo excede el tamaño máximo permitido.",
-                    new List<string> { "El tamaño máximo permitido es 10MB." }
+                    "El archivo excede el tamano maximo permitido.",
+                    new List<string> { "El tamano maximo permitido es 10MB." }
                 );
             }
 
-            var extension = Path.GetExtension(request.Evidence.FileName);
+            var extension = Path.GetExtension(request.InsumoFile.FileName);
             if (!AllowedExtensions.Contains(extension))
             {
                 return ApiResponse<TaskItemDto>.Fail(
@@ -64,49 +69,34 @@ public class CreateTaskItemCommandHandler : IRequestHandler<CreateTaskItemComman
             // Crear tarea primero para obtener el Id
             var created = await _taskItemRepository.CreateAsync(taskItem);
 
-            // Guardar archivo
-            var fileName = $"{created.Id}{extension}";
-            var filePath = Path.Combine(UploadsBasePath, fileName);
+            // Guardar archivo de insumo en disco
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var safeFileName = Path.GetFileName(request.InsumoFile.FileName);
+            var diskFileName = $"{created.Id}_{timestamp}_{safeFileName}";
+            var relativePath = Path.Combine(InsumosRelativeDir, diskFileName);
+            var absolutePath = Path.Combine(FilesBasePath, relativePath);
 
-            Directory.CreateDirectory(UploadsBasePath);
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            Directory.CreateDirectory(Path.Combine(FilesBasePath, InsumosRelativeDir));
+            using (var stream = new FileStream(absolutePath, FileMode.Create))
             {
-                await request.Evidence.CopyToAsync(stream, cancellationToken);
+                await request.InsumoFile.CopyToAsync(stream, cancellationToken);
             }
 
-            // Actualizar tarea con datos del archivo
-            created.EvidenceFileName = request.Evidence.FileName;
-            created.EvidenceFilePath = filePath;
-            created.EvidenceContentType = request.Evidence.ContentType;
+            // Actualizar tarea con path relativo (NO absoluto, NO contenido binario)
+            created.InsumoFileName = request.InsumoFile.FileName;
+            created.InsumoFilePath = relativePath;
+            created.InsumoContentType = request.InsumoFile.ContentType;
             await _taskItemRepository.UpdateAsync(created);
 
-            _logger.LogInformation("Tarea creada exitosamente con evidencia: {Title} ({TaskId})", created.Title, created.Id);
+            _logger.LogInformation("Tarea creada exitosamente con insumo: {Title} ({TaskId})", created.Title, created.Id);
 
-            return ApiResponse<TaskItemDto>.Ok(MapToDto(created), "Tarea creada exitosamente.");
+            return ApiResponse<TaskItemDto>.Ok(TaskItemMapper.ToDto(created), "Tarea creada exitosamente.");
         }
 
         var createdTask = await _taskItemRepository.CreateAsync(taskItem);
 
         _logger.LogInformation("Tarea creada exitosamente: {Title} ({TaskId})", createdTask.Title, createdTask.Id);
 
-        return ApiResponse<TaskItemDto>.Ok(MapToDto(createdTask), "Tarea creada exitosamente.");
-    }
-
-    private static TaskItemDto MapToDto(TaskItem taskItem)
-    {
-        return new TaskItemDto
-        {
-            Id = taskItem.Id,
-            Title = taskItem.Title,
-            Description = taskItem.Description,
-            AssignedTo = taskItem.AssignedTo,
-            Status = taskItem.Status,
-            EstimatedTime = taskItem.EstimatedTime,
-            ActualTime = taskItem.ActualTime,
-            EvidenceFileName = taskItem.EvidenceFileName,
-            HasEvidence = !string.IsNullOrEmpty(taskItem.EvidenceFilePath),
-            CreatedAt = taskItem.CreatedAt,
-            UpdatedAt = taskItem.UpdatedAt
-        };
+        return ApiResponse<TaskItemDto>.Ok(TaskItemMapper.ToDto(createdTask), "Tarea creada exitosamente.");
     }
 }

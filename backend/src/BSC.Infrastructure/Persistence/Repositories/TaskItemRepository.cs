@@ -1,3 +1,4 @@
+using BSC.Domain.Constants;
 using BSC.Domain.Entities;
 using BSC.Domain.Interfaces;
 using MongoDB.Driver;
@@ -32,6 +33,56 @@ public class TaskItemRepository : ITaskItemRepository
     public async Task<int> GetTotalCountAsync()
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
+        return (int)await _collection.CountDocumentsAsync(filter);
+    }
+
+    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, int page, int pageSize)
+    {
+        var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
+                   & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
+                   & Builders<TaskItem>.Filter.Ne(t => t.Status, TaskStatuses.Completa);
+
+        var skip = (page - 1) * pageSize;
+
+        return await _collection
+            .Find(filter)
+            .SortByDescending(t => t.CreatedAt)
+            .Skip(skip)
+            .Limit(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<int> GetCountByLeaderEmailAsync(string email)
+    {
+        var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
+                   & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
+                   & Builders<TaskItem>.Filter.Ne(t => t.Status, TaskStatuses.Completa);
+
+        return (int)await _collection.CountDocumentsAsync(filter);
+    }
+
+    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize)
+    {
+        var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
+                   & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
+                   & Builders<TaskItem>.Filter.In(t => t.Status, statuses);
+
+        var skip = (page - 1) * pageSize;
+
+        return await _collection
+            .Find(filter)
+            .SortByDescending(t => t.CreatedAt)
+            .Skip(skip)
+            .Limit(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses)
+    {
+        var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
+                   & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
+                   & Builders<TaskItem>.Filter.In(t => t.Status, statuses);
+
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 

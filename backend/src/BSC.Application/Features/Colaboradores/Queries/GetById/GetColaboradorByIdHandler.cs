@@ -30,11 +30,14 @@ public class GetColaboradorByIdHandler : IRequestHandler<GetColaboradorByIdQuery
             return ApiResponse<ColaboradorDto>.Fail("Colaborador no encontrado.");
         }
 
-        var rolName = string.Empty;
-        if (!string.IsNullOrEmpty(colaborador.RolId))
+        var rolNames = new List<string>();
+        foreach (var rolId in colaborador.RolIds)
         {
-            var role = await _roleRepository.GetByIdAsync(colaborador.RolId);
-            rolName = role?.Name ?? string.Empty;
+            if (!string.IsNullOrEmpty(rolId))
+            {
+                var role = await _roleRepository.GetByIdAsync(rolId);
+                rolNames.Add(role?.Name ?? string.Empty);
+            }
         }
 
         var dto = new ColaboradorDto
@@ -44,8 +47,8 @@ public class GetColaboradorByIdHandler : IRequestHandler<GetColaboradorByIdQuery
             Cedula = colaborador.Cedula,
             Area = colaborador.Area,
             Correo = colaborador.Correo,
-            RolId = colaborador.RolId,
-            RolName = rolName,
+            RolIds = colaborador.RolIds,
+            RolNames = rolNames,
             CreatedAt = colaborador.CreatedAt,
             UpdatedAt = colaborador.UpdatedAt
         };

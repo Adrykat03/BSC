@@ -16,6 +16,7 @@ services:
       - "27017:27017"
     volumes:
       - bsc_mongo_data:/data/db
+      - ./seeds:/seeds:ro
     networks:
       bsc_net:
         ipv4_address: 19.168.78.10
@@ -36,6 +37,8 @@ services:
       MongoDbSettings__DatabaseName: bsc_db
     ports:
       - "5000:8080"
+    volumes:
+      - ./files:/app/files
     depends_on:
       - bsc_mongo
     networks:
@@ -62,6 +65,22 @@ services:
     networks:
       bsc_net:
         ipv4_address: 19.168.78.12
+
+  # ============================================
+  # File Server - httpd sirviendo archivos
+  # Evidencias e insumos de tareas
+  # ============================================
+  bsc_fileserver:
+    image: httpd:alpine
+    container_name: bsc_fileserver
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    volumes:
+      - ./files:/usr/local/apache2/htdocs:ro
+    networks:
+      bsc_net:
+        ipv4_address: 19.168.78.16
 
   # ============================================
   # SonarQube - Analisis de codigo

@@ -10,5 +10,5 @@ public class CreateColaboradorCommand : IRequest<ApiResponse<ColaboradorDto>>
     public string Area { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
-    public string RolId { get; set; } = string.Empty;
+    public List<string> RolIds { get; set; } = new();
 }

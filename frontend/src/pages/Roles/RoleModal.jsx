@@ -48,7 +48,6 @@ const RoleModal = ({ isOpen, onClose, onSubmit, role, loading }) => {
     <>
       <div
         className={`modal-backdrop ${isOpen ? 'modal-backdrop--open' : ''}`}
-        onClick={onClose}
       />
       <div className={`modal ${isOpen ? 'modal--open' : ''}`}>
         <div className="modal__header">

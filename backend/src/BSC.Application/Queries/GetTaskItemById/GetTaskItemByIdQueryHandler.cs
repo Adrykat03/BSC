@@ -1,4 +1,5 @@
 using BSC.Application.DTOs;
+using BSC.Application.Mappings;
 using BSC.Domain.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -26,25 +27,10 @@ public class GetTaskItemByIdQueryHandler : IRequestHandler<GetTaskItemByIdQuery,
         {
             return ApiResponse<TaskItemDto>.Fail(
                 "Tarea no encontrada.",
-                new List<string> { $"No se encontró una tarea con el ID '{request.Id}'." }
+                new List<string> { $"No se encontro una tarea con el ID '{request.Id}'." }
             );
         }
 
-        var dto = new TaskItemDto
-        {
-            Id = taskItem.Id,
-            Title = taskItem.Title,
-            Description = taskItem.Description,
-            AssignedTo = taskItem.AssignedTo,
-            Status = taskItem.Status,
-            EstimatedTime = taskItem.EstimatedTime,
-            ActualTime = taskItem.ActualTime,
-            EvidenceFileName = taskItem.EvidenceFileName,
-            HasEvidence = !string.IsNullOrEmpty(taskItem.EvidenceFilePath),
-            CreatedAt = taskItem.CreatedAt,
-            UpdatedAt = taskItem.UpdatedAt
-        };
-
-        return ApiResponse<TaskItemDto>.Ok(dto);
+        return ApiResponse<TaskItemDto>.Ok(TaskItemMapper.ToDto(taskItem));
     }
 }
