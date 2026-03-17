@@ -232,7 +232,9 @@ Seguir la estructura definida en `components.css`:
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.x",
-    "lucide-react": "^0.x"
+    "lucide-react": "^0.x",
+    "chart.js": "^4.x",
+    "react-chartjs-2": "^5.x"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.x",
@@ -240,6 +242,20 @@ Seguir la estructura definida en `components.css`:
   }
 }
 ```
+
+## Graficos de Datos
+Para visualizacion de datos usar **Chart.js** con el wrapper **react-chartjs-2**. No usar otras librerias de graficos.
+
+```jsx
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
+import { Doughnut, Bar } from 'react-chartjs-2';
+
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+```
+
+- Usar colores del design system BSC (`#E31837` primary, `#1A1A2E` secondary)
+- Envolver cada grafico en una card (`.card`, `.card__header`, `.card__body`)
+- Tipos disponibles: Bar, Line, Doughnut, Pie, Radar, PolarArea, Scatter, Bubble
 
 ## Compilacion y Despliegue Local
 
