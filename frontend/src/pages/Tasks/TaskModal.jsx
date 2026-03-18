@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
 import { tasksService } from '../../services/tasksService';
 import { colaboradorService } from '../../services/colaboradorService';
+import './TaskModal.css';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
@@ -587,7 +588,7 @@ const TaskModal = ({
     <>
       <div className={`modal-backdrop ${isOpen ? 'modal-backdrop--open' : ''}`} />
       <div
-        className={`modal ${isOpen ? 'modal--open' : ''}`}
+        className={`modal task-modal ${isOpen ? 'modal--open' : ''}`}
         style={{ maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
         {/* ── Header ── */}
@@ -655,8 +656,8 @@ const TaskModal = ({
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <div className="modal__body">
             {/* ── Row 1: Titulo (50%) + Fecha entrega (30%) + Tiempo estimado (20%) ── */}
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-              <div style={{ width: 'calc(50% - 16px)', flexShrink: 0 }}>
+            <div className="task-modal__row" style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                 <Label required={!isColaborador}>Titulo</Label>
                 <input
                   type="text"
@@ -672,7 +673,7 @@ const TaskModal = ({
                   <span className="form-helper form-helper--error">{errors.title}</span>
                 )}
               </div>
-              <div style={{ flex: 3, minWidth: 0 }}>
+              <div style={{ flex: '0 1 200px', minWidth: '140px' }}>
                 <Label>Fecha entrega</Label>
                 <input
                   type="datetime-local"
@@ -684,7 +685,7 @@ const TaskModal = ({
                   style={(isColaborador || (isLider && isEditing)) ? readOnlyStyle : undefined}
                 />
               </div>
-              <div style={{ flex: 2, minWidth: 0 }}>
+              <div style={{ flex: '0 1 120px', minWidth: '100px' }}>
                 <Label>&#128339; (h)</Label>
                 <input
                   type="number"
@@ -702,9 +703,9 @@ const TaskModal = ({
             </div>
 
             {/* ── Row 2: Descripcion (50%) | Insumos texto + Insumo drag&drop (50%) ── */}
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+            <div className="task-modal__row" style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
               {/* Left — Descripcion */}
-              <div style={{ width: 'calc(50% - 8px)', flexShrink: 0 }}>
+              <div style={{ flex: '1 1 280px', minWidth: 0 }}>
                 <Label required={!isColaborador}>Descripcion</Label>
                 <textarea
                   name="description"
@@ -725,7 +726,7 @@ const TaskModal = ({
               </div>
 
               {/* Right — Insumos texto (top 50%) + Insumo archivo (bottom 50%) */}
-              <div style={{ width: 'calc(50% - 8px)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ flex: '1 1 280px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <Label>Insumos (texto)</Label>
                   <textarea
@@ -788,9 +789,9 @@ const TaskModal = ({
 
             {/* ── Row 3: Evidencia texto (50%) + Evidencia archivo (50%) — Lider/Colaborador ── */}
             {!isGerente && (
-              <div style={{ display: 'flex', gap: '16px' }}>
+              <div className="task-modal__row" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 {/* Evidencia texto */}
-                <div style={{ width: 'calc(50% - 8px)', flexShrink: 0 }}>
+                <div style={{ flex: '1 1 280px', minWidth: 0 }}>
                   <Label>Evidencia (texto)</Label>
                   <textarea
                     name="evidenceText"
@@ -803,7 +804,7 @@ const TaskModal = ({
                 </div>
 
                 {/* Evidencia archivo */}
-                <div style={{ width: 'calc(50% - 8px)', flexShrink: 0 }}>
+                <div style={{ flex: '1 1 280px', minWidth: 0 }}>
                   {(isColaborador || isLider) ? (
                     <FileDropZone
                       label="Archivos de evidencia"

@@ -10,6 +10,7 @@ import { tasksService } from '../../services/tasksService';
 import { colaboradorService } from '../../services/colaboradorService';
 import SessionContext from '../../context/SessionContext';
 import TaskModal from './TaskModal';
+import './Tasks.css';
 
 const PAGE_SIZE = 20;
 
@@ -668,14 +669,14 @@ const Tasks = () => {
       />
 
       <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <div>
             <h1 className="page-header__title">Tareas</h1>
             <p className="page-header__subtitle">
               Gestion de tareas del sistema
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
+          <div style={{ display: 'flex', gap: '4px' }}>
             <button
               className="btn btn--secondary btn--sm btn--icon"
               onClick={handleExportXlsx}
@@ -713,8 +714,8 @@ const Tasks = () => {
       </div>
 
       {/* ── Toolbar: Search + Filters in one row ── */}
-      <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-        <div className="header__search" style={{ flex: 1 }}>
+      <div className="tasks-toolbar" style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="header__search" style={{ flex: '1 1 200px', minWidth: 0 }}>
           <input
             type="text"
             className="header__search-input"
@@ -730,7 +731,7 @@ const Tasks = () => {
           className="form-control form-select"
           value={filterStatus}
           onChange={(e) => { setFilterStatus(e.target.value); setSearchText(''); }}
-          style={{ width: '220px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px' }}
+          style={{ width: '220px', minWidth: '150px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px', flex: '0 1 220px' }}
         >
           <option value="">Estado: Todas</option>
           {VISIBLE_STATUSES.map((s) => (
@@ -742,7 +743,7 @@ const Tasks = () => {
           className="form-control form-select"
           value={filterDate}
           onChange={(e) => setFilterDate(e.target.value)}
-          style={{ width: '180px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px' }}
+          style={{ width: '180px', minWidth: '140px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px', flex: '0 1 180px' }}
         >
           {DATE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>Fecha: {opt.label}</option>
@@ -770,10 +771,10 @@ const Tasks = () => {
                     <tr>
                       <th>Titulo</th>
                       {(isGerente || isLider) && <th>Asignado a</th>}
-                      <th>Lider</th>
+                      <th className="table__col--secondary">Lider</th>
                       <th>Estado</th>
-                      <th>Entrega</th>
-                      <th data-tooltip="Tiempo estimado (horas)">&#128339;</th>
+                      <th className="table__col--secondary">Entrega</th>
+                      <th className="table__col--secondary" data-tooltip="Tiempo estimado (horas)">&#128339;</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -807,7 +808,7 @@ const Tasks = () => {
                               {task.assignedToName || 'Sin asignar'}
                             </td>
                           )}
-                          <td className="text-secondary">
+                          <td className="text-secondary table__col--secondary">
                             {task.assignedLeaderName || '-'}
                           </td>
                           <td>
@@ -815,10 +816,10 @@ const Tasks = () => {
                               {task.status}
                             </span>
                           </td>
-                          <td className="text-secondary" style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
+                          <td className="text-secondary table__col--secondary" style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>
                             {formatDueDate(task.dueDate)}
                           </td>
-                          <td>{formatTime(task.estimatedTime)}</td>
+                          <td className="table__col--secondary">{formatTime(task.estimatedTime)}</td>
                           <td>
                             <div className="table__actions">
                               {/* Edit button — Gerente (full) or Lider (limited) */}
@@ -964,7 +965,7 @@ const Tasks = () => {
       {historyModalOpen && historyTask && (
         <>
           <div className="modal-backdrop modal-backdrop--open" />
-          <div className="modal modal--open" style={{ maxWidth: '650px' }}>
+          <div className="modal modal--open task-history-modal" style={{ maxWidth: '650px' }}>
             <div className="modal__header">
               <h3 className="modal__title">Historial — {historyTask.title}</h3>
               <button

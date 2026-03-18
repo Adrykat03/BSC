@@ -201,9 +201,9 @@ const Colaboradores = () => {
                   <thead>
                     <tr>
                       <th>Nombre Completo</th>
-                      <th>Cedula</th>
-                      <th>Area</th>
-                      <th>Correo</th>
+                      <th className="table__col--secondary">Cedula</th>
+                      <th className="table__col--secondary">Area</th>
+                      <th className="table__col--secondary">Correo</th>
                       <th>Rol</th>
                       <th>Acciones</th>
                     </tr>
@@ -212,9 +212,9 @@ const Colaboradores = () => {
                     {colaboradores.map((col) => (
                       <tr key={col.id}>
                         <td className="font-semibold">{col.nombreCompleto}</td>
-                        <td className="text-secondary">{col.cedula}</td>
-                        <td className="text-secondary">{col.area}</td>
-                        <td className="text-secondary">{col.correo}</td>
+                        <td className="text-secondary table__col--secondary">{col.cedula}</td>
+                        <td className="text-secondary table__col--secondary">{col.area}</td>
+                        <td className="text-secondary table__col--secondary">{col.correo}</td>
                         <td>
                           {col.rolNames && col.rolNames.length > 0 ? (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>

@@ -1,6 +1,6 @@
 import { useContext, useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { LogOut, User, ChevronDown, RefreshCw } from 'lucide-react';
+import { LogOut, User, ChevronDown, RefreshCw, Menu } from 'lucide-react';
 import SessionContext from '../../context/SessionContext';
 
 const pageTitles = {
@@ -10,7 +10,7 @@ const pageTitles = {
   '/colaboradores': 'Colaboradores',
 };
 
-const Header = () => {
+const Header = ({ isMobile, onOpenSidebar }) => {
   const location = useLocation();
   const title = pageTitles[location.pathname] || 'FlowPulse';
   const { user, logout, switchRole } = useContext(SessionContext);
@@ -44,7 +44,16 @@ const Header = () => {
   return (
     <div className="header">
       <div className="header__left">
-        <h1 className="text-xl font-semibold m-0">{title}</h1>
+        {isMobile && (
+          <button
+            className="header__hamburger"
+            onClick={onOpenSidebar}
+            aria-label="Abrir menu"
+          >
+            <Menu size={24} />
+          </button>
+        )}
+        <h1 className="text-xl font-semibold m-0 header__title">{title}</h1>
       </div>
       <div className="header__right">
         {user && (
@@ -91,7 +100,7 @@ const Header = () => {
               )}
               <button className="dropdown__item" onClick={logout}>
                 <LogOut size={16} />
-                Cerrar sesión
+                Cerrar sesion
               </button>
             </div>
           </div>

@@ -192,7 +192,7 @@
   color: #FFFFFF;
 }
 
-/* Responsive */
+/* Responsive - Tablet */
 @media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -218,5 +218,95 @@
 
   .timeline-selector .form-input {
     max-width: 100%;
+  }
+}
+
+/* Responsive - Small Mobile */
+@media (max-width: 639px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+  }
+
+  .highlight-cards {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-3);
+  }
+
+  .highlight-card {
+    padding: var(--spacing-4);
+    gap: var(--spacing-3);
+  }
+
+  .highlight-card__icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .highlight-card__value {
+    font-size: var(--font-size-base);
+  }
+
+  .highlight-card__label {
+    font-size: 10px;
+  }
+
+  .heatmap-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: var(--spacing-2);
+  }
+
+  .heatmap-cell {
+    padding: var(--spacing-3) var(--spacing-2);
+    min-height: 64px;
+  }
+
+  .heatmap-cell__name {
+    font-size: 10px;
+  }
+
+  .heatmap-cell__count {
+    font-size: var(--font-size-lg);
+  }
+
+  /* Charts: scrollable container */
+  .chart-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    min-width: 0;
+  }
+
+  .chart-container canvas {
+    min-width: 320px;
+  }
+
+  .dashboard-filter {
+    gap: var(--spacing-3);
+  }
+
+  .dashboard-filter__group {
+    width: 100%;
+  }
+
+  .dashboard-filter__group .form-input,
+  .dashboard-filter__group .form-select {
+    width: 100%;
+  }
+
+  .timeline-selector {
+    gap: var(--spacing-2);
+  }
+
+  .timeline-selector .form-input {
+    min-height: 44px;
+  }
+
+  .timeline-tags {
+    gap: var(--spacing-1);
+  }
+
+  .timeline-tag {
+    font-size: var(--font-size-xs);
+    padding: var(--spacing-1) var(--spacing-2);
   }
 }

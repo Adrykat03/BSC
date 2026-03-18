@@ -3,13 +3,29 @@ import { NavLink } from 'react-router-dom';
 import { Home, Shield, ClipboardList, Users } from 'lucide-react';
 import SessionContext from '../../context/SessionContext';
 
-const Sidebar = () => {
+const Sidebar = ({ isMobile, onCloseSidebar }) => {
   const { user } = useContext(SessionContext);
   const role = user?.role || '';
   const isAdmin = role === 'Administrador';
 
+  const handleNavClick = () => {
+    if (isMobile && onCloseSidebar) {
+      onCloseSidebar();
+    }
+  };
+
   return (
     <div className="sidebar">
+      {isMobile && (
+        <button
+          className="sidebar__close-btn"
+          onClick={onCloseSidebar}
+          aria-label="Cerrar menu"
+        >
+          &#10005;
+        </button>
+      )}
+
       <div className="sidebar__logo">
         <img src="/logo.png" alt="FlowPulse" style={{ maxWidth: '100%', height: 'auto', maxHeight: '48px' }} />
       </div>
@@ -23,6 +39,7 @@ const Sidebar = () => {
               className={({ isActive }) =>
                 `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
               }
+              onClick={handleNavClick}
             >
               <Home className="sidebar__nav-icon" size={20} />
               <span>Home</span>
@@ -38,6 +55,7 @@ const Sidebar = () => {
                   className={({ isActive }) =>
                     `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                   }
+                  onClick={handleNavClick}
                 >
                   <Shield className="sidebar__nav-icon" size={20} />
                   <span>Roles</span>
@@ -49,6 +67,7 @@ const Sidebar = () => {
                   className={({ isActive }) =>
                     `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                   }
+                  onClick={handleNavClick}
                 >
                   <Users className="sidebar__nav-icon" size={20} />
                   <span>Colaboradores</span>
@@ -67,6 +86,7 @@ const Sidebar = () => {
                   className={({ isActive }) =>
                     `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                   }
+                  onClick={handleNavClick}
                 >
                   <ClipboardList className="sidebar__nav-icon" size={20} />
                   <span>Tareas</span>

@@ -1,0 +1,29 @@
+/* ==========================================================================
+   Tasks Page - Responsive Overrides
+   Uses design system variables from /style/variables.css
+   ========================================================================== */
+
+/* Toolbar responsive */
+@media (max-width: 639px) {
+  .tasks-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .tasks-toolbar .header__search {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  .tasks-toolbar .form-select {
+    width: 100% !important;
+    flex: none !important;
+    min-height: 44px;
+  }
+
+  /* History modal - override inline max-width */
+  .task-history-modal {
+    max-width: 95vw !important;
+    width: 95vw !important;
+  }
+}

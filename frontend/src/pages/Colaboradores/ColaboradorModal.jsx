@@ -265,7 +265,7 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
                   Cargando roles...
                 </div>
               ) : (
-                <div style={{ display: 'flex', gap: 0 }}>
+                <div style={{ display: 'flex', gap: 0, flexWrap: 'wrap' }}>
                   {roles.map((role, idx) => {
                     const selected = formData.rolIds.includes(role.id);
                     return (
@@ -288,6 +288,7 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
                           backgroundColor: selected ? 'var(--color-primary)' : 'var(--color-bg-paper)',
                           color: selected ? 'var(--color-primary-contrast)' : 'var(--color-primary)',
                           transition: 'all var(--transition-fast)',
+                          minHeight: '44px',
                         }}
                       >
                         {role.name}
