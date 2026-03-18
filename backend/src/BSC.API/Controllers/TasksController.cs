@@ -44,18 +44,10 @@ public class TasksController : ControllerBase
     private string GetUserEmail() => User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
     private string GetUserRole()
     {
-        var raw = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
-        // Handle case where role claim contains a JSON array like ["Gerente"]
-        if (raw.StartsWith("["))
-        {
-            try
-            {
-                var roles = JsonSerializer.Deserialize<List<string>>(raw);
-                return roles?.FirstOrDefault() ?? string.Empty;
-            }
-            catch { return raw; }
-        }
-        return raw;
+        // ASP.NET mapea tanto "roles" (JSON array) como "role" (activo) a ClaimTypes.Role.
+        // El rol activo es el claim que NO es un JSON array.
+        var allRoles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+        return allRoles.FirstOrDefault(v => !v.TrimStart().StartsWith("[")) ?? string.Empty;
     }
 
     /// <summary>
