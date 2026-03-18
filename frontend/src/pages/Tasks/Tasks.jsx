@@ -78,6 +78,10 @@ const Tasks = () => {
   // Bulk upload file input ref
   const bulkFileInputRef = useRef(null);
 
+  // Search debounce ref
+  const searchDebounceRef = useRef(null);
+  const searchRef = useRef('');
+
   // History modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historyTask, setHistoryTask] = useState(null);
@@ -102,11 +106,15 @@ const Tasks = () => {
   const isLider = role === 'Lider';
   const isColaborador = role === 'Colaborador';
 
-  const loadTasks = useCallback(async (currentPage = 1) => {
+  const loadTasks = useCallback(async (currentPage = 1, search) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await tasksService.getAll(currentPage, PAGE_SIZE);
+      const searchValue = search !== undefined ? search : searchRef.current;
+      if (search !== undefined) {
+        searchRef.current = search;
+      }
+      const data = await tasksService.getAll(currentPage, PAGE_SIZE, searchValue);
       setTasks(data.items ?? []);
       setTotalPages(data.totalPages);
       setTotalCount(data.totalCount);
@@ -665,14 +673,6 @@ const Tasks = () => {
     if (task.status === 'Cancelada' && !isGerente) return false;
     if (filterStatus && task.status !== filterStatus) return false;
     if (!matchesDate(task)) return false;
-    if (searchText.trim()) {
-      const q = searchText.toLowerCase();
-      const matchTitle = (task.title || '').toLowerCase().includes(q);
-      const matchAssigned = (task.assignedToName || '').toLowerCase().includes(q);
-      const matchLeader = (task.assignedLeaderName || '').toLowerCase().includes(q);
-      const matchDesc = (task.description || '').toLowerCase().includes(q);
-      if (!matchTitle && !matchAssigned && !matchLeader && !matchDesc) return false;
-    }
     return true;
   });
 
@@ -745,7 +745,14 @@ const Tasks = () => {
             className="header__search-input"
             placeholder="Buscar.."
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchText(val);
+              if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+              searchDebounceRef.current = setTimeout(() => {
+                loadTasks(1, val);
+              }, 300);
+            }}
             style={{ width: '100%' }}
           />
           <Search size={18} className="header__search-icon" />
@@ -754,7 +761,7 @@ const Tasks = () => {
         <select
           className="form-control form-select"
           value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value); setSearchText(''); }}
+          onChange={(e) => { setFilterStatus(e.target.value); setSearchText(''); searchRef.current = ''; loadTasks(1, ''); }}
           style={{ width: '220px', minWidth: '150px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px', flex: '0 1 220px' }}
         >
           <option value="">Estado: Todas</option>

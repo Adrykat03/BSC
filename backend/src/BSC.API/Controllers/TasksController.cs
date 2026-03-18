@@ -80,14 +80,16 @@ public class TasksController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<PaginatedResult<TaskItemDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null)
     {
         var query = new GetTaskItemsQuery
         {
             Page = page,
             PageSize = pageSize,
             UserEmail = GetUserEmail(),
-            UserRole = GetUserRole()
+            UserRole = GetUserRole(),
+            Search = search
         };
         var result = await _mediator.Send(query);
         return Ok(result);

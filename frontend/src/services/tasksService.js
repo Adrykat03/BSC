@@ -10,8 +10,11 @@ function getAuthHeader() {
 }
 
 export const tasksService = {
-  async getAll(page = 1, pageSize = 20) {
-    const url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
+  async getAll(page = 1, pageSize = 20, search = '') {
+    let url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
+    if (search && search.trim()) {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+    }
     const response = await apiClient.get(url);
     return response.data ?? { items: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 };
   },

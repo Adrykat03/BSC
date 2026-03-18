@@ -36,26 +36,28 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
             {
                 case TaskStateTransitions.RolGerente:
                     // Gerente ve todas las tareas
-                    taskItems = await _taskItemRepository.GetAllAsync(page, pageSize);
-                    totalCount = await _taskItemRepository.GetTotalCountAsync();
+                    taskItems = await _taskItemRepository.GetAllAsync(page, pageSize, request.Search);
+                    totalCount = await _taskItemRepository.GetTotalCountAsync(request.Search);
                     break;
 
                 case TaskStateTransitions.RolLider:
                     // Lider ve tareas donde es el lider asignado y status != Completa
-                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, page, pageSize);
-                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail);
+                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, page, pageSize, request.Search);
+                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail, request.Search);
                     break;
 
                 case TaskStateTransitions.RolColaborador:
-                    // Colaborador ve tareas asignadas a el con estados especificos
+                    // Colaborador ve todas sus tareas asignadas (cualquier estado activo)
                     var allowedStatuses = new List<string>
                     {
                         TaskStatuses.Asignada,
                         TaskStatuses.CompletaPorValidar,
-                        TaskStatuses.Reasignada
+                        TaskStatuses.Reasignada,
+                        TaskStatuses.CompletaValidada,
+                        TaskStatuses.Completa
                     };
-                    taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, allowedStatuses, page, pageSize);
-                    totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, allowedStatuses);
+                    taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, allowedStatuses, page, pageSize, request.Search);
+                    totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, allowedStatuses, request.Search);
                     break;
 
                 default:
@@ -68,8 +70,8 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
         else
         {
             // Sin filtro de rol, retornar todas (comportamiento por defecto)
-            taskItems = await _taskItemRepository.GetAllAsync(page, pageSize);
-            totalCount = await _taskItemRepository.GetTotalCountAsync();
+            taskItems = await _taskItemRepository.GetAllAsync(page, pageSize, request.Search);
+            totalCount = await _taskItemRepository.GetTotalCountAsync(request.Search);
         }
 
         var dtos = taskItems.Select(TaskItemMapper.ToDto).ToList();

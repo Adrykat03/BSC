@@ -7,12 +7,12 @@ namespace BSC.Domain.Interfaces;
 /// </summary>
 public interface ITaskItemRepository
 {
-    Task<List<TaskItem>> GetAllAsync(int page, int pageSize);
-    Task<int> GetTotalCountAsync();
-    Task<List<TaskItem>> GetByLeaderEmailAsync(string email, int page, int pageSize);
-    Task<int> GetCountByLeaderEmailAsync(string email);
-    Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize);
-    Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses);
+    Task<List<TaskItem>> GetAllAsync(int page, int pageSize, string? search = null);
+    Task<int> GetTotalCountAsync(string? search = null);
+    Task<List<TaskItem>> GetByLeaderEmailAsync(string email, int page, int pageSize, string? search = null);
+    Task<int> GetCountByLeaderEmailAsync(string email, string? search = null);
+    Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null);
+    Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null);
     Task<TaskItem?> GetByIdAsync(string id);
     Task<TaskItem> CreateAsync(TaskItem taskItem);
     Task<TaskItem> UpdateAsync(TaskItem taskItem);

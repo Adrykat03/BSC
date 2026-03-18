@@ -13,4 +13,5 @@ public class GetTaskItemsQuery : IRequest<ApiResponse<PaginatedResult<TaskItemDt
     public int PageSize { get; set; } = 20;
     public string? UserEmail { get; set; }
     public string? UserRole { get; set; }
+    public string? Search { get; set; }
 }

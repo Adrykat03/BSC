@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using BSC.Domain.Constants;
 using BSC.Domain.Entities;
 using BSC.Domain.Interfaces;
@@ -17,9 +18,26 @@ public class TaskItemRepository : ITaskItemRepository
         _collection = context.GetCollection<TaskItem>("TaskItems");
     }
 
-    public async Task<List<TaskItem>> GetAllAsync(int page, int pageSize)
+    private static FilterDefinition<TaskItem> ApplySearchFilter(FilterDefinition<TaskItem> filter, string? search)
+    {
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var escaped = Regex.Escape(search);
+            var searchFilter = Builders<TaskItem>.Filter.Or(
+                Builders<TaskItem>.Filter.Regex(t => t.Title, new MongoDB.Bson.BsonRegularExpression(escaped, "i")),
+                Builders<TaskItem>.Filter.Regex(t => t.Description, new MongoDB.Bson.BsonRegularExpression(escaped, "i")),
+                Builders<TaskItem>.Filter.Regex(t => t.AssignedToName, new MongoDB.Bson.BsonRegularExpression(escaped, "i")),
+                Builders<TaskItem>.Filter.Regex(t => t.AssignedLeaderName, new MongoDB.Bson.BsonRegularExpression(escaped, "i"))
+            );
+            filter &= searchFilter;
+        }
+        return filter;
+    }
+
+    public async Task<List<TaskItem>> GetAllAsync(int page, int pageSize, string? search = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
+        filter = ApplySearchFilter(filter, search);
         var skip = (page - 1) * pageSize;
 
         return await _collection
@@ -30,17 +48,19 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
-    public async Task<int> GetTotalCountAsync()
+    public async Task<int> GetTotalCountAsync(string? search = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
+        filter = ApplySearchFilter(filter, search);
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
-    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, int page, int pageSize)
+    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, int page, int pageSize, string? search = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
                    & Builders<TaskItem>.Filter.Ne(t => t.Status, TaskStatuses.Completa);
+        filter = ApplySearchFilter(filter, search);
 
         var skip = (page - 1) * pageSize;
 
@@ -52,20 +72,22 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByLeaderEmailAsync(string email)
+    public async Task<int> GetCountByLeaderEmailAsync(string email, string? search = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
                    & Builders<TaskItem>.Filter.Ne(t => t.Status, TaskStatuses.Completa);
+        filter = ApplySearchFilter(filter, search);
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
-    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize)
+    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
                    & Builders<TaskItem>.Filter.In(t => t.Status, statuses);
+        filter = ApplySearchFilter(filter, search);
 
         var skip = (page - 1) * pageSize;
 
@@ -77,11 +99,12 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses)
+    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
                    & Builders<TaskItem>.Filter.In(t => t.Status, statuses);
+        filter = ApplySearchFilter(filter, search);
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }
