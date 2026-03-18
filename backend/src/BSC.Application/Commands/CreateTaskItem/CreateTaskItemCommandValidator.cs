@@ -25,6 +25,10 @@ public class CreateTaskItemCommandValidator : AbstractValidator<CreateTaskItemCo
             .MaximumLength(5000).WithMessage("Los insumos no pueden exceder 5000 caracteres.")
             .When(x => !string.IsNullOrEmpty(x.Insumos));
 
+        RuleFor(x => x.Observations)
+            .MaximumLength(5000).WithMessage("Las observaciones no pueden exceder 5000 caracteres.")
+            .When(x => !string.IsNullOrEmpty(x.Observations));
+
         RuleFor(x => x.CreatedByEmail)
             .NotEmpty().WithMessage("El email del creador es requerido.")
             .EmailAddress().WithMessage("El email del creador no es valido.");

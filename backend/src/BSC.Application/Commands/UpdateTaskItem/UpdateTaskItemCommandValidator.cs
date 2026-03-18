@@ -28,6 +28,14 @@ public class UpdateTaskItemCommandValidator : AbstractValidator<UpdateTaskItemCo
             .MaximumLength(5000).WithMessage("Los insumos no pueden exceder 5000 caracteres.")
             .When(x => !string.IsNullOrEmpty(x.Insumos));
 
+        RuleFor(x => x.Observations)
+            .MaximumLength(5000).WithMessage("Las observaciones no pueden exceder 5000 caracteres.")
+            .When(x => !string.IsNullOrEmpty(x.Observations));
+
+        RuleFor(x => x.EvidenceText)
+            .MaximumLength(5000).WithMessage("La evidencia no puede exceder 5000 caracteres.")
+            .When(x => !string.IsNullOrEmpty(x.EvidenceText));
+
         RuleFor(x => x.UpdatedByEmail)
             .NotEmpty().WithMessage("El email del usuario es requerido.")
             .EmailAddress().WithMessage("El email del usuario no es valido.");

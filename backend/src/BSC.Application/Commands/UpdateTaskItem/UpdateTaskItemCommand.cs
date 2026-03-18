@@ -21,4 +21,5 @@ public class UpdateTaskItemCommand : IRequest<ApiResponse<TaskItemDto>>
     public List<IFormFile>? EvidenceFiles { get; set; }
     public string? EvidenceText { get; set; }
     public string UpdatedByEmail { get; set; } = string.Empty;
+    public string UpdatedByRole { get; set; } = string.Empty;
 }

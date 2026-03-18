@@ -16,20 +16,38 @@ namespace BSC.Application.Commands.CreateTaskItem;
 public class CreateTaskItemCommandHandler : IRequestHandler<CreateTaskItemCommand, ApiResponse<TaskItemDto>>
 {
     private readonly ITaskItemRepository _taskItemRepository;
+    private readonly IColaboradorRepository _colaboradorRepository;
+    private readonly IRoleRepository _roleRepository;
     private readonly ILogger<CreateTaskItemCommandHandler> _logger;
 
     private const long MaxFileSize = 20 * 1024 * 1024; // 20MB
     private const string FilesBasePath = "/app/files";
     private const string InsumosRelativeDir = "insumos";
 
-    public CreateTaskItemCommandHandler(ITaskItemRepository taskItemRepository, ILogger<CreateTaskItemCommandHandler> logger)
+    public CreateTaskItemCommandHandler(
+        ITaskItemRepository taskItemRepository,
+        IColaboradorRepository colaboradorRepository,
+        IRoleRepository roleRepository,
+        ILogger<CreateTaskItemCommandHandler> logger)
     {
         _taskItemRepository = taskItemRepository;
+        _colaboradorRepository = colaboradorRepository;
+        _roleRepository = roleRepository;
         _logger = logger;
     }
 
     public async Task<ApiResponse<TaskItemDto>> Handle(CreateTaskItemCommand request, CancellationToken cancellationToken)
     {
+        // H-01: Validar que solo Gerente o Lider puedan crear tareas
+        if (request.CreatedByRole != TaskStateTransitions.RolGerente
+            && request.CreatedByRole != TaskStateTransitions.RolLider)
+        {
+            return ApiResponse<TaskItemDto>.Fail(
+                "No tiene permisos para crear tareas.",
+                new List<string> { "Solo Gerente y Lider pueden crear tareas." }
+            );
+        }
+
         var taskItem = new TaskItem
         {
             Title = request.Title,
@@ -44,6 +62,54 @@ public class CreateTaskItemCommandHandler : IRequestHandler<CreateTaskItemComman
             UpdatedAt = DateTime.UtcNow,
             UpdatedBy = request.CreatedByEmail
         };
+
+        // Si el creador es Lider, auto-asignarse como lider de la tarea
+        if (request.CreatedByRole == TaskStateTransitions.RolLider)
+        {
+            // Buscar datos del lider creador por email
+            var lider = await _colaboradorRepository.GetByCorreoAsync(request.CreatedByEmail);
+            if (lider != null)
+            {
+                taskItem.AssignedLeaderId = lider.Id;
+                taskItem.AssignedLeaderName = lider.NombreCompleto;
+                taskItem.AssignedLeaderEmail = lider.Correo;
+            }
+            else
+            {
+                // Fallback con datos del JWT
+                taskItem.AssignedLeaderId = request.CreatedById;
+                taskItem.AssignedLeaderName = request.CreatedByName;
+                taskItem.AssignedLeaderEmail = request.CreatedByEmail;
+            }
+
+            // Si el lider asigna un colaborador al crear
+            if (!string.IsNullOrEmpty(request.AssigneeId))
+            {
+                var assignee = await _colaboradorRepository.GetByIdAsync(request.AssigneeId);
+                if (assignee == null)
+                {
+                    return ApiResponse<TaskItemDto>.Fail(
+                        "Colaborador no encontrado.",
+                        new List<string> { $"No se encontro un colaborador con el ID '{request.AssigneeId}'." }
+                    );
+                }
+
+                // H-03: Validar que el assignee tenga rol Colaborador
+                var rolColaborador = await _roleRepository.GetByNameAsync(TaskStateTransitions.RolColaborador);
+                if (rolColaborador == null || !assignee.RolIds.Contains(rolColaborador.Id))
+                {
+                    return ApiResponse<TaskItemDto>.Fail(
+                        "El usuario asignado no tiene rol de Colaborador.",
+                        new List<string> { "Solo se pueden asignar tareas a usuarios con rol Colaborador." }
+                    );
+                }
+
+                taskItem.AssignedToId = assignee.Id;
+                taskItem.AssignedToName = assignee.NombreCompleto;
+                taskItem.AssignedToEmail = assignee.Correo;
+                taskItem.Status = TaskStatuses.Asignada;
+            }
+        }
 
         // Validar archivos de insumo antes de crear la tarea
         if (request.InsumoFiles != null && request.InsumoFiles.Count > 0)

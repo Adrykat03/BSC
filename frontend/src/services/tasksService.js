@@ -100,6 +100,11 @@ export const tasksService = {
     window.URL.revokeObjectURL(url);
   },
 
+  async bulkCreate(tasks) {
+    const response = await apiClient.post(`${ENDPOINT}/bulk`, { tasks });
+    return response.data;
+  },
+
   async removeFile(taskId, fileId, fileType) {
     const params = new URLSearchParams({ fileType });
     const response = await fetch(

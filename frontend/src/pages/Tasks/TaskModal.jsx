@@ -612,8 +612,8 @@ const TaskModal = ({
               </span>
             </div>
           )}
-          {/* Assign select — Gerente when creating, Gerente/Lider when editing */}
-          {((isEditing && (isGerente || isLider)) || (!isEditing && isGerente)) && (
+          {/* Assign select — Gerente/Lider when creating or editing */}
+          {(isGerente || isLider) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{
                 fontSize: '10px', fontWeight: 'bold', color: '#6B7280',
@@ -680,8 +680,8 @@ const TaskModal = ({
                   className="form-control"
                   value={formData.dueDate}
                   onChange={handleChange}
-                  readOnly={isColaborador || isLider}
-                  style={(isColaborador || isLider) ? readOnlyStyle : undefined}
+                  readOnly={isColaborador || (isLider && isEditing)}
+                  style={(isColaborador || (isLider && isEditing)) ? readOnlyStyle : undefined}
                 />
               </div>
               <div style={{ flex: 2, minWidth: 0 }}>

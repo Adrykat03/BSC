@@ -3,6 +3,7 @@ using System.Text.Json;
 using BSC.Application.Commands.AssignTask;
 using BSC.Application.Commands.ChangeTaskStatus;
 using BSC.Application.Commands.CreateTaskItem;
+using BSC.Application.Commands.CreateTaskItemsBulk;
 using BSC.Application.Commands.DeleteTaskItem;
 using BSC.Application.Commands.RemoveFileAttachment;
 using BSC.Application.Commands.UpdateTaskItem;
@@ -132,12 +133,40 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> Create([FromForm] CreateTaskItemCommand command)
     {
         command.CreatedByEmail = GetUserEmail();
+        command.CreatedByRole = GetUserRole();
+        command.CreatedById = GetUserId();
+        command.CreatedByName = GetUserName();
         var result = await _mediator.Send(command);
 
         if (!result.Success)
             return BadRequest(result);
 
         return CreatedAtAction(nameof(GetById), new { id = result.Data!.Id }, result);
+    }
+
+    /// <summary>
+    /// Crea tareas de forma masiva desde datos procesados de un XLSX.
+    /// Solo Gerente y Lider pueden usar esta funcionalidad.
+    /// En carga masiva, un Lider puede especificar cualquier otro lider en la columna de lider.
+    /// </summary>
+    /// <param name="command">Array de tareas a crear.</param>
+    /// <returns>Resultado de la carga masiva con detalle por fila.</returns>
+    [HttpPost("bulk")]
+    [Consumes("application/json")]
+    [ProducesResponseType(typeof(ApiResponse<BulkCreateResultDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<BulkCreateResultDto>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateBulk([FromBody] CreateTaskItemsBulkCommand command)
+    {
+        command.CreatedByEmail = GetUserEmail();
+        command.CreatedByRole = GetUserRole();
+        command.CreatedById = GetUserId();
+        command.CreatedByName = GetUserName();
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return StatusCode(StatusCodes.Status201Created, result);
     }
 
     /// <summary>
@@ -158,6 +187,7 @@ public class TasksController : ControllerBase
     {
         command.Id = id;
         command.UpdatedByEmail = GetUserEmail();
+        command.UpdatedByRole = GetUserRole();
         var result = await _mediator.Send(command);
 
         if (!result.Success)

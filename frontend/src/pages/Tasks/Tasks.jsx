@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import {
   Plus, Pencil, Trash2, ClipboardList, ChevronLeft, ChevronRight,
-  Eye, Search, History, Undo2,
+  Eye, Search, History, Undo2, Download, FileSpreadsheet, Upload,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
 import toast, { Toaster } from 'react-hot-toast';
 import { tasksService } from '../../services/tasksService';
@@ -72,6 +73,9 @@ const Tasks = () => {
 
   // Row selection (visual only)
   const [selectedRowId, setSelectedRowId] = useState(null);
+
+  // Bulk upload file input ref
+  const bulkFileInputRef = useRef(null);
 
   // History modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -395,6 +399,191 @@ const Tasks = () => {
       ' ' + d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
   };
 
+  // ---- Export XLSX ----
+  const handleExportXlsx = () => {
+    const rows = filteredTasks.map((t) => ({
+      'Titulo': t.title || '',
+      'Descripcion': t.description || '',
+      'Estado': t.status || '',
+      'Lider asignado': t.assignedLeaderName || '',
+      'Colaborador asignado': t.assignedToName || '',
+      'Fecha de entrega': t.dueDate ? new Date(t.dueDate).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+      'Tiempo estimado (h)': t.estimatedTime ?? '',
+      'Tiempo real (h)': t.actualTime ?? '',
+      'Observaciones': t.observations || '',
+      'Fecha de creacion': t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Auto-size columns
+    const colWidths = Object.keys(rows[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...rows.map((r) => String(r[key]).length)) + 2,
+    }));
+    ws['!cols'] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Tareas');
+    XLSX.writeFile(wb, `Tareas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // ---- Download template XLSX ----
+  const handleDownloadTemplate = async () => {
+    try {
+      // Sheet 1: empty template with headers
+      const templateHeaders = [
+        'Titulo', 'Descripcion', 'Fecha de entrega (DD/MM/AAAA)',
+        'Tiempo estimado (h)', 'Insumos', 'Observaciones',
+        'Email lider', 'Email colaborador',
+      ];
+      const wsTemplate = XLSX.utils.aoa_to_sheet([templateHeaders]);
+      wsTemplate['!cols'] = templateHeaders.map((h) => ({ wch: Math.max(h.length + 2, 20) }));
+
+      // Sheet 2: collaborators list
+      const allColabs = await colaboradorService.getAll();
+      const colabRows = allColabs.map((c) => ({
+        'Nombre completo': c.nombreCompleto || '',
+        'Correo': c.correo || '',
+        'Rol': (c.rolNames || (c.rolName ? [c.rolName] : [])).join(', '),
+      }));
+      const wsColabs = XLSX.utils.json_to_sheet(colabRows.length > 0 ? colabRows : [{ 'Nombre completo': '', 'Correo': '', 'Rol': '' }]);
+      if (colabRows.length > 0) {
+        const colabKeys = Object.keys(colabRows[0]);
+        wsColabs['!cols'] = colabKeys.map((key) => ({
+          wch: Math.max(key.length, ...colabRows.map((r) => String(r[key]).length)) + 2,
+        }));
+      }
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, wsTemplate, 'Tareas');
+      XLSX.utils.book_append_sheet(wb, wsColabs, 'Colaboradores');
+      XLSX.writeFile(wb, 'Plantilla_Carga_Tareas.xlsx');
+    } catch (err) {
+      toast.error(`Error al generar plantilla: ${err.message}`);
+    }
+  };
+
+  // ---- Bulk upload XLSX ----
+  const handleBulkFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    // Reset the input so the same file can be selected again
+    if (bulkFileInputRef.current) bulkFileInputRef.current.value = '';
+    if (!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      if (rows.length === 0) {
+        toast.error('El archivo no contiene tareas.');
+        e.target.value = '';
+        return;
+      }
+
+      if (rows.length > 100) {
+        toast.error('El archivo excede el limite de 100 tareas por carga.');
+        e.target.value = '';
+        return;
+      }
+
+      // Map rows to task objects
+      const tasks = rows.map((row, idx) => {
+        // Parse DD/MM/AAAA date
+        let dueDate = null;
+        const rawDate = String(row['Fecha de entrega (DD/MM/AAAA)'] || '').trim();
+        if (rawDate) {
+          const parts = rawDate.split('/');
+          if (parts.length === 3) {
+            const [dd, mm, yyyy] = parts;
+            const parsed = new Date(`${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}T00:00:00`);
+            if (!isNaN(parsed.getTime())) {
+              dueDate = parsed.toISOString();
+            }
+          }
+        }
+
+        const estimatedRaw = row['Tiempo estimado (h)'];
+        const estimatedTime = estimatedRaw !== '' ? Number(estimatedRaw) : null;
+
+        return {
+          title: String(row['Titulo'] || '').trim(),
+          description: String(row['Descripcion'] || '').trim(),
+          dueDate,
+          estimatedTime: isNaN(estimatedTime) ? null : estimatedTime,
+          insumos: String(row['Insumos'] || '').trim(),
+          observations: String(row['Observaciones'] || '').trim(),
+          leaderEmail: String(row['Email lider'] || '').trim(),
+          collaboratorEmail: String(row['Email colaborador'] || '').trim(),
+        };
+      });
+
+      // Validate emails (must be email format, not names)
+      const escapeHtml = (str) => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailErrors = [];
+      tasks.forEach((t, idx) => {
+        if (t.leaderEmail && !emailRegex.test(t.leaderEmail)) {
+          emailErrors.push(`Fila ${idx + 2}: "Email lider" no es un email valido ("${escapeHtml(t.leaderEmail)}"). Debe ser un correo electronico, no un nombre.`);
+        }
+        if (t.collaboratorEmail && !emailRegex.test(t.collaboratorEmail)) {
+          emailErrors.push(`Fila ${idx + 2}: "Email colaborador" no es un email valido ("${escapeHtml(t.collaboratorEmail)}"). Debe ser un correo electronico, no un nombre.`);
+        }
+      });
+      if (emailErrors.length > 0) {
+        Swal.fire({
+          title: 'Emails invalidos',
+          html: `<p style="margin-bottom:8px">Las columnas de email deben contener correos electronicos (ej: usuario@empresa.com), no nombres.</p><ul style="text-align:left;max-height:300px;overflow:auto;font-size:13px;">${emailErrors.map((e) => `<li>${e}</li>`).join('')}</ul>`,
+          icon: 'error',
+          confirmButtonColor: '#E31837',
+        });
+        return;
+      }
+
+      // Confirm
+      const confirm = await Swal.fire({
+        title: 'Carga masiva de tareas',
+        text: `Se cargaran ${tasks.length} tareas. ¿Continuar?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#E31837',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Si, cargar',
+        cancelButtonText: 'Cancelar',
+      });
+      if (!confirm.isConfirmed) return;
+
+      const result = await tasksService.bulkCreate(tasks);
+      const created = result?.created ?? result?.successCount ?? 0;
+      const failed = result?.failed ?? result?.failCount ?? 0;
+      const errors = result?.errors ?? [];
+
+      if (failed === 0) {
+        toast.success(`${created} tareas creadas exitosamente.`);
+      } else {
+        toast.error(`${created} tareas creadas, ${failed} fallidas.`);
+        // Show error details
+        if (errors.length > 0) {
+          const esc = (str) => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+          const errorHtml = errors
+            .map((e) => `<li>Fila ${e.row ?? e.index ?? '?'}: ${esc(e.message ?? e.error ?? 'Error desconocido')}</li>`)
+            .join('');
+          Swal.fire({
+            title: 'Errores en carga masiva',
+            html: `<ul style="text-align:left;max-height:300px;overflow:auto;font-size:13px;">${errorHtml}</ul>`,
+            icon: 'warning',
+            confirmButtonColor: '#E31837',
+          });
+        }
+      }
+
+      await loadTasks(1);
+    } catch (err) {
+      toast.error(`Error al procesar archivo: ${err.message}`);
+    }
+  };
+
   // ---- Render ----
 
   if (loading && tasks.length === 0) {
@@ -422,7 +611,7 @@ const Tasks = () => {
   // ---- Filter logic (client-side on loaded data) ----
   const VISIBLE_STATUSES = (() => {
     if (isGerente) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada', 'Completa', 'Cancelada'];
-    if (isLider) return ['Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'];
+    if (isLider) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'];
     if (isColaborador) return ['Asignada', 'Completa - Por Validar', 'Reasignada'];
     return [];
   })();
@@ -469,14 +658,53 @@ const Tasks = () => {
     <div>
       <Toaster position="top-center" />
 
+      {/* Hidden file input for bulk upload */}
+      <input
+        type="file"
+        ref={bulkFileInputRef}
+        style={{ display: 'none' }}
+        accept=".xlsx,.xls"
+        onChange={handleBulkFileChange}
+      />
+
       <div className="page-header">
-        <div>
-          <h1 className="page-header__title">Tareas</h1>
-          <p className="page-header__subtitle">
-            Gestion de tareas del sistema
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div>
+            <h1 className="page-header__title">Tareas</h1>
+            <p className="page-header__subtitle">
+              Gestion de tareas del sistema
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
+            <button
+              className="btn btn--secondary btn--sm btn--icon"
+              onClick={handleExportXlsx}
+              disabled={filteredTasks.length === 0}
+              data-tooltip="Descargar tareas"
+            >
+              <Download size={16} />
+            </button>
+            {(isGerente || isLider) && (
+              <button
+                className="btn btn--secondary btn--sm btn--icon"
+                onClick={handleDownloadTemplate}
+                data-tooltip="Descargar plantilla para carga masiva"
+              >
+                <FileSpreadsheet size={16} />
+              </button>
+            )}
+            {(isGerente || isLider) && (
+              <button
+                className="btn btn--secondary btn--sm btn--icon"
+                onClick={() => bulkFileInputRef.current?.click()}
+                data-tooltip="Cargar tareas desde XLSX"
+              >
+                <Upload size={16} />
+              </button>
+            )}
+          </div>
         </div>
-        {isGerente && (
+        {(isGerente || isLider) && (
           <button className="btn btn--primary" onClick={openCreateModal}>
             <Plus size={18} />
             Nueva Tarea
@@ -529,7 +757,7 @@ const Tasks = () => {
               <ClipboardList size={48} className="empty-state__icon" />
               <h3 className="empty-state__title">No hay tareas</h3>
               <p className="empty-state__description">
-                {isGerente
+                {(isGerente || isLider)
                   ? 'Aun no se han creado tareas. Crea la primera haciendo clic en "Nueva Tarea".'
                   : 'No tienes tareas asignadas por el momento.'}
               </p>

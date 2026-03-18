@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -13,8 +13,11 @@ import {
   Filler,
 } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
-import { Zap, Trophy, Calendar, Filter } from 'lucide-react';
+import { Zap, Trophy, Calendar, Filter, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { apiClient } from '../../services/api';
+import { tasksService } from '../../services/tasksService';
+import { SessionContext } from '../../context/SessionContext';
 import './Home.css';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement, Filler);
@@ -64,7 +67,30 @@ const FILTER_OPTIONS = {
   RANGE: 'range',
 };
 
+const formatDateDDMMYYYY = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+const formatDateTimeDDMMYYYY = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+};
+
 const Home = () => {
+  const { user } = useContext(SessionContext);
   const [filterType, setFilterType] = useState(FILTER_OPTIONS.ALL);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -72,6 +98,74 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCollaborators, setSelectedCollaborators] = useState([]);
+  const [generatingReport, setGeneratingReport] = useState(false);
+
+  const isGerente = user?.role === 'Gerente';
+
+  const handleDownloadReport = async () => {
+    try {
+      setGeneratingReport(true);
+      // Fetch all pages (backend caps at 100 per page)
+      const PAGE_SIZE = 100;
+      let allTasks = [];
+      let currentPage = 1;
+      let totalPages = 1;
+      do {
+        const result = await tasksService.getAll(currentPage, PAGE_SIZE);
+        const items = result.items || result || [];
+        allTasks = allTasks.concat(items);
+        totalPages = result.totalPages || 1;
+        currentPage++;
+      } while (currentPage <= totalPages);
+      const tasks = allTasks;
+
+      const rows = tasks.map((t) => ({
+        'Titulo': t.title || '',
+        'Descripcion': t.description || '',
+        'Estado': t.status || '',
+        'Lider asignado': t.assignedLeaderName || '',
+        'Email lider': t.assignedLeaderEmail || '',
+        'Colaborador asignado': t.assignedToName || '',
+        'Email colaborador': t.assignedToEmail || '',
+        'Fecha de entrega': formatDateDDMMYYYY(t.dueDate),
+        'Tiempo estimado (h)': t.estimatedTime ?? '',
+        'Tiempo real (h)': t.actualTime ?? '',
+        'Insumos': t.insumos || '',
+        'Observaciones': t.observations || '',
+        'Evidencia': t.evidenceText || '',
+        'Creado por': t.createdBy || '',
+        'Fecha de creacion': formatDateTimeDDMMYYYY(t.createdAt),
+        'Ultima actualizacion': formatDateTimeDDMMYYYY(t.updatedAt),
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+
+      // Auto-adjust column widths
+      const colWidths = Object.keys(rows[0] || {}).map((key) => {
+        const maxLen = Math.max(
+          key.length,
+          ...rows.map((r) => String(r[key] || '').length)
+        );
+        return { wch: Math.min(maxLen + 2, 60) };
+      });
+      ws['!cols'] = colWidths;
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Reporte de Tareas');
+
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const fileName = `Reporte_Tareas_${yyyy}-${mm}-${dd}.xlsx`;
+
+      XLSX.writeFile(wb, fileName);
+    } catch (err) {
+      alert('Error al generar el reporte: ' + (err.message || 'Error desconocido'));
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -127,6 +221,16 @@ const Home = () => {
           <h1 className="page-header__title">Dashboard</h1>
           <p className="page-header__subtitle">Resumen estadistico de tareas y colaboradores</p>
         </div>
+        {isGerente && (
+          <button
+            className="btn btn--primary"
+            onClick={handleDownloadReport}
+            disabled={generatingReport}
+          >
+            <Download size={16} className="mr-1" style={{ display: 'inline', verticalAlign: 'middle' }} />
+            {generatingReport ? 'Generando reporte...' : 'Descargar Reporte'}
+          </button>
+        )}
       </div>
 
       {/* Filter */}

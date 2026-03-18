@@ -1,6 +1,7 @@
 using BSC.Application.Common;
 using BSC.Application.DTOs;
 using BSC.Application.Mappings;
+using BSC.Domain.Constants;
 using BSC.Domain.Interfaces;
 using BSC.Domain.ValueObjects;
 using MediatR;
@@ -29,6 +30,16 @@ public class UpdateTaskItemCommandHandler : IRequestHandler<UpdateTaskItemComman
 
     public async Task<ApiResponse<TaskItemDto>> Handle(UpdateTaskItemCommand request, CancellationToken cancellationToken)
     {
+        // H-02: Validar que solo Gerente o Lider puedan editar tareas
+        if (request.UpdatedByRole != TaskStateTransitions.RolGerente
+            && request.UpdatedByRole != TaskStateTransitions.RolLider)
+        {
+            return ApiResponse<TaskItemDto>.Fail(
+                "No tiene permisos para editar tareas.",
+                new List<string> { "Solo Gerente y Lider pueden editar tareas." }
+            );
+        }
+
         var taskItem = await _taskItemRepository.GetByIdAsync(request.Id);
         if (taskItem == null)
         {
@@ -40,7 +51,13 @@ public class UpdateTaskItemCommandHandler : IRequestHandler<UpdateTaskItemComman
 
         taskItem.Title = request.Title;
         taskItem.Description = request.Description;
-        taskItem.DueDate = request.DueDate;
+
+        // Si el rol es Lider, preservar el DueDate original (no puede modificarlo)
+        if (request.UpdatedByRole != TaskStateTransitions.RolLider)
+        {
+            taskItem.DueDate = request.DueDate;
+        }
+
         taskItem.EstimatedTime = request.EstimatedTime;
         taskItem.Insumos = request.Insumos;
         taskItem.Observations = request.Observations;
