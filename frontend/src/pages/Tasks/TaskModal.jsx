@@ -886,8 +886,8 @@ const TaskModal = ({
                         await onUploadEvidence(task.id, evidenceFiles, formData.evidenceText);
                       }
                     }
-                    // BUG 3: Lider saves form data before changing status
-                    if (isLider) {
+                    // Lider/Gerente saves form data before changing status
+                    if (isLider || isGerente) {
                       const data = buildLiderFormData();
                       try {
                         await onSubmit(data);
