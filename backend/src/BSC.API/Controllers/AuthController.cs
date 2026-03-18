@@ -60,30 +60,22 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SwitchRole([FromBody] SwitchRoleRequestDto request)
     {
-        // Los roles pueden venir como múltiples claims individuales (JWT array)
-        // o como un solo claim con JSON serializado
-        var rolesClaims = User.FindAll("roles").Select(c => c.Value).ToList();
-        List<string> roles;
-        if (rolesClaims.Count == 1)
+        // ASP.NET mapea tanto "roles" como "role" del JWT a ClaimTypes.Role.
+        // Buscar el claim que contiene el JSON array de roles.
+        var allRoleClaims = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+        var roles = new List<string>();
+        foreach (var claimValue in allRoleClaims)
         {
-            // Intentar deserializar como JSON array
-            try
+            if (claimValue.TrimStart().StartsWith("["))
             {
-                roles = JsonSerializer.Deserialize<List<string>>(rolesClaims[0]) ?? rolesClaims;
+                try
+                {
+                    var parsed = JsonSerializer.Deserialize<List<string>>(claimValue);
+                    if (parsed != null) roles = parsed;
+                    break;
+                }
+                catch { /* no es JSON válido, ignorar */ }
             }
-            catch
-            {
-                roles = rolesClaims;
-            }
-        }
-        else if (rolesClaims.Count > 1)
-        {
-            // Múltiples claims individuales (JWT expandió el array)
-            roles = rolesClaims;
-        }
-        else
-        {
-            roles = new List<string>();
         }
 
         var command = new SwitchRoleCommand
