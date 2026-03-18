@@ -60,8 +60,31 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SwitchRole([FromBody] SwitchRoleRequestDto request)
     {
-        var rolesJson = User.FindFirstValue("roles") ?? "[]";
-        var roles = JsonSerializer.Deserialize<List<string>>(rolesJson) ?? new List<string>();
+        // Los roles pueden venir como múltiples claims individuales (JWT array)
+        // o como un solo claim con JSON serializado
+        var rolesClaims = User.FindAll("roles").Select(c => c.Value).ToList();
+        List<string> roles;
+        if (rolesClaims.Count == 1)
+        {
+            // Intentar deserializar como JSON array
+            try
+            {
+                roles = JsonSerializer.Deserialize<List<string>>(rolesClaims[0]) ?? rolesClaims;
+            }
+            catch
+            {
+                roles = rolesClaims;
+            }
+        }
+        else if (rolesClaims.Count > 1)
+        {
+            // Múltiples claims individuales (JWT expandió el array)
+            roles = rolesClaims;
+        }
+        else
+        {
+            roles = new List<string>();
+        }
 
         var command = new SwitchRoleCommand
         {
