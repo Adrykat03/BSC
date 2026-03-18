@@ -11,6 +11,9 @@
 | FUNC-001 | Gestion de Roles | En Progreso | 2026-03-17 |
 | FUNC-002 | CRUD Colaboradores | Completada | 2026-03-17 |
 | FUNC-003 | Gestion de Tareas | En Progreso | 2026-03-17 |
+| FUNC-009 | Modo Responsive (móvil/tablet) | Completada | 2026-03-18 |
+| FUNC-010 | Bugfix evidencias y observaciones en tareas | Completada | 2026-03-18 |
+| FUNC-011 | Dashboard solo Gerente, switch rol, plantilla carga masiva | Completada | 2026-03-18 |
 
 ---
 
@@ -65,6 +68,43 @@
 - **Backend:** Pendiente.
 - **Frontend:** Pagina placeholder Tasks.jsx con ruta /tasks y lazy loading. Sidebar actualizado con icono ClipboardList y enlace a Tareas.
 - **Security:** Pendiente
+
+### [FUNC-009] Modo Responsive (móvil/tablet)
+- **Estado:** Completada
+- **Fecha:** 2026-03-18
+- **Descripcion:** Soporte responsive completo para móvil y tablet con breakpoint principal en 1024px.
+- **Backend:** Sin cambios.
+- **Frontend:**
+  - Layout responsive: ancho completo en < 1024px
+  - Sidebar: drawer overlay con hamburguesa, cierre por backdrop/link/botón X
+  - Header: botón hamburguesa, nombre usuario compacto con truncado
+  - Tablas (Tasks, Colaboradores): scroll horizontal, columnas secundarias ocultas en < 640px
+  - Modales: fullscreen en < 640px (95vw, 90vh), scroll interno
+  - Dashboard: cards 1 columna, gráficos scrolleables, filtros apilados
+  - Formularios: 1 columna en móvil, touch targets 44px
+  - Labels de formularios corregidos (sin floating label)
+  - Utilidades CSS ampliadas (sm:, mobile:, md:, lg:)
+- **Security:** Aprobado (Fase 1: aprobado con observaciones menores, Fase 2: aprobado)
+
+### [FUNC-010] Bugfix evidencias y observaciones en tareas
+- **Estado:** Completada
+- **Fecha:** 2026-03-18
+- **Descripcion:** Correccion de 4 bugs relacionados con evidencias y observaciones al reasignar tareas, cambiar estado y visualizacion por rol.
+- **Backend:** UpdateTaskItemCommandHandler: null-check para preservar EvidenceText y Observations existentes cuando no vienen en el request (evita que el Gerente al editar borre la evidencia del Colaborador).
+- **Frontend:** TaskModal.jsx: (1) Evidencias visibles como solo-lectura para Gerente, (2) Boton "Completa - Por Validar" ahora guarda evidencias antes de cambiar estado, (3) Botones de estado del Lider guardan cambios del formulario (observaciones/evidencia) antes de cambiar estado. Helper buildLiderFormData() extraido para evitar duplicacion.
+- **Security:** Aprobado (0 criticos, 0 altos, 2 bajos: observaciones campo abierto a todos los roles y race condition menor en guardado+cambio de estado)
+
+### [FUNC-011] Dashboard solo Gerente, switch rol, plantilla carga masiva
+- **Estado:** Completada
+- **Fecha:** 2026-03-18
+- **Descripcion:** Tres correcciones: (1) Dashboard visible solo para Gerente, (2) Toast de error en switch de rol, (3) Plantilla de carga masiva con ejemplo y formato de fecha corregido.
+- **Backend:** Sin cambios.
+- **Frontend:**
+  - Header.jsx: toast de error al fallar switch de rol, título "Dashboard"
+  - Sidebar.jsx: enlace Dashboard condicionado a rol Gerente
+  - routes.jsx: HomeOrRedirect redirige Lider/Colaborador a /tasks
+  - Tasks.jsx: plantilla con fila de ejemplo, header de fecha con formato DD/MM/AAAA HH:mm, parseo robusto de fechas (serial Excel + string), fix conteo de tareas creadas (totalCreated/totalFailed del backend)
+- **Security:** Aprobado (0 criticos, 0 altos, 2 bajos: console.error en produccion e inline styles menores)
 
 ---
 

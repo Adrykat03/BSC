@@ -495,6 +495,40 @@ const TaskModal = ({
     }
   };
 
+  /* ── Build FormData for Lider/Gerente submit ── */
+  const buildLiderFormData = () => {
+    const data = new FormData();
+    data.append('title', formData.title.trim());
+    data.append('description', formData.description.trim());
+    if (formData.estimatedTime !== '' && formData.estimatedTime !== null) {
+      data.append('estimatedTime', formData.estimatedTime);
+    }
+    if (formData.dueDate) {
+      data.append('dueDate', new Date(formData.dueDate).toISOString());
+    }
+    if (formData.insumos.trim()) {
+      data.append('insumos', formData.insumos.trim());
+    }
+    if (formData.observations.trim()) {
+      data.append('observations', formData.observations.trim());
+    }
+    // Multiple insumo files
+    insumoFiles.forEach(f => data.append('InsumoFiles', f));
+    /* When creating, include assigneeId if a leader was selected */
+    if (!isEditing && selectedAssignee) {
+      data.append('assigneeId', selectedAssignee);
+    }
+    /* Lider can also send evidence */
+    if (isLider) {
+      if (formData.evidenceText.trim()) {
+        data.append('evidenceText', formData.evidenceText.trim());
+      }
+      // Multiple evidence files
+      evidenceFiles.forEach(f => data.append('EvidenceFiles', f));
+    }
+    return data;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -534,35 +568,7 @@ const TaskModal = ({
     });
     if (!confirm.isConfirmed) return;
 
-    const data = new FormData();
-    data.append('title', formData.title.trim());
-    data.append('description', formData.description.trim());
-    if (formData.estimatedTime !== '' && formData.estimatedTime !== null) {
-      data.append('estimatedTime', formData.estimatedTime);
-    }
-    if (formData.dueDate) {
-      data.append('dueDate', new Date(formData.dueDate).toISOString());
-    }
-    if (formData.insumos.trim()) {
-      data.append('insumos', formData.insumos.trim());
-    }
-    if (formData.observations.trim()) {
-      data.append('observations', formData.observations.trim());
-    }
-    // Multiple insumo files
-    insumoFiles.forEach(f => data.append('InsumoFiles', f));
-    /* When creating, include assigneeId if a leader was selected */
-    if (!isEditing && selectedAssignee) {
-      data.append('assigneeId', selectedAssignee);
-    }
-    /* Lider can also send evidence */
-    if (isLider) {
-      if (formData.evidenceText.trim()) {
-        data.append('evidenceText', formData.evidenceText.trim());
-      }
-      // Multiple evidence files
-      evidenceFiles.forEach(f => data.append('EvidenceFiles', f));
-    }
+    const data = buildLiderFormData();
 
     onSubmit(data);
   };
@@ -787,46 +793,55 @@ const TaskModal = ({
               />
             </div>
 
-            {/* ── Row 3: Evidencia texto (50%) + Evidencia archivo (50%) — Lider/Colaborador ── */}
-            {!isGerente && (
-              <div className="task-modal__row" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                {/* Evidencia texto */}
-                <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-                  <Label>Evidencia (texto)</Label>
-                  <textarea
-                    name="evidenceText"
-                    className="form-control form-textarea"
-                    value={formData.evidenceText}
-                    onChange={handleChange}
-                    placeholder="Descripcion de la evidencia"
-                    style={{ resize: 'none', height: '120px' }}
-                  />
-                </div>
-
-                {/* Evidencia archivo */}
-                <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-                  {(isColaborador || isLider) ? (
-                    <FileDropZone
-                      label="Archivos de evidencia"
-                      files={evidenceFiles}
-                      existingFiles={existingEvidenceFiles}
-                      onChange={(newFiles, err) => {
-                        if (newFiles.length > 0) {
-                          setEvidenceFiles((prev) => [...prev, ...newFiles]);
-                        }
-                        setErrors((prev) => ({ ...prev, evidenceFile: err || '' }));
-                      }}
-                      onRemoveNew={(idx) => {
-                        setEvidenceFiles((prev) => prev.filter((_, i) => i !== idx));
-                      }}
-                      onRemoveExisting={(fileId) => handleRemoveExistingFile(fileId, 'evidence')}
-                      onDownload={handleDownloadFile}
-                      error={errors.evidenceFile}
-                    />
-                  ) : null}
-                </div>
+            {/* ── Row 3: Evidencia texto (50%) + Evidencia archivo (50%) ── */}
+            <div className="task-modal__row" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              {/* Evidencia texto */}
+              <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+                <Label>Evidencia (texto)</Label>
+                <textarea
+                  name="evidenceText"
+                  className="form-control form-textarea"
+                  value={formData.evidenceText}
+                  onChange={handleChange}
+                  placeholder="Descripcion de la evidencia"
+                  readOnly={isGerente}
+                  style={{
+                    resize: 'none',
+                    height: '120px',
+                    ...(isGerente ? readOnlyStyle : {}),
+                  }}
+                />
               </div>
-            )}
+
+              {/* Evidencia archivo */}
+              <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+                {isGerente ? (
+                  <ReadOnlyFileList
+                    label="Archivos de evidencia"
+                    files={existingEvidenceFiles}
+                    onDownload={handleDownloadFile}
+                  />
+                ) : (
+                  <FileDropZone
+                    label="Archivos de evidencia"
+                    files={evidenceFiles}
+                    existingFiles={existingEvidenceFiles}
+                    onChange={(newFiles, err) => {
+                      if (newFiles.length > 0) {
+                        setEvidenceFiles((prev) => [...prev, ...newFiles]);
+                      }
+                      setErrors((prev) => ({ ...prev, evidenceFile: err || '' }));
+                    }}
+                    onRemoveNew={(idx) => {
+                      setEvidenceFiles((prev) => prev.filter((_, i) => i !== idx));
+                    }}
+                    onRemoveExisting={(fileId) => handleRemoveExistingFile(fileId, 'evidence')}
+                    onDownload={handleDownloadFile}
+                    error={errors.evidenceFile}
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
           {/* ── Footer ── */}
@@ -863,7 +878,26 @@ const TaskModal = ({
                     color: '#fff',
                     borderColor: newStatus === 'Reasignada' ? 'var(--color-warning)' : 'var(--color-success)',
                   }}
-                  onClick={() => onChangeStatus(task, newStatus)}
+                  onClick={async () => {
+                    // BUG 2: Colaborador saves evidence before changing to "Completa - Por Validar"
+                    if (isColaborador && newStatus === 'Completa - Por Validar') {
+                      const hasEvidence = evidenceFiles.length > 0 || formData.evidenceText.trim();
+                      if (hasEvidence && onUploadEvidence) {
+                        await onUploadEvidence(task.id, evidenceFiles, formData.evidenceText);
+                      }
+                    }
+                    // BUG 3: Lider saves form data before changing status
+                    if (isLider) {
+                      const data = buildLiderFormData();
+                      try {
+                        await onSubmit(data);
+                      } catch (e) {
+                        // If save fails, don't change status
+                        return;
+                      }
+                    }
+                    onChangeStatus(task, newStatus);
+                  }}
                 >
                   {newStatus}
                 </button>

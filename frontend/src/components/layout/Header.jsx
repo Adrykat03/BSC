@@ -1,10 +1,11 @@
 import { useContext, useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { LogOut, User, ChevronDown, RefreshCw, Menu } from 'lucide-react';
+import toast from 'react-hot-toast';
 import SessionContext from '../../context/SessionContext';
 
 const pageTitles = {
-  '/': 'Home',
+  '/': 'Dashboard',
   '/roles': 'Roles',
   '/tasks': 'Tareas',
   '/colaboradores': 'Colaboradores',
@@ -36,7 +37,9 @@ const Header = ({ isMobile, onOpenSidebar }) => {
       await switchRole(newRole);
       setDropdownOpen(false);
       window.location.reload();
-    } catch {
+    } catch (err) {
+      console.error('Error switching role:', err);
+      toast.error('Error al cambiar rol. Intente nuevamente.');
       setSwitchingRole(false);
     }
   };

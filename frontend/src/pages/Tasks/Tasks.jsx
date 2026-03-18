@@ -430,13 +430,17 @@ const Tasks = () => {
   // ---- Download template XLSX ----
   const handleDownloadTemplate = async () => {
     try {
-      // Sheet 1: empty template with headers
+      // Sheet 1: template with headers + example row
       const templateHeaders = [
-        'Titulo', 'Descripcion', 'Fecha de entrega (DD/MM/AAAA)',
+        'Titulo', 'Descripcion', 'Fecha de entrega (DD/MM/AAAA HH:mm)',
         'Tiempo estimado (h)', 'Insumos', 'Observaciones',
         'Email lider', 'Email colaborador',
       ];
-      const wsTemplate = XLSX.utils.aoa_to_sheet([templateHeaders]);
+      const exampleRow = [
+        'Tarea de ejemplo (eliminar esta fila)', 'Descripción de ejemplo',
+        '25/03/2026 14:30', '8', 'Documentos necesarios', 'Sin observaciones', '', '',
+      ];
+      const wsTemplate = XLSX.utils.aoa_to_sheet([templateHeaders, exampleRow]);
       wsTemplate['!cols'] = templateHeaders.map((h) => ({ wch: Math.max(h.length + 2, 20) }));
 
       // Sheet 2: collaborators list
@@ -491,17 +495,37 @@ const Tasks = () => {
 
       // Map rows to task objects
       const tasks = rows.map((row, idx) => {
-        // Parse DD/MM/AAAA date
+        // Parse date: supports DD/MM/YYYY HH:mm, DD/MM/YYYY, and Excel serial numbers
         let dueDate = null;
-        const rawDate = String(row['Fecha de entrega (DD/MM/AAAA)'] || '').trim();
-        if (rawDate) {
-          const parts = rawDate.split('/');
-          if (parts.length === 3) {
-            const [dd, mm, yyyy] = parts;
-            const parsed = new Date(`${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}T00:00:00`);
-            if (!isNaN(parsed.getTime())) {
-              dueDate = parsed.toISOString();
+        const rawDate = row['Fecha de entrega (DD/MM/AAAA HH:mm)'] ?? row['Fecha de entrega (DD/MM/AAAA)'] ?? '';
+        const rawDateStr = String(rawDate).trim();
+        if (rawDateStr) {
+          let parsed = null;
+          // Check if it's an Excel serial number (numeric value)
+          if (!isNaN(rawDate) && Number(rawDate) > 0) {
+            const excelDate = XLSX.SSF.parse_date_code(Number(rawDate));
+            if (excelDate) {
+              parsed = new Date(excelDate.y, excelDate.m - 1, excelDate.d, excelDate.H || 0, excelDate.M || 0, excelDate.S || 0);
             }
+          }
+          // Try DD/MM/YYYY HH:mm format
+          if (!parsed) {
+            const partsWithTime = rawDateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+(\d{1,2}):(\d{2})$/);
+            if (partsWithTime) {
+              const [, day, month, year, hours, minutes] = partsWithTime;
+              parsed = new Date(Number(year), Number(month) - 1, Number(day), Number(hours), Number(minutes));
+            }
+          }
+          // Try DD/MM/YYYY format (no time)
+          if (!parsed) {
+            const partsDateOnly = rawDateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+            if (partsDateOnly) {
+              const [, day, month, year] = partsDateOnly;
+              parsed = new Date(Number(year), Number(month) - 1, Number(day), 0, 0);
+            }
+          }
+          if (parsed && !isNaN(parsed.getTime())) {
+            dueDate = parsed.toISOString();
           }
         }
 
@@ -556,9 +580,9 @@ const Tasks = () => {
       if (!confirm.isConfirmed) return;
 
       const result = await tasksService.bulkCreate(tasks);
-      const created = result?.created ?? result?.successCount ?? 0;
-      const failed = result?.failed ?? result?.failCount ?? 0;
-      const errors = result?.errors ?? [];
+      const created = result?.totalCreated ?? result?.created ?? result?.successCount ?? 0;
+      const failed = result?.totalFailed ?? result?.failed ?? result?.failCount ?? 0;
+      const errors = result?.results?.filter((r) => !r.success) ?? result?.errors ?? [];
 
       if (failed === 0) {
         toast.success(`${created} tareas creadas exitosamente.`);

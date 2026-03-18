@@ -60,8 +60,17 @@ public class UpdateTaskItemCommandHandler : IRequestHandler<UpdateTaskItemComman
 
         taskItem.EstimatedTime = request.EstimatedTime;
         taskItem.Insumos = request.Insumos;
-        taskItem.Observations = request.Observations;
-        taskItem.EvidenceText = request.EvidenceText;
+        // Preservar Observations existente si no viene en el request
+        if (request.Observations != null)
+        {
+            taskItem.Observations = request.Observations;
+        }
+
+        // Preservar EvidenceText existente si no viene en el request
+        if (request.EvidenceText != null)
+        {
+            taskItem.EvidenceText = request.EvidenceText;
+        }
         taskItem.UpdatedAt = DateTime.UtcNow;
         taskItem.UpdatedBy = request.UpdatedByEmail;
 
