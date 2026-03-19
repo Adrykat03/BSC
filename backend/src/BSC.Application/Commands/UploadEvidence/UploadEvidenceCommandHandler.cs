@@ -48,18 +48,8 @@ public class UploadEvidenceCommandHandler : IRequestHandler<UploadEvidenceComman
             );
         }
 
-        // Validar que al menos se envie archivo, texto u observaciones
         var hasFiles = request.EvidenceFiles != null && request.EvidenceFiles.Count > 0 && request.EvidenceFiles.Any(f => f.Length > 0);
         var hasText = !string.IsNullOrWhiteSpace(request.EvidenceText);
-        var hasObservations = request.Observations != null;
-
-        if (!hasFiles && !hasText && !hasObservations)
-        {
-            return ApiResponse<TaskItemDto>.Fail(
-                "Datos requeridos.",
-                new List<string> { "Debe proporcionar al menos un archivo de evidencia, texto de evidencia u observaciones." }
-            );
-        }
 
         // Procesar archivos si se proporcionan (se AGREGAN a los existentes)
         if (hasFiles)
