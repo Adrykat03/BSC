@@ -311,6 +311,7 @@ const TaskModal = ({
   isOpen,
   onClose,
   onSubmit,
+  onSaveOnly,
   onUploadEvidence,
   onChangeStatus,
   onAssign,
@@ -631,9 +632,18 @@ const TaskModal = ({
               <select
                 className="form-control form-select"
                 value={selectedAssignee}
-                onChange={(e) => {
+                onChange={async (e) => {
                   setSelectedAssignee(e.target.value);
                   if (isEditing && e.target.value && onAssign) {
+                    // Save form data before reassigning
+                    if ((isLider || isGerente) && onSaveOnly) {
+                      const data = buildLiderFormData();
+                      try {
+                        await onSaveOnly(data);
+                      } catch (err) {
+                        return;
+                      }
+                    }
                     onAssign(task, e.target.value);
                   }
                 }}
@@ -879,21 +889,20 @@ const TaskModal = ({
                     borderColor: newStatus === 'Reasignada' ? 'var(--color-warning)' : 'var(--color-success)',
                   }}
                   onClick={async () => {
-                    // Colaborador saves evidence + observations before changing status
+                    // Colaborador: always save evidence + observations before status change
                     if (isColaborador && onUploadEvidence) {
-                      const hasEvidence = evidenceFiles.length > 0 || formData.evidenceText.trim();
-                      const hasObservations = formData.observations.trim();
-                      if (hasEvidence || hasObservations) {
+                      try {
                         await onUploadEvidence(task.id, evidenceFiles, formData.evidenceText, formData.observations);
+                      } catch (e) {
+                        return;
                       }
                     }
-                    // Lider/Gerente saves form data before changing status
-                    if (isLider || isGerente) {
+                    // Lider/Gerente: always save form data before status change
+                    if ((isLider || isGerente) && isEditing && onSaveOnly) {
                       const data = buildLiderFormData();
                       try {
-                        await onSubmit(data);
+                        await onSaveOnly(data);
                       } catch (e) {
-                        // If save fails, don't change status
                         return;
                       }
                     }

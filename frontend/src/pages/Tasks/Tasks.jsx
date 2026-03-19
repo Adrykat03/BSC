@@ -197,6 +197,19 @@ const Tasks = () => {
     }
   };
 
+  // ---- Save only (no close modal) — used by status buttons ----
+  const handleSaveOnly = async (formData) => {
+    try {
+      if (selectedTask) {
+        formData.append('updatedByEmail', email);
+        await tasksService.update(selectedTask.id, formData);
+      }
+    } catch (err) {
+      toast.error(`Error al guardar: ${err.message}`);
+      throw err;
+    }
+  };
+
   // ---- Delete or Cancel (Gerente only) ----
   const handleDelete = async (task) => {
     const isNotAssigned = !task.assignedLeaderId && !task.assignedToId;
@@ -956,16 +969,13 @@ const Tasks = () => {
         isOpen={modalOpen || detailModalOpen}
         onClose={() => { closeModal(); setDetailModalOpen(false); setDetailTask(null); }}
         onSubmit={handleSubmit}
+        onSaveOnly={handleSaveOnly}
         onUploadEvidence={async (taskId, file, text, observations) => {
           try {
             await tasksService.uploadEvidence(taskId, file, text, observations);
-            toast.success('Evidencia guardada exitosamente');
-            setDetailModalOpen(false);
-            setDetailTask(null);
-            setModalOpen(false);
-            await loadTasks(page);
           } catch (err) {
-            toast.error(`Error al guardar evidencia: ${err.message}`);
+            toast.error(`Error al guardar: ${err.message}`);
+            throw err;
           }
         }}
         onChangeStatus={async (t, newStatus) => {
