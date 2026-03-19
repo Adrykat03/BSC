@@ -956,9 +956,9 @@ const Tasks = () => {
         isOpen={modalOpen || detailModalOpen}
         onClose={() => { closeModal(); setDetailModalOpen(false); setDetailTask(null); }}
         onSubmit={handleSubmit}
-        onUploadEvidence={async (taskId, file, text) => {
+        onUploadEvidence={async (taskId, file, text, observations) => {
           try {
-            await tasksService.uploadEvidence(taskId, file, text);
+            await tasksService.uploadEvidence(taskId, file, text, observations);
             toast.success('Evidencia guardada exitosamente');
             setDetailModalOpen(false);
             setDetailTask(null);

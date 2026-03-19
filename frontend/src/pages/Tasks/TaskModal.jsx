@@ -548,7 +548,7 @@ const TaskModal = ({
       if (!confirm.isConfirmed) return;
 
       if (onUploadEvidence) {
-        onUploadEvidence(task.id, evidenceFiles, formData.evidenceText);
+        onUploadEvidence(task.id, evidenceFiles, formData.evidenceText, formData.observations);
       }
       return;
     }
@@ -879,11 +879,12 @@ const TaskModal = ({
                     borderColor: newStatus === 'Reasignada' ? 'var(--color-warning)' : 'var(--color-success)',
                   }}
                   onClick={async () => {
-                    // BUG 2: Colaborador saves evidence before changing to "Completa - Por Validar"
-                    if (isColaborador && newStatus === 'Completa - Por Validar') {
+                    // Colaborador saves evidence + observations before changing status
+                    if (isColaborador && onUploadEvidence) {
                       const hasEvidence = evidenceFiles.length > 0 || formData.evidenceText.trim();
-                      if (hasEvidence && onUploadEvidence) {
-                        await onUploadEvidence(task.id, evidenceFiles, formData.evidenceText);
+                      const hasObservations = formData.observations.trim();
+                      if (hasEvidence || hasObservations) {
+                        await onUploadEvidence(task.id, evidenceFiles, formData.evidenceText, formData.observations);
                       }
                     }
                     // Lider/Gerente saves form data before changing status

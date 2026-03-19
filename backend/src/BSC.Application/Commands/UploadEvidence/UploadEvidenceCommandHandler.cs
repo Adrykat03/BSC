@@ -118,6 +118,12 @@ public class UploadEvidenceCommandHandler : IRequestHandler<UploadEvidenceComman
             taskItem.EvidenceText = request.EvidenceText;
         }
 
+        // Guardar observaciones si se proporcionan
+        if (request.Observations != null)
+        {
+            taskItem.Observations = request.Observations;
+        }
+
         taskItem.UpdatedAt = DateTime.UtcNow;
         taskItem.UpdatedBy = request.UploaderEmail;
 

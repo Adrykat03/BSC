@@ -63,13 +63,14 @@ export const tasksService = {
     return response;
   },
 
-  async uploadEvidence(taskId, files, evidenceText) {
+  async uploadEvidence(taskId, files, evidenceText, observations) {
     const formData = new FormData();
     if (files) {
       const fileList = Array.isArray(files) ? files : [files];
       fileList.forEach((f) => formData.append('EvidenceFiles', f));
     }
     if (evidenceText) formData.append('evidenceText', evidenceText);
+    if (observations != null) formData.append('observations', observations);
     const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${taskId}/evidence`, {
       method: 'POST',
       headers: getAuthHeader(),
