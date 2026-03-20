@@ -41,9 +41,15 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
                     break;
 
                 case TaskStateTransitions.RolLider:
-                    // Lider ve tareas donde es el lider asignado y status != Completa
-                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, page, pageSize, request.Search);
-                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail, request.Search);
+                    // Lider ve solo tareas Asignada, Reasignada y Completa - Por Validar
+                    var leaderAllowedStatuses = new List<string>
+                    {
+                        TaskStatuses.Asignada,
+                        TaskStatuses.Reasignada,
+                        TaskStatuses.CompletaPorValidar
+                    };
+                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, leaderAllowedStatuses, page, pageSize, request.Search);
+                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail, leaderAllowedStatuses, request.Search);
                     break;
 
                 case TaskStateTransitions.RolColaborador:

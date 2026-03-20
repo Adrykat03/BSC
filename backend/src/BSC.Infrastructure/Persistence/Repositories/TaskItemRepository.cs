@@ -55,11 +55,11 @@ public class TaskItemRepository : ITaskItemRepository
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
-    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, int page, int pageSize, string? search = null)
+    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
-                   & Builders<TaskItem>.Filter.Ne(t => t.Status, TaskStatuses.Completa);
+                   & Builders<TaskItem>.Filter.In(t => t.Status, statuses);
         filter = ApplySearchFilter(filter, search);
 
         var skip = (page - 1) * pageSize;
@@ -72,11 +72,11 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByLeaderEmailAsync(string email, string? search = null)
+    public async Task<int> GetCountByLeaderEmailAsync(string email, List<string> statuses, string? search = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
-                   & Builders<TaskItem>.Filter.Ne(t => t.Status, TaskStatuses.Completa);
+                   & Builders<TaskItem>.Filter.In(t => t.Status, statuses);
         filter = ApplySearchFilter(filter, search);
 
         return (int)await _collection.CountDocumentsAsync(filter);

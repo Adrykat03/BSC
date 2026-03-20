@@ -657,7 +657,7 @@ const Tasks = () => {
   // ---- Filter logic (client-side on loaded data) ----
   const VISIBLE_STATUSES = (() => {
     if (isGerente) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada', 'Completa', 'Cancelada'];
-    if (isLider) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'];
+    if (isLider) return ['Asignada', 'Completa - Por Validar', 'Reasignada'];
     if (isColaborador) return ['Asignada', 'Reasignada'];
     return [];
   })();
