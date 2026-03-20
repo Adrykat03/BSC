@@ -289,8 +289,8 @@ const Home = () => {
 
       {dashboard && (
         <>
-          {/* Highlight Cards */}
-          <HighlightCards highlights={dashboard.highlights} />
+          {/* Highlight Cards - solo Gerente */}
+          {isGerente && <HighlightCards highlights={dashboard.highlights} />}
 
           {/* Heatmap with tabs */}
           <div className="card mb-6">
