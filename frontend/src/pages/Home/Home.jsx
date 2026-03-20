@@ -101,6 +101,7 @@ const Home = () => {
   const [generatingReport, setGeneratingReport] = useState(false);
 
   const isGerente = user?.role === 'Gerente';
+  const isColaborador = user?.role === 'Colaborador';
 
   const handleDownloadReport = async () => {
     try {
@@ -292,19 +293,21 @@ const Home = () => {
           {/* Highlight Cards - solo Gerente */}
           {isGerente && <HighlightCards highlights={dashboard.highlights} />}
 
-          {/* Heatmap with tabs */}
-          <div className="card mb-6">
-            <div className="card__header">
-              <h2 className="card__title">Carga de trabajo por colaborador</h2>
-              <p className="card__subtitle">Intensidad basada en cantidad de tareas asignadas</p>
+          {/* Heatmap with tabs - oculto para Colaborador */}
+          {!isColaborador && (
+            <div className="card mb-6">
+              <div className="card__header">
+                <h2 className="card__title">Carga de trabajo por colaborador</h2>
+                <p className="card__subtitle">Intensidad basada en cantidad de tareas asignadas</p>
+              </div>
+              <div className="card__body">
+                <HeatMapTabs
+                  activeData={dashboard.collaboratorHeatmapActive}
+                  historicData={dashboard.collaboratorHeatmap}
+                />
+              </div>
             </div>
-            <div className="card__body">
-              <HeatMapTabs
-                activeData={dashboard.collaboratorHeatmapActive}
-                historicData={dashboard.collaboratorHeatmap}
-              />
-            </div>
-          </div>
+          )}
 
           {/* Charts row: Avg Time + Doughnut */}
           <div className="dashboard-grid mb-6">
@@ -550,6 +553,10 @@ const TasksByStatusDoughnut = ({ data }) => {
   }
 
   const sorted = sortByStatusOrder(data);
+  const completedCount = sorted
+    .filter((d) => d.status === 'Completa' || d.status === 'Completa - Validada')
+    .reduce((sum, d) => sum + d.count, 0);
+  const totalCount = sorted.reduce((sum, d) => sum + d.count, 0);
 
   const chartData = {
     labels: sorted.map((d) => d.status),
@@ -562,6 +569,25 @@ const TasksByStatusDoughnut = ({ data }) => {
         hoverOffset: 8,
       },
     ],
+  };
+
+  const centerTextPlugin = {
+    id: 'centerText',
+    afterDraw: (chart) => {
+      const { ctx, width, height } = chart;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const centerX = width / 2;
+      const centerY = height / 2 - 16;
+      ctx.font = 'bold 28px Inter, sans-serif';
+      ctx.fillStyle = '#2E7D32';
+      ctx.fillText(completedCount, centerX, centerY);
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillStyle = '#6B7280';
+      ctx.fillText(`de ${totalCount} completas`, centerX, centerY + 22);
+      ctx.restore();
+    },
   };
 
   const options = {
@@ -591,7 +617,7 @@ const TasksByStatusDoughnut = ({ data }) => {
     cutout: '60%',
   };
 
-  return <Doughnut data={chartData} options={options} />;
+  return <Doughnut data={chartData} options={options} plugins={[centerTextPlugin]} />;
 };
 
 /* ========================================
