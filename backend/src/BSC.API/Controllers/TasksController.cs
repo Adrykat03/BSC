@@ -64,7 +64,9 @@ public class TasksController : ControllerBase
         var query = new GetDashboardQuery
         {
             From = from,
-            To = to
+            To = to,
+            UserEmail = GetUserEmail(),
+            UserRole = GetUserRole()
         };
         var result = await _mediator.Send(query);
         return Ok(result);

@@ -7,8 +7,6 @@ const Sidebar = ({ isMobile, onCloseSidebar }) => {
   const { user } = useContext(SessionContext);
   const role = user?.role || '';
   const isAdmin = role === 'Administrador';
-  const isGerente = role === 'Gerente';
-
   const handleNavClick = () => {
     if (isMobile && onCloseSidebar) {
       onCloseSidebar();
@@ -33,21 +31,19 @@ const Sidebar = ({ isMobile, onCloseSidebar }) => {
 
       <nav>
         <ul className="sidebar__nav">
-          {isGerente && (
-            <li className="sidebar__nav-item">
-              <NavLink
-                to="/"
-                end
-                className={({ isActive }) =>
-                  `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
-                }
-                onClick={handleNavClick}
-              >
-                <Home className="sidebar__nav-icon" size={20} />
-                <span>Dashboard</span>
-              </NavLink>
-            </li>
-          )}
+          <li className="sidebar__nav-item">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
+              }
+              onClick={handleNavClick}
+            >
+              <Home className="sidebar__nav-icon" size={20} />
+              <span>Dashboard</span>
+            </NavLink>
+          </li>
 
           {/* Administrador: Roles y Colaboradores */}
           {isAdmin && (

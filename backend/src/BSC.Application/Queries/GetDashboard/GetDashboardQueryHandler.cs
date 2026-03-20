@@ -23,13 +23,51 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
     public async Task<ApiResponse<DashboardDto>> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Calculando estadísticas del dashboard. From={From}, To={To}", request.From, request.To);
+        _logger.LogInformation("Calculando estadísticas del dashboard. From={From}, To={To}, Role={Role}, Email={Email}",
+            request.From, request.To, request.UserRole, request.UserEmail);
 
-        var tasks = await _taskItemRepository.GetAllForDashboardAsync(request.From, request.To);
-        // Active heatmap always uses ALL tasks (no date filter) to reflect current workload
-        var allTasks = (request.From.HasValue || request.To.HasValue)
-            ? await _taskItemRepository.GetAllForDashboardAsync(null, null)
-            : tasks;
+        List<TaskItem> tasks;
+        List<TaskItem> allTasks;
+
+        if (!string.IsNullOrEmpty(request.UserRole) && !string.IsNullOrEmpty(request.UserEmail))
+        {
+            switch (request.UserRole)
+            {
+                case TaskStateTransitions.RolLider:
+                    tasks = await _taskItemRepository.GetForDashboardByLeaderAsync(request.UserEmail, request.From, request.To);
+                    allTasks = (request.From.HasValue || request.To.HasValue)
+                        ? await _taskItemRepository.GetForDashboardByLeaderAsync(request.UserEmail, null, null)
+                        : tasks;
+                    break;
+
+                case TaskStateTransitions.RolColaborador:
+                    tasks = await _taskItemRepository.GetForDashboardByAssigneeAsync(request.UserEmail, request.From, request.To);
+                    allTasks = (request.From.HasValue || request.To.HasValue)
+                        ? await _taskItemRepository.GetForDashboardByAssigneeAsync(request.UserEmail, null, null)
+                        : tasks;
+                    break;
+
+                case TaskStateTransitions.RolGerente:
+                    tasks = await _taskItemRepository.GetAllForDashboardAsync(request.From, request.To);
+                    allTasks = (request.From.HasValue || request.To.HasValue)
+                        ? await _taskItemRepository.GetAllForDashboardAsync(null, null)
+                        : tasks;
+                    break;
+
+                default: // Rol desconocido: no mostrar datos (principio de menor privilegio)
+                    _logger.LogWarning("Dashboard solicitado con rol no reconocido: {Role}", request.UserRole);
+                    tasks = new List<TaskItem>();
+                    allTasks = new List<TaskItem>();
+                    break;
+            }
+        }
+        else
+        {
+            // Sin rol/email: no mostrar datos (principio de menor privilegio)
+            _logger.LogWarning("Dashboard solicitado sin rol o email. Role={Role}, Email={Email}", request.UserRole, request.UserEmail);
+            tasks = new List<TaskItem>();
+            allTasks = new List<TaskItem>();
+        }
 
         var dashboard = new DashboardDto
         {

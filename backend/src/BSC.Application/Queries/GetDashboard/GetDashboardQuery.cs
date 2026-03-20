@@ -18,4 +18,14 @@ public class GetDashboardQuery : IRequest<ApiResponse<DashboardDto>>
     /// Fecha fin del filtro (opcional).
     /// </summary>
     public DateTime? To { get; set; }
+
+    /// <summary>
+    /// Email del usuario autenticado (para filtrado por rol).
+    /// </summary>
+    public string? UserEmail { get; set; }
+
+    /// <summary>
+    /// Rol del usuario autenticado (Gerente, Lider, Colaborador).
+    /// </summary>
+    public string? UserRole { get; set; }
 }

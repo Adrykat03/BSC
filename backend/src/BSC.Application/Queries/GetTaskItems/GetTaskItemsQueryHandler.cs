@@ -47,14 +47,11 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
                     break;
 
                 case TaskStateTransitions.RolColaborador:
-                    // Colaborador ve todas sus tareas asignadas (cualquier estado activo)
+                    // Colaborador solo ve tareas Asignada y Reasignada
                     var allowedStatuses = new List<string>
                     {
                         TaskStatuses.Asignada,
-                        TaskStatuses.CompletaPorValidar,
-                        TaskStatuses.Reasignada,
-                        TaskStatuses.CompletaValidada,
-                        TaskStatuses.Completa
+                        TaskStatuses.Reasignada
                     };
                     taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, allowedStatuses, page, pageSize, request.Search);
                     totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, allowedStatuses, request.Search);
@@ -69,9 +66,10 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
         }
         else
         {
-            // Sin filtro de rol, retornar todas (comportamiento por defecto)
-            taskItems = await _taskItemRepository.GetAllAsync(page, pageSize, request.Search);
-            totalCount = await _taskItemRepository.GetTotalCountAsync(request.Search);
+            // Sin rol/email: no mostrar datos (principio de menor privilegio)
+            _logger.LogWarning("Listado de tareas solicitado sin rol o email. Role={Role}, Email={Email}", request.UserRole, request.UserEmail);
+            taskItems = new List<TaskItem>();
+            totalCount = 0;
         }
 
         var dtos = taskItems.Select(TaskItemMapper.ToDto).ToList();

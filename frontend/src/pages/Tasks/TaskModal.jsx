@@ -549,7 +549,7 @@ const TaskModal = ({
       if (!confirm.isConfirmed) return;
 
       if (onUploadEvidence) {
-        onUploadEvidence(task.id, evidenceFiles, formData.evidenceText, formData.observations);
+        await onUploadEvidence(task.id, evidenceFiles, formData.evidenceText, formData.observations);
       }
       return;
     }

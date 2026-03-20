@@ -658,7 +658,7 @@ const Tasks = () => {
   const VISIBLE_STATUSES = (() => {
     if (isGerente) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada', 'Completa', 'Cancelada'];
     if (isLider) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'];
-    if (isColaborador) return ['Asignada', 'Completa - Por Validar', 'Reasignada'];
+    if (isColaborador) return ['Asignada', 'Reasignada'];
     return [];
   })();
   const DATE_OPTIONS = [
@@ -973,6 +973,11 @@ const Tasks = () => {
         onUploadEvidence={async (taskId, file, text, observations) => {
           try {
             await tasksService.uploadEvidence(taskId, file, text, observations);
+            toast.success('Evidencia guardada exitosamente');
+            closeModal();
+            setDetailModalOpen(false);
+            setDetailTask(null);
+            await loadTasks(page);
           } catch (err) {
             toast.error(`Error al guardar: ${err.message}`);
             throw err;

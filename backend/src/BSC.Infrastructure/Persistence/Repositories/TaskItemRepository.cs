@@ -153,4 +153,38 @@ public class TaskItemRepository : ITaskItemRepository
             .SortByDescending(t => t.CreatedAt)
             .ToListAsync();
     }
+
+    public async Task<List<TaskItem>> GetForDashboardByLeaderAsync(string leaderEmail, DateTime? from, DateTime? to)
+    {
+        var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
+                   & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, leaderEmail);
+
+        if (from.HasValue)
+            filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, from.Value);
+
+        if (to.HasValue)
+            filter &= Builders<TaskItem>.Filter.Lte(t => t.CreatedAt, to.Value);
+
+        return await _collection
+            .Find(filter)
+            .SortByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<TaskItem>> GetForDashboardByAssigneeAsync(string assigneeEmail, DateTime? from, DateTime? to)
+    {
+        var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
+                   & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, assigneeEmail);
+
+        if (from.HasValue)
+            filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, from.Value);
+
+        if (to.HasValue)
+            filter &= Builders<TaskItem>.Filter.Lte(t => t.CreatedAt, to.Value);
+
+        return await _collection
+            .Find(filter)
+            .SortByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
 }

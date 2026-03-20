@@ -1,8 +1,7 @@
-import { lazy, Suspense, useContext } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
-import SessionContext from './context/SessionContext';
 
 const Login = lazy(() => import('./pages/Login/Login'));
 const Home = lazy(() => import('./pages/Home/Home'));
@@ -17,8 +16,6 @@ const SuspenseWrap = ({ children }) => (
 );
 
 const HomeOrRedirect = () => {
-  const { user } = useContext(SessionContext);
-  if (user?.role !== 'Gerente') return <Navigate to="/tasks" replace />;
   return <SuspenseWrap><Home /></SuspenseWrap>;
 };
 
