@@ -36,9 +36,8 @@ const getStatusTransitions = (currentStatus, role, task) => {
     if (currentStatus === 'Completa - Por Validar') return ['Completa - Validada', 'Reasignada'];
   }
   if (role === 'Colaborador') {
-    if (!beforeDeadline) return [];
     if (currentStatus === 'Asignada') return ['Completa - Por Validar'];
-    if (currentStatus === 'Reasignada') return ['Completa - Por Validar'];
+    if (currentStatus === 'Reasignada' && beforeDeadline) return ['Completa - Por Validar'];
   }
   return [];
 };
@@ -687,9 +686,8 @@ const Tasks = () => {
     const beforeDeadline = !task.dueDate || new Date() < new Date(task.dueDate);
 
     if (isColaborador) {
-      // Colaborador ve: Asignada, Reasignada siempre; CPV solo antes de fecha limite
-      const allowed = ['Asignada', 'Reasignada'];
-      if (beforeDeadline) allowed.push('Completa - Por Validar');
+      // Colaborador ve: Asignada, Reasignada y CPV siempre; puede avanzar aunque venza la fecha
+      const allowed = ['Asignada', 'Reasignada', 'Completa - Por Validar'];
       if (!allowed.includes(task.status)) return false;
     } else if (isLider) {
       // Lider ve: Asignada, Reasignada siempre; CPV y CV solo antes de fecha limite
