@@ -682,16 +682,11 @@ const Tasks = () => {
   };
 
   const filteredTasks = tasks.filter((task) => {
-    const beforeDeadline = !task.dueDate || new Date() < new Date(task.dueDate);
-
     if (isColaborador) {
-      // Colaborador ve: Asignada, Reasignada y CPV siempre; puede avanzar aunque venza la fecha
       const allowed = ['Asignada', 'Reasignada', 'Completa - Por Validar'];
       if (!allowed.includes(task.status)) return false;
     } else if (isLider) {
-      // Lider ve: Asignada, Reasignada siempre; CPV y CV solo antes de fecha limite
-      const allowed = ['Asignada', 'Reasignada'];
-      if (beforeDeadline) allowed.push('Completa - Por Validar', 'Completa - Validada');
+      const allowed = ['Asignada', 'Reasignada', 'Completa - Por Validar', 'Completa - Validada'];
       if (!allowed.includes(task.status)) return false;
     }
     // Gerente ve todo (Creada, Asignada, CPV, Reasignada, CV, Completa, Cancelada)

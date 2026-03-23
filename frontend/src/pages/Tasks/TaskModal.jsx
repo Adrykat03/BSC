@@ -350,6 +350,7 @@ const TaskModal = ({
   const isLider = userRole === 'Lider';
   const isColaborador = userRole === 'Colaborador';
 
+
   /* ── Determine modal title ── */
   const modalTitle = isColaborador
     ? 'Detalle Tarea'
