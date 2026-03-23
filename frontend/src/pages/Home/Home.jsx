@@ -554,7 +554,7 @@ const TasksByStatusDoughnut = ({ data }) => {
 
   const sorted = sortByStatusOrder(data);
   const completedCount = sorted
-    .filter((d) => d.status === 'Completa' || d.status === 'Completa - Validada')
+    .filter((d) => d.status === 'Completa')
     .reduce((sum, d) => sum + d.count, 0);
   const totalCount = sorted.reduce((sum, d) => sum + d.count, 0);
 
