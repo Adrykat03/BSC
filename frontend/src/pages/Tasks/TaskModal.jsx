@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Upload, FileText, Download, Trash2, CheckCircle, CornerDownLeft, UserCheck, ArrowRightCircle, XCircle, Save, Send } from 'lucide-react';
+import { X, Upload, FileText, Download, Trash2, CheckCircle, CornerDownLeft, UserCheck, ArrowRightCircle, Eraser, Save, Send } from 'lucide-react';
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
 import { tasksService } from '../../services/tasksService';
@@ -883,7 +883,7 @@ const TaskModal = ({
                     buttons.push({ icon: <><CornerDownLeft size={16} /><UserCheck size={16} /></>, title: 'Devolver al Colaborador (Reasignada)', status: 'Reasignada', color: 'var(--color-warning)' });
                   }
                   if (['Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'].includes(s)) {
-                    buttons.push({ icon: <XCircle size={16} />, title: 'Cancelar tarea', status: 'Cancelada', color: 'var(--color-error)' });
+                    buttons.push({ icon: <Eraser size={16} />, title: 'Cancelar tarea', status: 'Cancelada', color: 'var(--color-error)' });
                   }
                 }
 
