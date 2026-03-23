@@ -41,36 +41,28 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
                     break;
 
                 case TaskStateTransitions.RolLider:
-                    // Lider ve Asignada/Reasignada siempre; CPV y CV solo si DueDate >= ahora
-                    var leaderAlwaysStatuses = new List<string>
+                    // Lider ve Asignada, Reasignada, CPV y CV sin restriccion de fecha
+                    var leaderStatuses = new List<string>
                     {
                         TaskStatuses.Asignada,
-                        TaskStatuses.Reasignada
-                    };
-                    var leaderConditionalStatuses = new List<string>
-                    {
+                        TaskStatuses.Reasignada,
                         TaskStatuses.CompletaPorValidar,
                         TaskStatuses.CompletaValidada
                     };
-                    var nowForLeader = DateTime.UtcNow;
-                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, leaderAlwaysStatuses, page, pageSize, request.Search, leaderConditionalStatuses, nowForLeader);
-                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail, leaderAlwaysStatuses, request.Search, leaderConditionalStatuses, nowForLeader);
+                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, leaderStatuses, page, pageSize, request.Search);
+                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail, leaderStatuses, request.Search);
                     break;
 
                 case TaskStateTransitions.RolColaborador:
-                    // Colaborador ve Asignada/Reasignada siempre; CPV solo si DueDate >= ahora
-                    var collabAlwaysStatuses = new List<string>
+                    // Colaborador ve Asignada, Reasignada y CPV sin restriccion de fecha
+                    var collabStatuses = new List<string>
                     {
                         TaskStatuses.Asignada,
-                        TaskStatuses.Reasignada
-                    };
-                    var collabConditionalStatuses = new List<string>
-                    {
+                        TaskStatuses.Reasignada,
                         TaskStatuses.CompletaPorValidar
                     };
-                    var nowForCollab = DateTime.UtcNow;
-                    taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, collabAlwaysStatuses, page, pageSize, request.Search, collabConditionalStatuses, nowForCollab);
-                    totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, collabAlwaysStatuses, request.Search, collabConditionalStatuses, nowForCollab);
+                    taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, collabStatuses, page, pageSize, request.Search);
+                    totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, collabStatuses, request.Search);
                     break;
 
                 default:
