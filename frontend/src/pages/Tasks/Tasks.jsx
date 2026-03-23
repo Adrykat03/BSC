@@ -27,17 +27,16 @@ const STATUS_BADGE_MAP = {
 const getBadgeClass = (status) => STATUS_BADGE_MAP[status] || 'badge badge--inactive';
 
 /** Returns valid next statuses based on current status, role and deadline */
-const getStatusTransitions = (currentStatus, role, task) => {
-  const beforeDeadline = !task?.dueDate || new Date() < new Date(task.dueDate);
+const getStatusTransitions = (currentStatus, role) => {
   if (role === 'Gerente') {
     if (currentStatus === 'Completa - Validada') return ['Completa', 'Reasignada'];
+    if (['Asignada', 'Completa - Por Validar', 'Reasignada'].includes(currentStatus)) return ['Cancelada'];
   }
   if (role === 'Lider') {
     if (currentStatus === 'Completa - Por Validar') return ['Completa - Validada', 'Reasignada'];
   }
   if (role === 'Colaborador') {
-    if (currentStatus === 'Asignada') return ['Completa - Por Validar'];
-    if (currentStatus === 'Reasignada' && beforeDeadline) return ['Completa - Por Validar'];
+    if (currentStatus === 'Asignada' || currentStatus === 'Reasignada') return ['Completa - Por Validar'];
   }
   return [];
 };
@@ -844,7 +843,7 @@ const Tasks = () => {
                         return aDate - bDate;
                       })
                       .map((task) => {
-                      const transitions = getStatusTransitions(task.status, role, task);
+                      const transitions = getStatusTransitions(task.status, role);
                       const isSelected = selectedRowId === task.id;
                       const urgencyBg = getRowBgColor(task._urgency.level);
                       return (
