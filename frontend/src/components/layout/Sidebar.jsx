@@ -31,19 +31,21 @@ const Sidebar = ({ isMobile, onCloseSidebar }) => {
 
       <nav>
         <ul className="sidebar__nav">
-          <li className="sidebar__nav-item">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
-              }
-              onClick={handleNavClick}
-            >
-              <Home className="sidebar__nav-icon" size={20} />
-              <span>Dashboard</span>
-            </NavLink>
-          </li>
+          {!isAdmin && (
+            <li className="sidebar__nav-item">
+              <NavLink
+                to="/"
+                end
+                className={({ isActive }) =>
+                  `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
+                }
+                onClick={handleNavClick}
+              >
+                <Home className="sidebar__nav-icon" size={20} />
+                <span>Dashboard</span>
+              </NavLink>
+            </li>
+          )}
 
           {/* Administrador: Roles y Colaboradores */}
           {isAdmin && (
