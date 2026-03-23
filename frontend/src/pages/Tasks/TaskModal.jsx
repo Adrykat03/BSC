@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Upload, FileText, Download, Trash2 } from 'lucide-react';
+import { X, Upload, FileText, Download, Trash2, CheckCircle, CornerDownLeft, UserCheck, ArrowRightCircle, XCircle, Save, Send } from 'lucide-react';
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
 import { tasksService } from '../../services/tasksService';
@@ -855,90 +855,113 @@ const TaskModal = ({
             </div>
           </div>
 
-          {/* ── Footer ── */}
-          <div className="modal__footer" style={{ flexWrap: 'wrap', gap: '8px' }}>
+          {/* ── Footer toolbar ── */}
+          <div className="modal__footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '12px 24px' }}>
+            {/* Left: close */}
             <button
               type="button"
-              className="btn btn--secondary"
+              className="btn btn--secondary btn--sm"
               onClick={onClose}
               disabled={loading}
+              title="Cerrar sin guardar"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
-              Cancelar
+              <X size={16} /> Cerrar
             </button>
-            {/* Status transitions for all roles when editing */}
-            {isEditing && onChangeStatus && (() => {
-              const buttons = [];
-              const s = task?.status;
 
-              if (isGerente) {
-                if (s === 'Completa - Validada') {
-                  buttons.push({ label: 'Completa', status: 'Completa', color: 'var(--color-success)' });
-                  buttons.push({ label: 'Devolver al Lider', status: 'Completa - Por Validar', color: 'var(--color-warning)' });
-                  buttons.push({ label: 'Devolver al Colaborador', status: 'Reasignada', color: 'var(--color-warning)' });
-                }
-                // Cancelar desde cualquier estado activo
-                if (['Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'].includes(s)) {
-                  buttons.push({ label: 'Cancelar Tarea', status: 'Cancelada', color: 'var(--color-error)' });
-                }
-              }
+            {/* Right: action toolbar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Status transitions */}
+              {isEditing && onChangeStatus && (() => {
+                const buttons = [];
+                const s = task?.status;
 
-              if (isLider) {
-                if (s === 'Completa - Por Validar') {
-                  buttons.push({ label: 'Completa - Validada', status: 'Completa - Validada', color: 'var(--color-success)' });
-                  buttons.push({ label: 'Reasignar', status: 'Reasignada', color: 'var(--color-warning)' });
+                if (isGerente) {
+                  if (s === 'Completa - Validada') {
+                    buttons.push({ icon: <CheckCircle size={16} />, title: 'Marcar como Completa', status: 'Completa', color: 'var(--color-success)' });
+                    buttons.push({ icon: <CornerDownLeft size={16} />, title: 'Devolver al Lider (Completa - Por Validar)', status: 'Completa - Por Validar', color: 'var(--color-warning)' });
+                    buttons.push({ icon: <><CornerDownLeft size={16} /><UserCheck size={16} /></>, title: 'Devolver al Colaborador (Reasignada)', status: 'Reasignada', color: 'var(--color-warning)' });
+                  }
+                  if (['Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'].includes(s)) {
+                    buttons.push({ icon: <XCircle size={16} />, title: 'Cancelar tarea', status: 'Cancelada', color: 'var(--color-error)' });
+                  }
                 }
-              }
 
-              if (isColaborador) {
-                if (s === 'Asignada' || s === 'Reasignada') {
-                  buttons.push({ label: 'Completa - Por Validar', status: 'Completa - Por Validar', color: 'var(--color-success)' });
+                if (isLider) {
+                  if (s === 'Completa - Por Validar') {
+                    buttons.push({ icon: <><CheckCircle size={16} /><ArrowRightCircle size={16} /></>, title: 'Validar y enviar al Gerente', status: 'Completa - Validada', color: 'var(--color-success)' });
+                    buttons.push({ icon: <CornerDownLeft size={16} />, title: 'Reasignar al Colaborador', status: 'Reasignada', color: 'var(--color-warning)' });
+                  }
                 }
-              }
 
-              return buttons.map((btn) => (
-                <button
-                  key={btn.status + btn.label}
-                  type="button"
-                  className="btn"
-                  disabled={loading}
-                  style={{
-                    backgroundColor: btn.color,
-                    color: '#fff',
-                    borderColor: btn.color,
-                  }}
-                  onClick={async () => {
-                    // Colaborador: always save evidence + observations before status change
-                    if (isColaborador && onUploadEvidence) {
-                      try {
-                        await onUploadEvidence(task.id, evidenceFiles, formData.evidenceText, formData.observations);
-                      } catch (e) {
-                        return;
+                if (isColaborador) {
+                  if (s === 'Asignada' || s === 'Reasignada') {
+                    buttons.push({ icon: <><Send size={16} /><CheckCircle size={16} /></>, title: 'Enviar a validacion', status: 'Completa - Por Validar', color: 'var(--color-success)' });
+                  }
+                }
+
+                return buttons.map((btn) => (
+                  <button
+                    key={btn.status + btn.title}
+                    type="button"
+                    className="btn btn--sm"
+                    disabled={loading}
+                    title={btn.title}
+                    data-tooltip={btn.title}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      backgroundColor: btn.color,
+                      color: '#fff',
+                      borderColor: btn.color,
+                      padding: '6px 10px',
+                    }}
+                    onClick={async () => {
+                      if (isColaborador && onUploadEvidence) {
+                        try {
+                          await onUploadEvidence(task.id, evidenceFiles, formData.evidenceText, formData.observations);
+                        } catch (e) {
+                          return;
+                        }
                       }
-                    }
-                    // Lider/Gerente: always save form data before status change
-                    if ((isLider || isGerente) && isEditing && onSaveOnly) {
-                      const data = buildLiderFormData();
-                      try {
-                        await onSaveOnly(data);
-                      } catch (e) {
-                        return;
+                      if ((isLider || isGerente) && isEditing && onSaveOnly) {
+                        const data = buildLiderFormData();
+                        try {
+                          await onSaveOnly(data);
+                        } catch (e) {
+                          return;
+                        }
                       }
-                    }
-                    onChangeStatus(task, btn.status);
-                  }}
-                >
-                  {btn.label}
-                </button>
-              ));
-            })()}
-            <button
-              type="submit"
-              className={isColaborador ? 'btn' : 'btn btn--primary'}
-              disabled={loading}
-              style={isColaborador ? { backgroundColor: 'var(--color-success)', color: '#fff', borderColor: 'var(--color-success)' } : {}}
-            >
-              {submitLabel}
-            </button>
+                      onChangeStatus(task, btn.status);
+                    }}
+                  >
+                    {btn.icon}
+                  </button>
+                ));
+              })()}
+
+              {/* Separator when there are transition buttons */}
+              {isEditing && onChangeStatus && (() => {
+                const s = task?.status;
+                const hasTransitions =
+                  (isGerente && (s === 'Completa - Validada' || ['Asignada', 'Completa - Por Validar', 'Reasignada'].includes(s))) ||
+                  (isLider && s === 'Completa - Por Validar') ||
+                  (isColaborador && (s === 'Asignada' || s === 'Reasignada'));
+                return hasTransitions ? <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--color-border-main)', margin: '0 4px' }} /> : null;
+              })()}
+
+              {/* Save / Submit */}
+              <button
+                type="submit"
+                className="btn btn--primary btn--sm"
+                disabled={loading}
+                title={isColaborador ? 'Guardar evidencia y observaciones' : isEditing ? 'Guardar cambios de la tarea' : 'Crear nueva tarea'}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px' }}
+              >
+                <Save size={16} /> {loading ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
