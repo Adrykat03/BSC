@@ -866,28 +866,44 @@ const TaskModal = ({
             </button>
             {/* Status transitions for all roles when editing */}
             {isEditing && onChangeStatus && (() => {
-              const transitions = [];
+              const buttons = [];
               const s = task?.status;
-              const beforeDeadline = !task?.dueDate || new Date() < new Date(task.dueDate);
+
               if (isGerente) {
-                if (s === 'Completa - Validada') transitions.push('Completa', 'Reasignada');
+                if (s === 'Completa - Validada') {
+                  buttons.push({ label: 'Completa', status: 'Completa', color: 'var(--color-success)' });
+                  buttons.push({ label: 'Devolver al Lider', status: 'Completa - Por Validar', color: 'var(--color-warning)' });
+                  buttons.push({ label: 'Devolver al Colaborador', status: 'Reasignada', color: 'var(--color-warning)' });
+                }
+                // Cancelar desde cualquier estado activo
+                if (['Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'].includes(s)) {
+                  buttons.push({ label: 'Cancelar Tarea', status: 'Cancelada', color: 'var(--color-error)' });
+                }
               }
+
               if (isLider) {
-                if (s === 'Completa - Por Validar') transitions.push('Completa - Validada', 'Reasignada');
+                if (s === 'Completa - Por Validar') {
+                  buttons.push({ label: 'Completa - Validada', status: 'Completa - Validada', color: 'var(--color-success)' });
+                  buttons.push({ label: 'Reasignar', status: 'Reasignada', color: 'var(--color-warning)' });
+                }
               }
-              if (isColaborador && beforeDeadline) {
-                if (s === 'Asignada' || s === 'Reasignada') transitions.push('Completa - Por Validar');
+
+              if (isColaborador) {
+                if (s === 'Asignada' || s === 'Reasignada') {
+                  buttons.push({ label: 'Completa - Por Validar', status: 'Completa - Por Validar', color: 'var(--color-success)' });
+                }
               }
-              return transitions.map((newStatus) => (
+
+              return buttons.map((btn) => (
                 <button
-                  key={newStatus}
+                  key={btn.status + btn.label}
                   type="button"
                   className="btn"
                   disabled={loading}
                   style={{
-                    backgroundColor: newStatus === 'Reasignada' ? 'var(--color-warning)' : 'var(--color-success)',
+                    backgroundColor: btn.color,
                     color: '#fff',
-                    borderColor: newStatus === 'Reasignada' ? 'var(--color-warning)' : 'var(--color-success)',
+                    borderColor: btn.color,
                   }}
                   onClick={async () => {
                     // Colaborador: always save evidence + observations before status change
@@ -907,10 +923,10 @@ const TaskModal = ({
                         return;
                       }
                     }
-                    onChangeStatus(task, newStatus);
+                    onChangeStatus(task, btn.status);
                   }}
                 >
-                  {newStatus}
+                  {btn.label}
                 </button>
               ));
             })()}

@@ -16,6 +16,7 @@ public static class TaskStateTransitions
             (TaskStatuses.Creada, TaskStatuses.Asignada),
             (TaskStatuses.CompletaValidada, TaskStatuses.Completa),
             (TaskStatuses.CompletaValidada, TaskStatuses.Reasignada),
+            (TaskStatuses.CompletaValidada, TaskStatuses.CompletaPorValidar), // Devolver al Lider
             // Cancelar desde cualquier estado activo
             (TaskStatuses.Asignada, TaskStatuses.Cancelada),
             (TaskStatuses.CompletaPorValidar, TaskStatuses.Cancelada),
