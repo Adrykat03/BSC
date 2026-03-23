@@ -26,8 +26,9 @@ const STATUS_BADGE_MAP = {
 
 const getBadgeClass = (status) => STATUS_BADGE_MAP[status] || 'badge badge--inactive';
 
-/** Returns valid next statuses based on current status and role */
-const getStatusTransitions = (currentStatus, role) => {
+/** Returns valid next statuses based on current status, role and deadline */
+const getStatusTransitions = (currentStatus, role, task) => {
+  const beforeDeadline = !task?.dueDate || new Date() < new Date(task.dueDate);
   if (role === 'Gerente') {
     if (currentStatus === 'Completa - Validada') return ['Completa', 'Reasignada'];
   }
@@ -35,6 +36,7 @@ const getStatusTransitions = (currentStatus, role) => {
     if (currentStatus === 'Completa - Por Validar') return ['Completa - Validada', 'Reasignada'];
   }
   if (role === 'Colaborador') {
+    if (!beforeDeadline) return [];
     if (currentStatus === 'Asignada') return ['Completa - Por Validar'];
     if (currentStatus === 'Reasignada') return ['Completa - Por Validar'];
   }
@@ -657,8 +659,8 @@ const Tasks = () => {
   // ---- Filter logic (client-side on loaded data) ----
   const VISIBLE_STATUSES = (() => {
     if (isGerente) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada', 'Completa', 'Cancelada'];
-    if (isLider) return ['Asignada', 'Completa - Por Validar', 'Reasignada'];
-    if (isColaborador) return ['Asignada', 'Reasignada'];
+    if (isLider) return ['Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'];
+    if (isColaborador) return ['Asignada', 'Completa - Por Validar', 'Reasignada'];
     return [];
   })();
   const DATE_OPTIONS = [
@@ -682,8 +684,21 @@ const Tasks = () => {
   };
 
   const filteredTasks = tasks.filter((task) => {
-    // Canceladas solo visibles para Gerente
-    if (task.status === 'Cancelada' && !isGerente) return false;
+    const beforeDeadline = !task.dueDate || new Date() < new Date(task.dueDate);
+
+    if (isColaborador) {
+      // Colaborador ve: Asignada, Reasignada siempre; CPV solo antes de fecha limite
+      const allowed = ['Asignada', 'Reasignada'];
+      if (beforeDeadline) allowed.push('Completa - Por Validar');
+      if (!allowed.includes(task.status)) return false;
+    } else if (isLider) {
+      // Lider ve: Asignada, Reasignada siempre; CPV y CV solo antes de fecha limite
+      const allowed = ['Asignada', 'Reasignada'];
+      if (beforeDeadline) allowed.push('Completa - Por Validar', 'Completa - Validada');
+      if (!allowed.includes(task.status)) return false;
+    }
+    // Gerente ve todo (Creada, Asignada, CPV, Reasignada, CV, Completa, Cancelada)
+
     if (filterStatus && task.status !== filterStatus) return false;
     if (!matchesDate(task)) return false;
     return true;
@@ -831,7 +846,7 @@ const Tasks = () => {
                         return aDate - bDate;
                       })
                       .map((task) => {
-                      const transitions = getStatusTransitions(task.status, role);
+                      const transitions = getStatusTransitions(task.status, role, task);
                       const isSelected = selectedRowId === task.id;
                       const urgencyBg = getRowBgColor(task._urgency.level);
                       return (

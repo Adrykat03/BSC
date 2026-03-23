@@ -48,6 +48,18 @@ public class ChangeTaskStatusCommandHandler : IRequestHandler<ChangeTaskStatusCo
             );
         }
 
+        // Validar fecha limite: Colaborador no puede pasar a "Completa - Por Validar" si ya paso la fecha de entrega
+        if (request.ChangedByRole == TaskStateTransitions.RolColaborador
+            && request.NewStatus == TaskStatuses.CompletaPorValidar
+            && taskItem.DueDate.HasValue
+            && DateTime.UtcNow >= taskItem.DueDate.Value)
+        {
+            return ApiResponse<TaskItemDto>.Fail(
+                "Fecha limite excedida.",
+                new List<string> { "No se puede completar la tarea porque la fecha de entrega ya paso." }
+            );
+        }
+
         // Validar transicion segun rol
         if (!TaskStateTransitions.IsValidTransition(request.ChangedByRole, taskItem.Status, request.NewStatus))
         {

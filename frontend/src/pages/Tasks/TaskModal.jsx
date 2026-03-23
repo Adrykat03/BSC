@@ -868,13 +868,14 @@ const TaskModal = ({
             {isEditing && onChangeStatus && (() => {
               const transitions = [];
               const s = task?.status;
+              const beforeDeadline = !task?.dueDate || new Date() < new Date(task.dueDate);
               if (isGerente) {
                 if (s === 'Completa - Validada') transitions.push('Completa', 'Reasignada');
               }
               if (isLider) {
                 if (s === 'Completa - Por Validar') transitions.push('Completa - Validada', 'Reasignada');
               }
-              if (isColaborador) {
+              if (isColaborador && beforeDeadline) {
                 if (s === 'Asignada' || s === 'Reasignada') transitions.push('Completa - Por Validar');
               }
               return transitions.map((newStatus) => (
