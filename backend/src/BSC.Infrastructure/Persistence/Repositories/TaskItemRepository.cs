@@ -57,27 +57,30 @@ public class TaskItemRepository : ITaskItemRepository
     }
 
     /// <summary>
-    /// Construye el filtro de visibilidad: si visibleBeforeDeadline tiene valor,
-    /// muestra tareas cuya DueDate >= ahora (cualquier estado) O que esten en los estados permitidos.
+    /// Construye el filtro de visibilidad:
+    /// - alwaysVisibleStatuses: se muestran siempre.
+    /// - conditionalStatuses: solo se muestran si DueDate >= ahora.
     /// </summary>
-    private static FilterDefinition<TaskItem> BuildVisibilityFilter(List<string> statuses, DateTime? visibleBeforeDeadline)
+    private static FilterDefinition<TaskItem> BuildVisibilityFilter(List<string> alwaysVisibleStatuses, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null)
     {
-        var statusFilter = Builders<TaskItem>.Filter.In(t => t.Status, statuses);
+        var alwaysFilter = Builders<TaskItem>.Filter.In(t => t.Status, alwaysVisibleStatuses);
 
-        if (visibleBeforeDeadline.HasValue)
+        if (conditionalStatuses != null && conditionalStatuses.Count > 0 && visibleBeforeDeadline.HasValue)
         {
+            var conditionalStatusFilter = Builders<TaskItem>.Filter.In(t => t.Status, conditionalStatuses);
             var deadlineFilter = Builders<TaskItem>.Filter.Gte(t => t.DueDate, visibleBeforeDeadline.Value);
-            return Builders<TaskItem>.Filter.Or(deadlineFilter, statusFilter);
+            var conditionalFilter = Builders<TaskItem>.Filter.And(conditionalStatusFilter, deadlineFilter);
+            return Builders<TaskItem>.Filter.Or(alwaysFilter, conditionalFilter);
         }
 
-        return statusFilter;
+        return alwaysFilter;
     }
 
-    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, DateTime? visibleBeforeDeadline = null)
+    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
-                   & BuildVisibilityFilter(statuses, visibleBeforeDeadline);
+                   & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
 
         var skip = (page - 1) * pageSize;
@@ -90,21 +93,21 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByLeaderEmailAsync(string email, List<string> statuses, string? search = null, DateTime? visibleBeforeDeadline = null)
+    public async Task<int> GetCountByLeaderEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
-                   & BuildVisibilityFilter(statuses, visibleBeforeDeadline);
+                   & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
-    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, DateTime? visibleBeforeDeadline = null)
+    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
-                   & BuildVisibilityFilter(statuses, visibleBeforeDeadline);
+                   & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
 
         var skip = (page - 1) * pageSize;
@@ -117,11 +120,11 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null, DateTime? visibleBeforeDeadline = null)
+    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
-                   & BuildVisibilityFilter(statuses, visibleBeforeDeadline);
+                   & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
 
         return (int)await _collection.CountDocumentsAsync(filter);
