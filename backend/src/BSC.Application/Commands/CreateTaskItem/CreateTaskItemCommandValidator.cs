@@ -18,7 +18,8 @@ public class CreateTaskItemCommandValidator : AbstractValidator<CreateTaskItemCo
             .MaximumLength(2000).WithMessage("La descripcion no puede exceder 2000 caracteres.");
 
         RuleFor(x => x.EstimatedTime)
-            .GreaterThan(0).WithMessage("El tiempo estimado debe ser mayor a 0.")
+            .GreaterThanOrEqualTo(0).WithMessage("El tiempo estimado debe ser mayor o igual a 0.")
+            .Must(v => v!.Value % 0.5m == 0).WithMessage("El tiempo estimado debe ser multiplo de 0.5.")
             .When(x => x.EstimatedTime.HasValue);
 
         RuleFor(x => x.Insumos)

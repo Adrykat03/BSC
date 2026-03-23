@@ -58,7 +58,7 @@ public class UpdateTaskItemCommandHandler : IRequestHandler<UpdateTaskItemComman
             taskItem.DueDate = request.DueDate;
         }
 
-        taskItem.EstimatedTime = request.EstimatedTime;
+        taskItem.EstimatedTime = request.EstimatedTime ?? taskItem.EstimatedTime;
         taskItem.Insumos = request.Insumos;
         // Preservar Observations existente si no viene en el request
         if (request.Observations != null)

@@ -75,6 +75,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             CollaboratorHeatmapActive = CalculateCollaboratorHeatmapActive(allTasks),
             AvgTimeByStatus = CalculateAvgTimeByStatus(tasks),
             TasksByCollaboratorAndStatus = CalculateTasksByCollaboratorAndStatus(tasks),
+            HistoricReassignedByCollaborator = CalculateHistoricReassigned(tasks),
             TasksByStatus = CalculateTasksByStatus(tasks),
             Highlights = CalculateHighlights(tasks),
             CompletionTimeline = CalculateCompletionTimeline(tasks)
@@ -84,7 +85,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
     }
 
     /// <summary>
-    /// Mapa de calor: colaboradores y cantidad de tareas asignadas.
+    /// Mapa de calor: colaboradores y suma de tiempo estimado de tareas asignadas.
     /// </summary>
     private static List<CollaboratorHeatmapItem> CalculateCollaboratorHeatmap(List<TaskItem> tasks)
     {
@@ -94,14 +95,16 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             .Select(g => new CollaboratorHeatmapItem
             {
                 Name = g.Key,
-                TaskCount = g.Count()
+                TaskCount = g.Count(),
+                EstimatedTimeSum = g.Sum(t => t.EstimatedTime)
             })
-            .OrderByDescending(x => x.TaskCount)
+            .OrderByDescending(x => x.EstimatedTimeSum)
             .ToList();
     }
 
     /// <summary>
     /// Mapa de calor de tareas activas: excluye Completa y Cancelada.
+    /// Suma el tiempo estimado de las tareas activas.
     /// </summary>
     private static List<CollaboratorHeatmapItem> CalculateCollaboratorHeatmapActive(List<TaskItem> tasks)
     {
@@ -113,9 +116,10 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             .Select(g => new CollaboratorHeatmapItem
             {
                 Name = g.Key,
-                TaskCount = g.Count()
+                TaskCount = g.Count(),
+                EstimatedTimeSum = g.Sum(t => t.EstimatedTime)
             })
-            .OrderByDescending(x => x.TaskCount)
+            .OrderByDescending(x => x.EstimatedTimeSum)
             .ToList();
     }
 
@@ -184,6 +188,40 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
                     .ToDictionary(sg => sg.Key, sg => sg.Count())
             })
             .OrderBy(x => x.Name)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Calcula la cantidad historica de reasignaciones por colaborador.
+    /// Cuenta las transiciones a "Reasignada" en el historial de cada tarea.
+    /// </summary>
+    private static List<CollaboratorReassignedCount> CalculateHistoricReassigned(List<TaskItem> tasks)
+    {
+        var counts = new Dictionary<string, int>();
+
+        foreach (var task in tasks)
+        {
+            if (string.IsNullOrEmpty(task.AssignedToName) || task.StatusHistory == null)
+                continue;
+
+            var reassignCount = task.StatusHistory
+                .Count(h => h.ToStatus == TaskStatuses.Reasignada);
+
+            if (reassignCount > 0)
+            {
+                if (!counts.ContainsKey(task.AssignedToName))
+                    counts[task.AssignedToName] = 0;
+                counts[task.AssignedToName] += reassignCount;
+            }
+        }
+
+        return counts
+            .Select(kvp => new CollaboratorReassignedCount
+            {
+                Name = kvp.Key,
+                Count = kvp.Value
+            })
+            .OrderByDescending(x => x.Count)
             .ToList();
     }
 

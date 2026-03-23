@@ -104,6 +104,15 @@ export const tasksService = {
     window.URL.revokeObjectURL(url);
   },
 
+  async exportByCollaborator(collaboratorName, status, from, to) {
+    const params = new URLSearchParams({ collaboratorName });
+    if (status) params.append('status', status);
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const response = await apiClient.get(`${ENDPOINT}/export?${params.toString()}`);
+    return response.data ?? [];
+  },
+
   async bulkCreate(tasks) {
     const response = await apiClient.post(`${ENDPOINT}/bulk`, { tasks });
     return response.data;

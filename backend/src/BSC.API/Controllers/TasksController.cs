@@ -6,6 +6,7 @@ using BSC.Application.Commands.CreateTaskItem;
 using BSC.Application.Commands.CreateTaskItemsBulk;
 using BSC.Application.Commands.DeleteTaskItem;
 using BSC.Application.Commands.RemoveFileAttachment;
+using BSC.Application.Commands.RevertTaskStatus;
 using BSC.Application.Commands.UpdateTaskItem;
 using BSC.Application.Commands.UploadEvidence;
 using BSC.Application.DTOs;
@@ -48,6 +49,28 @@ public class TasksController : ControllerBase
         // El rol activo es el claim que NO es un JSON array.
         var allRoles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
         return allRoles.FirstOrDefault(v => !v.TrimStart().StartsWith("[")) ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Exporta tareas filtradas por nombre de colaborador, estado opcional y rango de fechas.
+    /// Usado por el gráfico de tareas por colaborador para descargar XLSX.
+    /// </summary>
+    [HttpGet("export")]
+    [ProducesResponseType(typeof(ApiResponse<List<TaskItemDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportByCollaborator(
+        [FromQuery] string collaboratorName,
+        [FromQuery] string? status = null,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null)
+    {
+        if (string.IsNullOrWhiteSpace(collaboratorName))
+            return BadRequest(ApiResponse<object>.Fail("El nombre del colaborador es requerido."));
+
+        var tasks = await _taskItemRepository.GetByCollaboratorNameAsync(
+            collaboratorName, status, from, to);
+
+        var dtos = tasks.Select(BSC.Application.Mappings.TaskItemMapper.ToDto).ToList();
+        return Ok(ApiResponse<List<TaskItemDto>>.Ok(dtos));
     }
 
     /// <summary>
@@ -213,6 +236,36 @@ public class TasksController : ControllerBase
         command.TaskId = id;
         command.ChangedByEmail = GetUserEmail();
         command.ChangedByRole = GetUserRole();
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+        {
+            if (result.Message.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))
+                return NotFound(result);
+
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retoma una tarea revertiendola a su estado anterior basado en el historial.
+    /// Solo Colaborador y Lider pueden ejecutar esta accion.
+    /// El email y rol se obtienen del JWT.
+    /// </summary>
+    /// <param name="id">ID de la tarea.</param>
+    /// <param name="command">Datos de la reversion (comentario opcional).</param>
+    /// <returns>Tarea con estado revertido.</returns>
+    [HttpPut("{id}/revert")]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RevertStatus(string id, [FromBody] RevertTaskStatusCommand command)
+    {
+        command.TaskId = id;
+        command.RevertedByEmail = GetUserEmail();
+        command.RevertedByRole = GetUserRole();
         var result = await _mediator.Send(command);
 
         if (!result.Success)

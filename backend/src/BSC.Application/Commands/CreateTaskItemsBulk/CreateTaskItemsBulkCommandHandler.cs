@@ -105,7 +105,7 @@ public class CreateTaskItemsBulkCommandHandler : IRequestHandler<CreateTaskItems
                     Description = taskData.Description.Trim(),
                     Status = TaskStatuses.Creada,
                     DueDate = taskData.DueDate,
-                    EstimatedTime = taskData.EstimatedTime,
+                    EstimatedTime = taskData.EstimatedTime ?? 0m,
                     Insumos = taskData.Insumos,
                     Observations = taskData.Observations,
                     CreatedAt = DateTime.UtcNow,

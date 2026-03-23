@@ -47,7 +47,7 @@ public class TaskItem
     public DateTime? DueDate { get; set; }
 
     [BsonElement("estimatedTime")]
-    public decimal? EstimatedTime { get; set; }
+    public decimal EstimatedTime { get; set; }
 
     [BsonElement("actualTime")]
     public decimal? ActualTime { get; set; }

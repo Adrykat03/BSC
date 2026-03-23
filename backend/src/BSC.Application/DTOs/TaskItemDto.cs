@@ -21,7 +21,7 @@ public class TaskItemDto
     public string? AssignedToEmail { get; set; }
 
     public DateTime? DueDate { get; set; }
-    public decimal? EstimatedTime { get; set; }
+    public decimal EstimatedTime { get; set; }
     public decimal? ActualTime { get; set; }
 
     // Insumos

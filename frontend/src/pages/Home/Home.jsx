@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -344,7 +344,7 @@ const Home = () => {
             </div>
             <div className="card__body">
               <div className="chart-container" style={{ height: Math.max(300, (dashboard.tasksByCollaboratorAndStatus?.length || 1) * 40 + 80) + 'px' }}>
-                <TasksByCollaboratorChart data={dashboard.tasksByCollaboratorAndStatus} />
+                <TasksByCollaboratorChart data={dashboard.tasksByCollaboratorAndStatus} historicReassigned={dashboard.historicReassignedByCollaborator} dateFrom={dateFrom} dateTo={dateTo} />
               </div>
             </div>
           </div>
@@ -443,10 +443,10 @@ const HeatMap = ({ data }) => {
     return <div className="text-center text-secondary p-4">No hay datos de colaboradores</div>;
   }
 
-  const maxCount = Math.max(...data.map((d) => d.taskCount), 1);
+  const maxHours = Math.max(...data.map((d) => d.estimatedTimeSum), 1);
 
-  const getHeatColor = (count) => {
-    const intensity = count / maxCount;
+  const getHeatColor = (hours) => {
+    const intensity = hours / maxHours;
     // From light pink to deep BSC red (#E31837)
     const r = Math.round(255 - (255 - 227) * intensity);
     const g = Math.round(245 - (245 - 24) * intensity);
@@ -454,8 +454,8 @@ const HeatMap = ({ data }) => {
     return `rgb(${r}, ${g}, ${b})`;
   };
 
-  const getTextColor = (count) => {
-    const intensity = count / maxCount;
+  const getTextColor = (hours) => {
+    const intensity = hours / maxHours;
     return intensity > 0.5 ? '#FFFFFF' : '#1A1A2E';
   };
 
@@ -466,12 +466,12 @@ const HeatMap = ({ data }) => {
           key={index}
           className="heatmap-cell"
           style={{
-            backgroundColor: getHeatColor(item.taskCount),
-            color: getTextColor(item.taskCount),
+            backgroundColor: getHeatColor(item.estimatedTimeSum),
+            color: getTextColor(item.estimatedTimeSum),
           }}
         >
           <span className="heatmap-cell__name">{item.name}</span>
-          <span className="heatmap-cell__count">{item.taskCount}</span>
+          <span className="heatmap-cell__count">{item.estimatedTimeSum}h</span>
         </div>
       ))}
     </div>
@@ -623,7 +623,40 @@ const TasksByStatusDoughnut = ({ data }) => {
 /* ========================================
    Tasks by Collaborator & Status (Horizontal Stacked Bar)
    ======================================== */
-const TasksByCollaboratorChart = ({ data }) => {
+const downloadTasksXlsx = (tasks, fileName) => {
+  const rows = tasks.map((t) => ({
+    'Titulo': t.title || '',
+    'Descripcion': t.description || '',
+    'Estado': t.status || '',
+    'Lider asignado': t.assignedLeaderName || '',
+    'Colaborador asignado': t.assignedToName || '',
+    'Fecha de entrega': formatDateDDMMYYYY(t.dueDate),
+    'Tiempo estimado (h)': t.estimatedTime ?? '',
+    'Tiempo real (h)': t.actualTime ?? '',
+    'Insumos': t.insumos || '',
+    'Observaciones': t.observations || '',
+    'Evidencia': t.evidenceText || '',
+    'Creado por': t.createdBy || '',
+    'Fecha de creacion': formatDateTimeDDMMYYYY(t.createdAt),
+  }));
+  if (rows.length === 0) {
+    alert('No hay tareas para descargar.');
+    return;
+  }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const colWidths = Object.keys(rows[0]).map((key) => {
+    const maxLen = Math.max(key.length, ...rows.map((r) => String(r[key] || '').length));
+    return { wch: Math.min(maxLen + 2, 60) };
+  });
+  ws['!cols'] = colWidths;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Tareas');
+  XLSX.writeFile(wb, fileName);
+};
+
+const TasksByCollaboratorChart = ({ data, historicReassigned, dateFrom, dateTo }) => {
+  const chartRef = useRef(null);
+
   if (!data || data.length === 0) {
     return <div className="text-center text-secondary p-4">No hay datos disponibles</div>;
   }
@@ -637,16 +670,81 @@ const TasksByCollaboratorChart = ({ data }) => {
   });
 
   const statuses = sortStatuses(Array.from(allStatuses));
+  const collaboratorNames = data.map((d) => d.name);
+
+  // Build lookup for historic reassigned counts
+  const reassignedMap = {};
+  if (historicReassigned) {
+    historicReassigned.forEach((item) => {
+      reassignedMap[item.name] = item.count;
+    });
+  }
+
+  const datasets = statuses.map((status) => ({
+    label: status,
+    data: data.map((d) => (d.statusCounts ? d.statusCounts[status] || 0 : 0)),
+    backgroundColor: STATUS_COLORS[status] || '#7B8794',
+    borderRadius: 4,
+    maxBarThickness: 30,
+  }));
+
+  // Add "Reasignadas - Históricas" dataset, hidden by default
+  datasets.push({
+    label: 'Reasignadas - Históricas',
+    data: collaboratorNames.map((name) => reassignedMap[name] || 0),
+    backgroundColor: '#9B59B6',
+    borderRadius: 4,
+    maxBarThickness: 30,
+    hidden: true,
+  });
 
   const chartData = {
-    labels: data.map((d) => d.name),
-    datasets: statuses.map((status) => ({
-      label: status,
-      data: data.map((d) => (d.statusCounts ? d.statusCounts[status] || 0 : 0)),
-      backgroundColor: STATUS_COLORS[status] || '#7B8794',
-      borderRadius: 4,
-      maxBarThickness: 30,
-    })),
+    labels: collaboratorNames,
+    datasets,
+  };
+
+  const handleClick = async (event) => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    // Check if clicked on a bar element
+    const elements = chart.getElementsAtEventForMode(event.nativeEvent, 'nearest', { intersect: true }, false);
+    if (elements.length > 0) {
+      const el = elements[0];
+      const collaboratorName = collaboratorNames[el.index];
+      const statusLabel = chartData.datasets[el.datasetIndex].label;
+      // Skip download for "Reasignadas - Históricas" (it's not a real status)
+      const statusParam = statusLabel === 'Reasignadas - Históricas' ? null : statusLabel;
+      try {
+        const tasks = await tasksService.exportByCollaborator(collaboratorName, statusParam, dateFrom || undefined, dateTo || undefined);
+        const safeStatus = (statusParam || 'Historicas').replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '').replace(/\s+/g, '_');
+        const safeName = collaboratorName.replace(/\s+/g, '_');
+        downloadTasksXlsx(tasks, `${safeName}_${safeStatus}.xlsx`);
+      } catch (err) {
+        alert('Error al descargar: ' + (err.message || 'Error desconocido'));
+      }
+      return;
+    }
+
+    // Check if clicked on a Y-axis label (collaborator name)
+    const yScale = chart.scales.y;
+    if (!yScale) return;
+    const { top, bottom, left } = yScale;
+    const mouseX = event.nativeEvent.offsetX;
+    const mouseY = event.nativeEvent.offsetY;
+    if (mouseX <= left && mouseY >= top && mouseY <= bottom) {
+      const labelIndex = yScale.getValueForPixel(mouseY);
+      if (labelIndex >= 0 && labelIndex < collaboratorNames.length) {
+        const collaboratorName = collaboratorNames[Math.round(labelIndex)];
+        try {
+          const tasks = await tasksService.exportByCollaborator(collaboratorName, null, dateFrom || undefined, dateTo || undefined);
+          const safeName = collaboratorName.replace(/\s+/g, '_');
+          downloadTasksXlsx(tasks, `${safeName}_Todas.xlsx`);
+        } catch (err) {
+          alert('Error al descargar: ' + (err.message || 'Error desconocido'));
+        }
+      }
+    }
   };
 
   const options = {
@@ -691,13 +789,22 @@ const TasksByCollaboratorChart = ({ data }) => {
         ticks: {
           color: '#1A1A2E',
           font: { size: 12, weight: '500' },
+          cursor: 'pointer',
         },
         grid: { display: false },
       },
     },
+    onHover: (event, elements, chart) => {
+      const yScale = chart.scales.y;
+      if (!yScale) return;
+      const mouseX = event.native?.offsetX;
+      const mouseY = event.native?.offsetY;
+      const isOverLabel = mouseX <= yScale.left && mouseY >= yScale.top && mouseY <= yScale.bottom;
+      chart.canvas.style.cursor = (elements.length > 0 || isOverLabel) ? 'pointer' : 'default';
+    },
   };
 
-  return <Bar data={chartData} options={options} />;
+  return <Bar ref={chartRef} data={chartData} options={options} onClick={handleClick} />;
 };
 
 /* ========================================

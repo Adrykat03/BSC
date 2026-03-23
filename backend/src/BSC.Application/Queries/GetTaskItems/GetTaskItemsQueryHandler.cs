@@ -41,26 +41,30 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
                     break;
 
                 case TaskStateTransitions.RolLider:
-                    // Lider ve solo tareas Asignada, Reasignada y Completa - Por Validar
+                    // Lider ve tareas en cualquier estado si DueDate >= hoy,
+                    // o solo Asignada/Reasignada/CompletaPorValidar si ya vencio la fecha limite
                     var leaderAllowedStatuses = new List<string>
                     {
                         TaskStatuses.Asignada,
                         TaskStatuses.Reasignada,
                         TaskStatuses.CompletaPorValidar
                     };
-                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, leaderAllowedStatuses, page, pageSize, request.Search);
-                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail, leaderAllowedStatuses, request.Search);
+                    var nowForLeader = DateTime.UtcNow;
+                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, leaderAllowedStatuses, page, pageSize, request.Search, nowForLeader);
+                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail, leaderAllowedStatuses, request.Search, nowForLeader);
                     break;
 
                 case TaskStateTransitions.RolColaborador:
-                    // Colaborador solo ve tareas Asignada y Reasignada
+                    // Colaborador ve tareas en cualquier estado si DueDate >= hoy,
+                    // o solo Asignada/Reasignada si ya vencio la fecha limite
                     var allowedStatuses = new List<string>
                     {
                         TaskStatuses.Asignada,
                         TaskStatuses.Reasignada
                     };
-                    taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, allowedStatuses, page, pageSize, request.Search);
-                    totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, allowedStatuses, request.Search);
+                    var nowForCollab = DateTime.UtcNow;
+                    taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, allowedStatuses, page, pageSize, request.Search, nowForCollab);
+                    totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, allowedStatuses, request.Search, nowForCollab);
                     break;
 
                 default:

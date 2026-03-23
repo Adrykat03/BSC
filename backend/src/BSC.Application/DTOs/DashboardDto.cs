@@ -26,6 +26,12 @@ public class DashboardDto
     public List<CollaboratorStatusBreakdown> TasksByCollaboratorAndStatus { get; set; } = new();
 
     /// <summary>
+    /// Cantidad historica de reasignaciones por colaborador en el periodo.
+    /// Se calcula desde el historial de estados (transiciones a "Reasignada").
+    /// </summary>
+    public List<CollaboratorReassignedCount> HistoricReassignedByCollaborator { get; set; } = new();
+
+    /// <summary>
     /// Total de tareas por estado (para gráfico pastel).
     /// </summary>
     public List<StatusCountItem> TasksByStatus { get; set; } = new();
@@ -61,11 +67,13 @@ public class TimelineDataPoint
 
 /// <summary>
 /// Item del mapa de calor de colaboradores.
+/// Muestra la suma de tiempo estimado (horas) de las tareas asignadas.
 /// </summary>
 public class CollaboratorHeatmapItem
 {
     public string Name { get; set; } = string.Empty;
     public int TaskCount { get; set; }
+    public decimal EstimatedTimeSum { get; set; }
 }
 
 /// <summary>
@@ -84,6 +92,15 @@ public class CollaboratorStatusBreakdown
 {
     public string Name { get; set; } = string.Empty;
     public Dictionary<string, int> StatusCounts { get; set; } = new();
+}
+
+/// <summary>
+/// Conteo historico de reasignaciones por colaborador.
+/// </summary>
+public class CollaboratorReassignedCount
+{
+    public string Name { get; set; } = string.Empty;
+    public int Count { get; set; }
 }
 
 /// <summary>

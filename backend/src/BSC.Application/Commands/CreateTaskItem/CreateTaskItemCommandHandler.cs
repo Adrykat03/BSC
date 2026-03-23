@@ -54,7 +54,7 @@ public class CreateTaskItemCommandHandler : IRequestHandler<CreateTaskItemComman
             Description = request.Description,
             Status = TaskStatuses.Creada,
             DueDate = request.DueDate,
-            EstimatedTime = request.EstimatedTime,
+            EstimatedTime = request.EstimatedTime ?? 0m,
             Insumos = request.Insumos,
             Observations = request.Observations,
             CreatedAt = DateTime.UtcNow,
