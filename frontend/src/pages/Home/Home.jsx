@@ -764,8 +764,16 @@ const TasksByCollaboratorChart = ({ data, historicReassigned, dateFrom, dateTo }
         },
       },
       tooltip: {
-        mode: 'index',
-        intersect: false,
+        mode: 'nearest',
+        intersect: true,
+        callbacks: {
+          title: (tooltipItems) => {
+            if (tooltipItems.length > 0) {
+              return tooltipItems[0].label;
+            }
+            return '';
+          },
+        },
       },
     },
     scales: {
