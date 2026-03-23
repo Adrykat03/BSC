@@ -90,7 +90,8 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
     private static List<CollaboratorHeatmapItem> CalculateCollaboratorHeatmap(List<TaskItem> tasks)
     {
         return tasks
-            .Where(t => !string.IsNullOrEmpty(t.AssignedToName))
+            .Where(t => !string.IsNullOrEmpty(t.AssignedToName)
+                && t.Status != TaskStatuses.Cancelada)
             .GroupBy(t => t.AssignedToName!)
             .Select(g => new CollaboratorHeatmapItem
             {
