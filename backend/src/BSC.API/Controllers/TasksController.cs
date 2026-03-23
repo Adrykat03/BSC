@@ -54,20 +54,32 @@ public class TasksController : ControllerBase
     /// <summary>
     /// Exporta tareas filtradas por nombre de colaborador, estado opcional y rango de fechas.
     /// Usado por el gráfico de tareas por colaborador para descargar XLSX.
+    /// Si se envía historicStatus, busca tareas que tengan esa transición en el historial.
     /// </summary>
     [HttpGet("export")]
     [ProducesResponseType(typeof(ApiResponse<List<TaskItemDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> ExportByCollaborator(
         [FromQuery] string collaboratorName,
         [FromQuery] string? status = null,
+        [FromQuery] string? historicStatus = null,
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null)
     {
         if (string.IsNullOrWhiteSpace(collaboratorName))
             return BadRequest(ApiResponse<object>.Fail("El nombre del colaborador es requerido."));
 
-        var tasks = await _taskItemRepository.GetByCollaboratorNameAsync(
-            collaboratorName, status, from, to);
+        List<Domain.Entities.TaskItem> tasks;
+
+        if (!string.IsNullOrEmpty(historicStatus))
+        {
+            tasks = await _taskItemRepository.GetByCollaboratorWithHistoricStatusAsync(
+                collaboratorName, historicStatus, from, to);
+        }
+        else
+        {
+            tasks = await _taskItemRepository.GetByCollaboratorNameAsync(
+                collaboratorName, status, from, to);
+        }
 
         var dtos = tasks.Select(BSC.Application.Mappings.TaskItemMapper.ToDto).ToList();
         return Ok(ApiResponse<List<TaskItemDto>>.Ok(dtos));

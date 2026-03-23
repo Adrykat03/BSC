@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Shield, ClipboardList, Users } from 'lucide-react';
+import { Home, Shield, ClipboardList, Users, Bell } from 'lucide-react';
 import SessionContext from '../../context/SessionContext';
 
 const Sidebar = ({ isMobile, onCloseSidebar }) => {
@@ -93,6 +93,20 @@ const Sidebar = ({ isMobile, onCloseSidebar }) => {
               </li>
             </>
           )}
+
+          <li><hr style={{ border: 'none', borderTop: '1px solid var(--color-border-main)', margin: 'var(--spacing-2) var(--spacing-4)' }} /></li>
+          <li className="sidebar__nav-item">
+            <NavLink
+              to="/alertas-payroll"
+              className={({ isActive }) =>
+                `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
+              }
+              onClick={handleNavClick}
+            >
+              <Bell className="sidebar__nav-icon" size={20} />
+              <span>Alertas Payroll</span>
+            </NavLink>
+          </li>
         </ul>
       </nav>
     </div>

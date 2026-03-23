@@ -9,6 +9,7 @@ const pageTitles = {
   '/roles': 'Roles',
   '/tasks': 'Tareas',
   '/colaboradores': 'Colaboradores',
+  '/alertas-payroll': 'Alertas Payroll',
 };
 
 const Header = ({ isMobile, onOpenSidebar }) => {

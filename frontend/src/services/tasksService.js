@@ -104,9 +104,10 @@ export const tasksService = {
     window.URL.revokeObjectURL(url);
   },
 
-  async exportByCollaborator(collaboratorName, status, from, to) {
+  async exportByCollaborator(collaboratorName, status, from, to, { historicStatus } = {}) {
     const params = new URLSearchParams({ collaboratorName });
-    if (status) params.append('status', status);
+    if (historicStatus) params.append('historicStatus', historicStatus);
+    else if (status) params.append('status', status);
     if (from) params.append('from', from);
     if (to) params.append('to', to);
     const response = await apiClient.get(`${ENDPOINT}/export?${params.toString()}`);

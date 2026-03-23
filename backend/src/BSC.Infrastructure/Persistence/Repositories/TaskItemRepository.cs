@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using BSC.Domain.Constants;
 using BSC.Domain.Entities;
 using BSC.Domain.Interfaces;
+using BSC.Domain.ValueObjects;
 using MongoDB.Driver;
 
 namespace BSC.Infrastructure.Persistence.Repositories;
@@ -162,6 +163,25 @@ public class TaskItemRepository : ITaskItemRepository
 
         if (!string.IsNullOrEmpty(status))
             filter &= Builders<TaskItem>.Filter.Eq(t => t.Status, status);
+
+        if (from.HasValue)
+            filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, from.Value);
+
+        if (to.HasValue)
+            filter &= Builders<TaskItem>.Filter.Lte(t => t.CreatedAt, to.Value);
+
+        return await _collection
+            .Find(filter)
+            .SortByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<TaskItem>> GetByCollaboratorWithHistoricStatusAsync(string collaboratorName, string historicStatus, DateTime? from, DateTime? to)
+    {
+        var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
+                   & Builders<TaskItem>.Filter.Eq(t => t.AssignedToName, collaboratorName)
+                   & Builders<TaskItem>.Filter.ElemMatch(t => t.StatusHistory,
+                       Builders<StatusChange>.Filter.Eq(sc => sc.ToStatus, historicStatus));
 
         if (from.HasValue)
             filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, from.Value);

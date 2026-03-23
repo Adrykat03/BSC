@@ -713,11 +713,12 @@ const TasksByCollaboratorChart = ({ data, historicReassigned, dateFrom, dateTo }
       const el = elements[0];
       const collaboratorName = collaboratorNames[el.index];
       const statusLabel = chartData.datasets[el.datasetIndex].label;
-      // Skip download for "Reasignadas - Históricas" (it's not a real status)
-      const statusParam = statusLabel === 'Reasignadas - Históricas' ? null : statusLabel;
+      const isHistoric = statusLabel === 'Reasignadas - Históricas';
+      const statusParam = isHistoric ? null : statusLabel;
       try {
-        const tasks = await tasksService.exportByCollaborator(collaboratorName, statusParam, dateFrom || undefined, dateTo || undefined);
-        const safeStatus = (statusParam || 'Historicas').replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '').replace(/\s+/g, '_');
+        const exportOpts = isHistoric ? { historicStatus: 'Reasignada' } : {};
+        const tasks = await tasksService.exportByCollaborator(collaboratorName, statusParam, dateFrom || undefined, dateTo || undefined, exportOpts);
+        const safeStatus = (isHistoric ? 'Reasignadas_Historicas' : statusLabel).replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '').replace(/\s+/g, '_');
         const safeName = collaboratorName.replace(/\s+/g, '_');
         downloadTasksXlsx(tasks, `${safeName}_${safeStatus}.xlsx`);
       } catch (err) {

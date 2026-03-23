@@ -8,6 +8,7 @@ const Home = lazy(() => import('./pages/Home/Home'));
 const Roles = lazy(() => import('./pages/Roles/Roles'));
 const Tasks = lazy(() => import('./pages/Tasks/Tasks'));
 const Colaboradores = lazy(() => import('./pages/Colaboradores/Colaboradores'));
+const AlertasPayroll = lazy(() => import('./pages/AlertasPayroll/AlertasPayroll'));
 
 const SuspenseWrap = ({ children }) => (
   <Suspense fallback={<div className="text-center p-6">Cargando...</div>}>
@@ -63,6 +64,14 @@ const AppRoutes = () => (
           element={
             <SuspenseWrap>
               <Colaboradores />
+            </SuspenseWrap>
+          }
+        />
+        <Route
+          path="alertas-payroll"
+          element={
+            <SuspenseWrap>
+              <AlertasPayroll />
             </SuspenseWrap>
           }
         />
