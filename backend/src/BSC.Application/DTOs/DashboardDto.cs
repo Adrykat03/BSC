@@ -118,14 +118,16 @@ public class StatusCountItem
 public class HighlightLabels
 {
     /// <summary>
-    /// Colaborador con menor tiempo promedio en tareas que llegaron a "Completa".
+    /// Colaborador con mayor tiempo estimado acumulado en tareas completas.
     /// </summary>
     public string FastestCollaboratorName { get; set; } = string.Empty;
-    public double FastestCollaboratorAvgHours { get; set; }
+    public int FastestCollaboratorCompletedCount { get; set; }
+    public decimal FastestCollaboratorEstimatedTimeSum { get; set; }
 
     /// <summary>
-    /// Líder con más tareas completas gestionadas en su historial.
+    /// Líder con mayor tiempo estimado completado.
     /// </summary>
     public string TopLeaderName { get; set; } = string.Empty;
     public int TopLeaderCompletedCount { get; set; }
+    public decimal TopLeaderEstimatedTimeSum { get; set; }
 }

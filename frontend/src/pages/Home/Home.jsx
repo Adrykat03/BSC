@@ -374,13 +374,13 @@ const HighlightCards = ({ highlights }) => {
           <Zap size={24} />
         </div>
         <div className="highlight-card__content">
-          <div className="highlight-card__label">Colaborador mas eficiente</div>
+          <div className="highlight-card__label">Colaborador más eficiente</div>
           <div className="highlight-card__value">
             {highlights.fastestCollaboratorName || 'N/A'}
           </div>
           <div className="highlight-card__detail">
-            Promedio: {highlights.fastestCollaboratorAvgHours != null
-              ? `${highlights.fastestCollaboratorAvgHours.toFixed(1)} horas`
+            {highlights.fastestCollaboratorCompletedCount != null
+              ? `${highlights.fastestCollaboratorCompletedCount} tareas · ${highlights.fastestCollaboratorEstimatedTimeSum ?? 0}h estimadas`
               : 'Sin datos'}
           </div>
         </div>
@@ -391,13 +391,13 @@ const HighlightCards = ({ highlights }) => {
           <Trophy size={24} />
         </div>
         <div className="highlight-card__content">
-          <div className="highlight-card__label">Lider con mas tareas completas</div>
+          <div className="highlight-card__label">Líder top en tiempo completado</div>
           <div className="highlight-card__value">
             {highlights.topLeaderName || 'N/A'}
           </div>
           <div className="highlight-card__detail">
-            Completadas: {highlights.topLeaderCompletedCount != null
-              ? highlights.topLeaderCompletedCount
+            {highlights.topLeaderCompletedCount != null
+              ? `${highlights.topLeaderCompletedCount} tareas · ${highlights.topLeaderEstimatedTimeSum ?? 0}h estimadas`
               : 'Sin datos'}
           </div>
         </div>

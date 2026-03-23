@@ -250,43 +250,46 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
     {
         var highlights = new HighlightLabels();
 
-        // Colaborador más rápido: tareas en estado "Completa" con ActualTime,
-        // agrupadas por assignedToName, menor promedio de ActualTime
+        // Colaborador más eficiente: mayor suma de tiempo estimado en tareas completas
         var completedTasks = tasks.Where(t => t.Status == TaskStatuses.Completa).ToList();
 
         var fastestCollaborator = completedTasks
-            .Where(t => !string.IsNullOrEmpty(t.AssignedToName) && t.ActualTime.HasValue && t.ActualTime.Value > 0)
+            .Where(t => !string.IsNullOrEmpty(t.AssignedToName))
             .GroupBy(t => t.AssignedToName!)
             .Select(g => new
             {
                 Name = g.Key,
-                AvgHours = (double)g.Average(t => t.ActualTime!.Value)
+                Count = g.Count(),
+                EstimatedTimeSum = g.Sum(t => t.EstimatedTime)
             })
-            .OrderBy(x => x.AvgHours)
+            .OrderByDescending(x => x.EstimatedTimeSum)
             .FirstOrDefault();
 
         if (fastestCollaborator != null)
         {
             highlights.FastestCollaboratorName = fastestCollaborator.Name;
-            highlights.FastestCollaboratorAvgHours = Math.Round(fastestCollaborator.AvgHours, 2);
+            highlights.FastestCollaboratorCompletedCount = fastestCollaborator.Count;
+            highlights.FastestCollaboratorEstimatedTimeSum = fastestCollaborator.EstimatedTimeSum;
         }
 
-        // Líder con más tareas completas
+        // Líder con mayor tiempo estimado completado
         var topLeader = completedTasks
             .Where(t => !string.IsNullOrEmpty(t.AssignedLeaderName))
             .GroupBy(t => t.AssignedLeaderName!)
             .Select(g => new
             {
                 Name = g.Key,
-                Count = g.Count()
+                Count = g.Count(),
+                EstimatedTimeSum = g.Sum(t => t.EstimatedTime)
             })
-            .OrderByDescending(x => x.Count)
+            .OrderByDescending(x => x.EstimatedTimeSum)
             .FirstOrDefault();
 
         if (topLeader != null)
         {
             highlights.TopLeaderName = topLeader.Name;
             highlights.TopLeaderCompletedCount = topLeader.Count;
+            highlights.TopLeaderEstimatedTimeSum = topLeader.EstimatedTimeSum;
         }
 
         return highlights;
