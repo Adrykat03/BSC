@@ -1,6 +1,6 @@
 import { useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { LogOut, User, ChevronDown, RefreshCw, Menu, Bell } from 'lucide-react';
+import { LogOut, User, ChevronDown, RefreshCw, Menu, Bell, HelpCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import SessionContext from '../../context/SessionContext';
 import { tasksService } from '../../services/tasksService';
@@ -82,6 +82,15 @@ const Header = ({ isMobile, onOpenSidebar }) => {
       <div className="header__right">
         {user && (
           <>
+          {/* Help icon — download user manual */}
+          <a
+            href="/Manual_FlowPulse.html"
+            download="Manual_FlowPulse.html"
+            data-tooltip="Descargar manual de usuario"
+            style={{ position: 'relative', marginRight: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          >
+            <HelpCircle size={22} style={{ color: 'var(--color-text-secondary)' }} />
+          </a>
           {/* Notification bell */}
           <div style={{ position: 'relative', marginRight: '12px', cursor: 'pointer' }}>
             <Bell size={22} style={{ color: 'var(--color-text-secondary)' }} />
