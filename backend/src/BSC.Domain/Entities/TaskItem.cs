@@ -73,6 +73,10 @@ public class TaskItem
     [BsonElement("observations")]
     public string? Observations { get; set; }
 
+    // Calificacion (1-10, asignada por Lider, modificable por Gerente)
+    [BsonElement("rating")]
+    public int? Rating { get; set; }
+
     // Campos de auditoria
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; }

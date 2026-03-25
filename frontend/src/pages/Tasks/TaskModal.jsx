@@ -304,6 +304,42 @@ const ReadOnlyFileList = ({ files, onDownload, label }) => (
   </div>
 );
 
+/* ────────────────────────────────────────────
+   StarRating — 10-star rating component
+   ──────────────────────────────────────────── */
+const StarRating = ({ value, onChange, readOnly }) => {
+  const [hovered, setHovered] = useState(0);
+  const stars = [];
+  for (let i = 1; i <= 10; i++) {
+    const filled = hovered ? i <= hovered : i <= (value || 0);
+    stars.push(
+      <span
+        key={i}
+        onClick={() => !readOnly && onChange && onChange(i)}
+        onMouseEnter={() => !readOnly && setHovered(i)}
+        onMouseLeave={() => !readOnly && setHovered(0)}
+        style={{
+          cursor: readOnly ? 'default' : 'pointer',
+          fontSize: '20px',
+          color: filled ? '#F59E0B' : '#D1D5DB',
+          transition: 'color 150ms',
+          userSelect: 'none',
+        }}
+      >
+        ★
+      </span>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+      {stars}
+      {value ? (
+        <span style={{ marginLeft: '8px', fontSize: '13px', fontWeight: 600, color: '#F59E0B' }}>{value}/10</span>
+      ) : null}
+    </div>
+  );
+};
+
 /* ════════════════════════════════════════════
    TaskModal — Main component
    ════════════════════════════════════════════ */
@@ -315,6 +351,7 @@ const TaskModal = ({
   onUploadEvidence,
   onChangeStatus,
   onAssign,
+  onRate,
   task,
   loading,
   userRole = 'Gerente',
@@ -344,6 +381,7 @@ const TaskModal = ({
   const [existingInsumoFiles, setExistingInsumoFiles] = useState([]);
   const [existingEvidenceFiles, setExistingEvidenceFiles] = useState([]);
   const [errors, setErrors] = useState({});
+  const [localRating, setLocalRating] = useState(0);
 
   const isEditing = Boolean(task);
   const isGerente = userRole === 'Gerente';
@@ -431,6 +469,7 @@ const TaskModal = ({
     setInsumoFiles([]);
     setEvidenceFiles([]);
     setErrors({});
+    setLocalRating(task?.rating || 0);
   }, [task, isOpen]);
 
   /* ── Validation ── */
@@ -572,6 +611,11 @@ const TaskModal = ({
 
     const data = buildLiderFormData();
 
+    // Save rating if set (Lider/Gerente editing)
+    if ((isLider || isGerente) && isEditing && localRating > 0 && onRate) {
+      await onRate(task.id, localRating);
+    }
+
     onSubmit(data);
   };
 
@@ -644,6 +688,10 @@ const TaskModal = ({
                       } catch (err) {
                         return;
                       }
+                    }
+                    // Save rating if set
+                    if ((isLider || isGerente) && localRating > 0 && onRate) {
+                      await onRate(task.id, localRating);
                     }
                     onAssign(task, e.target.value);
                   }
@@ -804,6 +852,25 @@ const TaskModal = ({
               />
             </div>
 
+            {/* ── Row: Calificacion (Lider y Gerente) ── */}
+            {isEditing && (isLider || isGerente) && (
+              <div style={{ marginBottom: '16px' }}>
+                <Label>Calificacion</Label>
+                <StarRating
+                  value={localRating}
+                  onChange={(val) => setLocalRating(val)}
+                />
+              </div>
+            )}
+
+            {/* ── Row: Calificacion read-only (Colaborador) ── */}
+            {isEditing && isColaborador && task?.rating && (
+              <div style={{ marginBottom: '16px' }}>
+                <Label>Calificacion</Label>
+                <StarRating value={task.rating} readOnly />
+              </div>
+            )}
+
             {/* ── Row 3: Evidencia texto (50%) + Evidencia archivo (50%) ── */}
             <div className="task-modal__row" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               {/* Evidencia texto */}
@@ -932,6 +999,9 @@ const TaskModal = ({
                         } catch (e) {
                           return;
                         }
+                      }
+                      if ((isLider || isGerente) && localRating > 0 && onRate) {
+                        await onRate(task.id, localRating);
                       }
                       onChangeStatus(task, btn.status);
                     }}

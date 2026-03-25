@@ -7,6 +7,7 @@ using BSC.Application.Commands.CreateTaskItemsBulk;
 using BSC.Application.Commands.DeleteTaskItem;
 using BSC.Application.Commands.RemoveFileAttachment;
 using BSC.Application.Commands.RevertTaskStatus;
+using BSC.Application.Commands.RateTask;
 using BSC.Application.Commands.UpdateTaskItem;
 using BSC.Application.Commands.UploadEvidence;
 using BSC.Application.DTOs;
@@ -436,6 +437,34 @@ public class TasksController : ControllerBase
         if (!result.Success)
         {
             if (result.Message.Contains("no encontrad", StringComparison.OrdinalIgnoreCase))
+                return NotFound(result);
+
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Califica una tarea (1-10). Solo Lider y Gerente pueden calificar.
+    /// </summary>
+    /// <param name="id">ID de la tarea.</param>
+    /// <param name="command">Datos de la calificacion.</param>
+    /// <returns>Tarea con calificacion actualizada.</returns>
+    [HttpPut("{id}/rating")]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RateTask(string id, [FromBody] RateTaskCommand command)
+    {
+        command.TaskId = id;
+        command.RatedByEmail = GetUserEmail();
+        command.RatedByRole = GetUserRole();
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+        {
+            if (result.Message.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))
                 return NotFound(result);
 
             return BadRequest(result);

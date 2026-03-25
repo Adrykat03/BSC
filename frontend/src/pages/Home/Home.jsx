@@ -134,6 +134,7 @@ const Home = () => {
         'Insumos': t.insumos || '',
         'Observaciones': t.observations || '',
         'Evidencia': t.evidenceText || '',
+        'Calificacion': t.rating ? `${t.rating}/10` : 'Sin calificar',
         'Creado por': t.createdBy || '',
         'Fecha de creacion': formatDateTimeDDMMYYYY(t.createdAt),
         'Ultima actualizacion': formatDateTimeDDMMYYYY(t.updatedAt),
@@ -636,6 +637,7 @@ const downloadTasksXlsx = (tasks, fileName) => {
     'Insumos': t.insumos || '',
     'Observaciones': t.observations || '',
     'Evidencia': t.evidenceText || '',
+    'Calificacion': t.rating ? `${t.rating}/10` : 'Sin calificar',
     'Creado por': t.createdBy || '',
     'Fecha de creacion': formatDateTimeDDMMYYYY(t.createdAt),
   }));

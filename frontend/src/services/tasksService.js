@@ -119,6 +119,11 @@ export const tasksService = {
     return response.data;
   },
 
+  async rateTask(taskId, rating) {
+    const response = await apiClient.put(`${ENDPOINT}/${taskId}/rating`, { rating });
+    return response;
+  },
+
   async removeFile(taskId, fileId, fileType) {
     const params = new URLSearchParams({ fileType });
     const response = await fetch(

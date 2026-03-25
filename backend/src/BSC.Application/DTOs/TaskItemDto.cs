@@ -35,6 +35,9 @@ public class TaskItemDto
     // Observaciones
     public string? Observations { get; set; }
 
+    // Calificacion (1-10)
+    public int? Rating { get; set; }
+
     // Historial de estados
     public List<StatusChangeDto> StatusHistory { get; set; } = new();
 

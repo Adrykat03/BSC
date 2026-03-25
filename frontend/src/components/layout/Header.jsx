@@ -1,8 +1,9 @@
-import { useContext, useState, useRef, useEffect } from 'react';
+import { useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { LogOut, User, ChevronDown, RefreshCw, Menu } from 'lucide-react';
+import { LogOut, User, ChevronDown, RefreshCw, Menu, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
 import SessionContext from '../../context/SessionContext';
+import { tasksService } from '../../services/tasksService';
 
 const pageTitles = {
   '/': 'Dashboard',
@@ -21,6 +22,25 @@ const Header = ({ isMobile, onOpenSidebar }) => {
   const dropdownRef = useRef(null);
 
   const hasMultipleRoles = user?.roles && user.roles.length > 1;
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const fetchPendingCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const result = await tasksService.getAll(1, 100);
+      const items = result.items || [];
+      const count = items.filter(t => t.status === 'Asignada' || t.status === 'Reasignada').length;
+      setPendingCount(count);
+    } catch {
+      setPendingCount(0);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 60000);
+    return () => clearInterval(interval);
+  }, [fetchPendingCount]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -61,6 +81,32 @@ const Header = ({ isMobile, onOpenSidebar }) => {
       </div>
       <div className="header__right">
         {user && (
+          <>
+          {/* Notification bell */}
+          <div style={{ position: 'relative', marginRight: '12px', cursor: 'pointer' }}>
+            <Bell size={22} style={{ color: 'var(--color-text-secondary)' }} />
+            {pendingCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-6px',
+                right: '-8px',
+                backgroundColor: '#E31837',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 700,
+                minWidth: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                lineHeight: 1,
+                padding: '0 4px',
+              }}>
+                {pendingCount}
+              </span>
+            )}
+          </div>
           <div
             className={`dropdown${dropdownOpen ? ' dropdown--open' : ''}`}
             ref={dropdownRef}
@@ -108,6 +154,7 @@ const Header = ({ isMobile, onOpenSidebar }) => {
               </button>
             </div>
           </div>
+          </>
         )}
       </div>
     </div>
