@@ -86,13 +86,13 @@ const Header = ({ isMobile, onOpenSidebar }) => {
           <a
             href="/Manual_FlowPulse.pdf"
             download="Manual_FlowPulse.pdf"
-            title="Descargar manual de usuario"
-            style={{ position: 'relative', marginRight: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            data-tooltip="Descargar manual"
+            style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
           >
-            <HelpCircle size={22} style={{ color: 'var(--color-text-secondary)' }} />
+            <HelpCircle size={20} style={{ color: 'var(--color-text-secondary)' }} />
           </a>
           {/* Notification bell */}
-          <div style={{ position: 'relative', marginRight: '12px', cursor: 'pointer' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
             <Bell size={22} style={{ color: 'var(--color-text-secondary)' }} />
             {pendingCount > 0 && (
               <span style={{
