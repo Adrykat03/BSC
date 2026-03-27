@@ -7,7 +7,6 @@ using BSC.Application.Commands.CreateTaskItemsBulk;
 using BSC.Application.Commands.DeleteTaskItem;
 using BSC.Application.Commands.RemoveFileAttachment;
 using BSC.Application.Commands.RevertTaskStatus;
-using BSC.Application.Commands.RateTask;
 using BSC.Application.Commands.UpdateTaskItem;
 using BSC.Application.Commands.UploadEvidence;
 using BSC.Application.DTOs;
@@ -106,6 +105,86 @@ public class TasksController : ControllerBase
         };
         var result = await _mediator.Send(query);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Obtiene las estrellas mensuales del colaborador autenticado.
+    /// Se calcula a partir del promedio de calificacion de tareas entregadas en el mes actual.
+    /// </summary>
+    [HttpGet("monthly-stars")]
+    [ProducesResponseType(typeof(ApiResponse<MonthlyStarsDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMonthlyStars()
+    {
+        var email = GetUserEmail();
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var monthEnd = monthStart.AddMonths(1);
+
+        var tasks = await _taskItemRepository.GetForDashboardByAssigneeAsync(email, null, null);
+
+        // Filtrar tareas cuya primera entrega (CPV) fue en el mes actual y tienen rating
+        var monthlyRated = tasks.Where(t =>
+        {
+            if (!t.Rating.HasValue) return false;
+            var firstCpv = t.StatusHistory?
+                .FirstOrDefault(h => h.ToStatus == "Completa - Por Validar");
+            if (firstCpv == null) return false;
+            return firstCpv.ChangedAt >= monthStart && firstCpv.ChangedAt < monthEnd;
+        }).ToList();
+
+        var result = new MonthlyStarsDto();
+
+        if (monthlyRated.Count == 0)
+        {
+            // Sin tareas entregadas en el mes: 5 estrellas por defecto
+            result.Stars = 5;
+            result.Phrase = "Lo estas logrando, la excelencia es tuya";
+            result.AvgRating = 100;
+            result.TaskCount = 0;
+            result.HasTasks = false;
+        }
+        else
+        {
+            var avg = Math.Round(monthlyRated.Average(t => t.Rating!.Value), 1);
+            result.AvgRating = avg;
+            result.TaskCount = monthlyRated.Count;
+            result.HasTasks = true;
+
+            if (avg >= 100)
+            {
+                result.Stars = 5;
+                result.Phrase = "Lo estas logrando, la excelencia es tuya";
+            }
+            else if (avg >= 80)
+            {
+                result.Stars = 4;
+                result.Phrase = "Cuida los detalles, marca la diferencia";
+            }
+            else if (avg >= 60)
+            {
+                result.Stars = 3;
+                result.Phrase = "Enfocate en lo que realmente importa";
+            }
+            else if (avg >= 40)
+            {
+                result.Stars = 2;
+                result.Phrase = "Refuerza tu organizacion de tiempos y tareas";
+            }
+            else
+            {
+                result.Stars = 1;
+                result.Phrase = "Avanza, tu lider puede aclarar tus dudas";
+            }
+
+            // Frase especial de fin de mes para 100%
+            var lastDayOfMonth = monthStart.AddMonths(1).AddDays(-1).Day;
+            if (now.Day == lastDayOfMonth && avg >= 100)
+            {
+                result.BonusPhrase = "Excelente trabajo, tienes un dia libre";
+            }
+        }
+
+        return Ok(ApiResponse<MonthlyStarsDto>.Ok(result));
     }
 
     /// <summary>
@@ -437,34 +516,6 @@ public class TasksController : ControllerBase
         if (!result.Success)
         {
             if (result.Message.Contains("no encontrad", StringComparison.OrdinalIgnoreCase))
-                return NotFound(result);
-
-            return BadRequest(result);
-        }
-
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Califica una tarea (1-10). Solo Lider y Gerente pueden calificar.
-    /// </summary>
-    /// <param name="id">ID de la tarea.</param>
-    /// <param name="command">Datos de la calificacion.</param>
-    /// <returns>Tarea con calificacion actualizada.</returns>
-    [HttpPut("{id}/rating")]
-    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RateTask(string id, [FromBody] RateTaskCommand command)
-    {
-        command.TaskId = id;
-        command.RatedByEmail = GetUserEmail();
-        command.RatedByRole = GetUserRole();
-        var result = await _mediator.Send(command);
-
-        if (!result.Success)
-        {
-            if (result.Message.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))
                 return NotFound(result);
 
             return BadRequest(result);

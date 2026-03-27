@@ -10,6 +10,11 @@ function getAuthHeader() {
 }
 
 export const tasksService = {
+  async getMonthlyStars() {
+    const response = await apiClient.get(`${ENDPOINT}/monthly-stars`);
+    return response.data;
+  },
+
   async getAll(page = 1, pageSize = 20, search = '') {
     let url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
     if (search && search.trim()) {
@@ -117,11 +122,6 @@ export const tasksService = {
   async bulkCreate(tasks) {
     const response = await apiClient.post(`${ENDPOINT}/bulk`, { tasks });
     return response.data;
-  },
-
-  async rateTask(taskId, rating) {
-    const response = await apiClient.put(`${ENDPOINT}/${taskId}/rating`, { rating });
-    return response;
   },
 
   async removeFile(taskId, fileId, fileType) {

@@ -87,6 +87,9 @@ public class ChangeTaskStatusCommandHandler : IRequestHandler<ChangeTaskStatusCo
         taskItem.UpdatedAt = DateTime.UtcNow;
         taskItem.UpdatedBy = request.ChangedByEmail;
 
+        // Recalcular calificacion automatica tras cada cambio de estado
+        taskItem.Rating = CalculateRating(taskItem);
+
         await _taskItemRepository.UpdateAsync(taskItem);
 
         _logger.LogInformation(
@@ -94,5 +97,36 @@ public class ChangeTaskStatusCommandHandler : IRequestHandler<ChangeTaskStatusCo
             taskItem.Id, previousStatus, request.NewStatus, request.ChangedByEmail, request.ChangedByRole);
 
         return ApiResponse<TaskItemDto>.Ok(TaskItemMapper.ToDto(taskItem), "Estado actualizado exitosamente.");
+    }
+
+    /// <summary>
+    /// Calcula la calificacion automatica de una tarea.
+    /// 100% = entregada a tiempo y sin reprocesos.
+    /// -30% si se entrego despues de la fecha/hora de entrega.
+    /// -10% por cada reasignacion.
+    /// </summary>
+    private static int CalculateRating(Domain.Entities.TaskItem task)
+    {
+        var rating = 100;
+
+        // Buscar la primera vez que se envio a validacion (momento de entrega)
+        var firstDelivery = task.StatusHistory
+            .FirstOrDefault(sh => sh.ToStatus == TaskStatuses.CompletaPorValidar);
+
+        // Penalizar entrega tardia: -30%
+        if (firstDelivery != null && task.DueDate.HasValue)
+        {
+            if (firstDelivery.ChangedAt > task.DueDate.Value)
+            {
+                rating -= 30;
+            }
+        }
+
+        // Penalizar reasignaciones: -10% por cada una
+        var reassignmentCount = task.StatusHistory
+            .Count(sh => sh.ToStatus == TaskStatuses.Reasignada);
+        rating -= reassignmentCount * 10;
+
+        return Math.Max(rating, 0);
     }
 }

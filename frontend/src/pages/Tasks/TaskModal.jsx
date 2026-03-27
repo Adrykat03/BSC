@@ -305,37 +305,17 @@ const ReadOnlyFileList = ({ files, onDownload, label }) => (
 );
 
 /* ────────────────────────────────────────────
-   StarRating — 10-star rating component
+   RatingBar — automatic percentage rating display
    ──────────────────────────────────────────── */
-const StarRating = ({ value, onChange, readOnly }) => {
-  const [hovered, setHovered] = useState(0);
-  const stars = [];
-  for (let i = 1; i <= 10; i++) {
-    const filled = hovered ? i <= hovered : i <= (value || 0);
-    stars.push(
-      <span
-        key={i}
-        onClick={() => !readOnly && onChange && onChange(i)}
-        onMouseEnter={() => !readOnly && setHovered(i)}
-        onMouseLeave={() => !readOnly && setHovered(0)}
-        style={{
-          cursor: readOnly ? 'default' : 'pointer',
-          fontSize: '20px',
-          color: filled ? '#F59E0B' : '#D1D5DB',
-          transition: 'color 150ms',
-          userSelect: 'none',
-        }}
-      >
-        ★
-      </span>
-    );
-  }
+const RatingBar = ({ value }) => {
+  if (value == null) return <span style={{ fontSize: '13px', color: 'var(--color-text-disabled)' }}>Pendiente</span>;
+  const color = value >= 80 ? '#2E7D32' : value >= 50 ? '#F59E0B' : '#E31837';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-      {stars}
-      {value ? (
-        <span style={{ marginLeft: '8px', fontSize: '13px', fontWeight: 600, color: '#F59E0B' }}>{value}/10</span>
-      ) : null}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ flex: 1, height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden', minWidth: '100px' }}>
+        <div style={{ width: `${value}%`, height: '100%', background: color, borderRadius: '4px', transition: 'width 300ms' }} />
+      </div>
+      <span style={{ fontSize: '14px', fontWeight: 700, color, minWidth: '40px' }}>{value}%</span>
     </div>
   );
 };
@@ -351,7 +331,6 @@ const TaskModal = ({
   onUploadEvidence,
   onChangeStatus,
   onAssign,
-  onRate,
   task,
   loading,
   userRole = 'Gerente',
@@ -381,7 +360,6 @@ const TaskModal = ({
   const [existingInsumoFiles, setExistingInsumoFiles] = useState([]);
   const [existingEvidenceFiles, setExistingEvidenceFiles] = useState([]);
   const [errors, setErrors] = useState({});
-  const [localRating, setLocalRating] = useState(0);
 
   const isEditing = Boolean(task);
   const isGerente = userRole === 'Gerente';
@@ -469,7 +447,6 @@ const TaskModal = ({
     setInsumoFiles([]);
     setEvidenceFiles([]);
     setErrors({});
-    setLocalRating(task?.rating || 0);
   }, [task, isOpen]);
 
   /* ── Validation ── */
@@ -611,11 +588,6 @@ const TaskModal = ({
 
     const data = buildLiderFormData();
 
-    // Save rating if set (Lider/Gerente editing)
-    if ((isLider || isGerente) && isEditing && localRating > 0 && onRate) {
-      await onRate(task.id, localRating);
-    }
-
     onSubmit(data);
   };
 
@@ -688,10 +660,6 @@ const TaskModal = ({
                       } catch (err) {
                         return;
                       }
-                    }
-                    // Save rating if set
-                    if ((isLider || isGerente) && localRating > 0 && onRate) {
-                      await onRate(task.id, localRating);
                     }
                     onAssign(task, e.target.value);
                   }
@@ -852,22 +820,11 @@ const TaskModal = ({
               />
             </div>
 
-            {/* ── Row: Calificacion (Lider y Gerente) ── */}
-            {isEditing && (isLider || isGerente) && (
+            {/* ── Row: Calificacion automatica ── */}
+            {isEditing && task?.rating != null && (
               <div style={{ marginBottom: '16px' }}>
                 <Label>Calificacion</Label>
-                <StarRating
-                  value={localRating}
-                  onChange={(val) => setLocalRating(val)}
-                />
-              </div>
-            )}
-
-            {/* ── Row: Calificacion read-only (Colaborador) ── */}
-            {isEditing && isColaborador && task?.rating && (
-              <div style={{ marginBottom: '16px' }}>
-                <Label>Calificacion</Label>
-                <StarRating value={task.rating} readOnly />
+                <RatingBar value={task.rating} />
               </div>
             )}
 
@@ -999,9 +956,6 @@ const TaskModal = ({
                         } catch (e) {
                           return;
                         }
-                      }
-                      if ((isLider || isGerente) && localRating > 0 && onRate) {
-                        await onRate(task.id, localRating);
                       }
                       onChangeStatus(task, btn.status);
                     }}

@@ -285,15 +285,6 @@ const Tasks = () => {
     }
   };
 
-  // ---- Rate Task (called silently during status change) ----
-  const handleRateTask = async (taskId, rating) => {
-    try {
-      await tasksService.rateTask(taskId, rating);
-    } catch (err) {
-      toast.error(`Error al guardar calificacion: ${err.message}`);
-    }
-  };
-
   // ---- Change Status ----
   const handleChangeStatus = async (task, newStatus) => {
     const result = await Swal.fire({
@@ -442,7 +433,7 @@ const Tasks = () => {
       'Tiempo estimado (h)': t.estimatedTime ?? '',
       'Tiempo real (h)': t.actualTime ?? '',
       'Observaciones': t.observations || '',
-      'Calificacion': t.rating ? `${t.rating}/10` : 'Sin calificar',
+      'Calificacion': t.rating != null ? `${t.rating}%` : 'Pendiente',
       'Fecha de creacion': t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
     }));
 
@@ -883,12 +874,16 @@ const Tasks = () => {
                           </td>
                           <td className="table__col--secondary">{formatTime(task.estimatedTime)}</td>
                           <td className="table__col--secondary" style={{ whiteSpace: 'nowrap' }}>
-                            {task.rating ? (
-                              <span style={{ color: '#F59E0B', fontSize: '13px', fontWeight: 600 }}>
-                                {'★'.repeat(task.rating)}{'☆'.repeat(10 - task.rating)}
+                            {task.rating != null ? (
+                              <span style={{
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: task.rating >= 80 ? '#2E7D32' : task.rating >= 50 ? '#F59E0B' : '#E31837',
+                              }}>
+                                {task.rating}%
                               </span>
                             ) : (
-                              <span style={{ color: 'var(--color-text-disabled)', fontSize: '12px' }}>Sin calificar</span>
+                              <span style={{ color: 'var(--color-text-disabled)', fontSize: '12px' }}>—</span>
                             )}
                           </td>
                           <td>
@@ -1010,7 +1005,6 @@ const Tasks = () => {
             throw err;
           }
         }}
-        onRate={handleRateTask}
         onChangeStatus={async (t, newStatus) => {
           await handleChangeStatus(t, newStatus);
           setDetailModalOpen(false);

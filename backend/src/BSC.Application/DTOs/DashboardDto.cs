@@ -45,6 +45,11 @@ public class DashboardDto
     /// Timeline de tareas completadas por colaborador (para gráfico de líneas).
     /// </summary>
     public List<CollaboratorCompletionTimeline> CompletionTimeline { get; set; } = new();
+
+    /// <summary>
+    /// Promedio de calificacion por colaborador (para gráfico de barras).
+    /// </summary>
+    public List<CollaboratorAvgRating> AvgRatingByCollaborator { get; set; } = new();
 }
 
 /// <summary>
@@ -110,6 +115,16 @@ public class StatusCountItem
 {
     public string Status { get; set; } = string.Empty;
     public int Count { get; set; }
+}
+
+/// <summary>
+/// Promedio de calificacion de un colaborador.
+/// </summary>
+public class CollaboratorAvgRating
+{
+    public string Name { get; set; } = string.Empty;
+    public double AvgRating { get; set; }
+    public int TaskCount { get; set; }
 }
 
 /// <summary>

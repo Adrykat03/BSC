@@ -99,9 +99,17 @@ const Home = () => {
   const [error, setError] = useState(null);
   const [selectedCollaborators, setSelectedCollaborators] = useState([]);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [monthlyStars, setMonthlyStars] = useState(null);
 
   const isGerente = user?.role === 'Gerente';
   const isColaborador = user?.role === 'Colaborador';
+
+  // Fetch monthly stars on mount
+  useEffect(() => {
+    tasksService.getMonthlyStars()
+      .then(data => setMonthlyStars(data))
+      .catch(() => setMonthlyStars(null));
+  }, []);
 
   const handleDownloadReport = async () => {
     try {
@@ -134,7 +142,7 @@ const Home = () => {
         'Insumos': t.insumos || '',
         'Observaciones': t.observations || '',
         'Evidencia': t.evidenceText || '',
-        'Calificacion': t.rating ? `${t.rating}/10` : 'Sin calificar',
+        'Calificacion': t.rating != null ? `${t.rating}%` : 'Pendiente',
         'Creado por': t.createdBy || '',
         'Fecha de creacion': formatDateTimeDDMMYYYY(t.createdAt),
         'Ultima actualizacion': formatDateTimeDDMMYYYY(t.updatedAt),
@@ -289,6 +297,9 @@ const Home = () => {
         <div className="text-center p-4 mb-4 text-secondary">Actualizando datos...</div>
       )}
 
+      {/* Monthly Stars Card - solo Colaborador */}
+      {isColaborador && monthlyStars && <MonthlyStarsCard data={monthlyStars} />}
+
       {dashboard && (
         <>
           {/* Highlight Cards - solo Gerente */}
@@ -350,6 +361,21 @@ const Home = () => {
             </div>
           </div>
 
+          {/* Full width: Avg Rating by Collaborator */}
+          {dashboard.avgRatingByCollaborator && dashboard.avgRatingByCollaborator.length > 0 && (
+            <div className="card mb-6">
+              <div className="card__header">
+                <h2 className="card__title">Calificacion promedio por colaborador</h2>
+                <p className="card__subtitle">Promedio basado en entrega a tiempo y reprocesos</p>
+              </div>
+              <div className="card__body">
+                <div className="chart-container" style={{ height: Math.max(200, (dashboard.avgRatingByCollaborator.length) * 40 + 60) + 'px' }}>
+                  <AvgRatingChart data={dashboard.avgRatingByCollaborator} />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Full width: Completion timeline comparison */}
           <CompletionTimelineCard
             completionTimeline={dashboard.completionTimeline}
@@ -358,6 +384,66 @@ const Home = () => {
           />
         </>
       )}
+    </div>
+  );
+};
+
+/* ========================================
+   Monthly Stars Card Component
+   ======================================== */
+const STAR_COLORS = {
+  1: '#E31837',
+  2: '#E85D75',
+  3: '#F5A623',
+  4: '#4A90D9',
+  5: '#2E7D32',
+};
+
+const MonthlyStarsCard = ({ data }) => {
+  if (!data) return null;
+  const { stars, phrase, bonusPhrase, avgRating, taskCount, hasTasks } = data;
+  const color = STAR_COLORS[stars] || '#2E7D32';
+
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const currentMonth = monthNames[new Date().getMonth()];
+
+  return (
+    <div className="card mb-6" style={{ border: `2px solid ${color}20`, background: `linear-gradient(135deg, ${color}08 0%, #fff 100%)` }}>
+      <div className="card__body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', padding: '20px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+          {/* Stars */}
+          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+            {[1, 2, 3, 4, 5].map(i => (
+              <span key={i} style={{ fontSize: '28px', color: i <= stars ? color : '#D1D5DB', transition: 'color 300ms' }}>
+                &#9733;
+              </span>
+            ))}
+          </div>
+          {/* Phrase */}
+          <div>
+            <p style={{ fontWeight: 700, fontSize: '15px', color, margin: 0 }}>
+              {phrase}
+            </p>
+            {bonusPhrase && (
+              <p style={{ fontWeight: 700, fontSize: '14px', color: '#2E7D32', margin: '4px 0 0', background: '#dcfce7', display: 'inline-block', padding: '2px 12px', borderRadius: '12px' }}>
+                {bonusPhrase}
+              </p>
+            )}
+            <p style={{ fontSize: '12px', color: '#6B7280', margin: '4px 0 0' }}>
+              {hasTasks
+                ? `Promedio ${currentMonth}: ${avgRating}% (${taskCount} tarea${taskCount !== 1 ? 's' : ''})`
+                : `${currentMonth}: Sin tareas entregadas aun`
+              }
+            </p>
+          </div>
+        </div>
+        {/* Month badge */}
+        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {currentMonth} {new Date().getFullYear()}
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
@@ -637,7 +723,7 @@ const downloadTasksXlsx = (tasks, fileName) => {
     'Insumos': t.insumos || '',
     'Observaciones': t.observations || '',
     'Evidencia': t.evidenceText || '',
-    'Calificacion': t.rating ? `${t.rating}/10` : 'Sin calificar',
+    'Calificacion': t.rating != null ? `${t.rating}%` : 'Pendiente',
     'Creado por': t.createdBy || '',
     'Fecha de creacion': formatDateTimeDDMMYYYY(t.createdAt),
   }));
@@ -825,6 +911,66 @@ const TIMELINE_COLORS = [
   '#E31837', '#4A90D9', '#50C878', '#F5A623', '#9B59B6',
   '#1ABC9C', '#E67E22', '#2C3E50', '#E85D75', '#3498DB',
 ];
+
+/* ========================================
+   Avg Rating by Collaborator Chart
+   ======================================== */
+const AvgRatingChart = ({ data }) => {
+  const chartRef = useRef(null);
+
+  if (!data || data.length === 0) {
+    return <p className="text-secondary" style={{ textAlign: 'center', padding: '40px 0' }}>No hay datos de calificacion disponibles.</p>;
+  }
+
+  const sorted = [...data].sort((a, b) => b.avgRating - a.avgRating);
+  const labels = sorted.map(d => d.name);
+  const values = sorted.map(d => d.avgRating);
+  const colors = values.map(v => v >= 80 ? '#2E7D32' : v >= 50 ? '#F5A623' : '#E31837');
+
+  const chartData = {
+    labels,
+    datasets: [{
+      label: 'Promedio (%)',
+      data: values,
+      backgroundColor: colors,
+      borderColor: colors,
+      borderWidth: 1,
+      borderRadius: 4,
+      barThickness: 28,
+    }],
+  };
+
+  const options = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const item = sorted[ctx.dataIndex];
+            return `${ctx.raw}% (${item.taskCount} tarea${item.taskCount !== 1 ? 's' : ''})`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        min: 0,
+        max: 100,
+        ticks: { callback: v => v + '%', stepSize: 20 },
+        grid: { color: 'rgba(0,0,0,0.06)' },
+      },
+      y: {
+        grid: { display: false },
+        ticks: { font: { size: 12 } },
+      },
+    },
+  };
+
+  return <Bar ref={chartRef} data={chartData} options={options} />;
+};
 
 const CompletionTimelineCard = ({ completionTimeline, selectedCollaborators, setSelectedCollaborators }) => {
   const [selectedValue, setSelectedValue] = useState('');

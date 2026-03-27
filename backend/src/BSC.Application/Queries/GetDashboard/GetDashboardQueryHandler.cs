@@ -78,7 +78,8 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             HistoricReassignedByCollaborator = CalculateHistoricReassigned(tasks),
             TasksByStatus = CalculateTasksByStatus(tasks),
             Highlights = CalculateHighlights(tasks),
-            CompletionTimeline = CalculateCompletionTimeline(tasks)
+            CompletionTimeline = CalculateCompletionTimeline(tasks),
+            AvgRatingByCollaborator = CalculateAvgRatingByCollaborator(tasks)
         };
 
         return ApiResponse<DashboardDto>.Ok(dashboard);
@@ -341,6 +342,25 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
                 };
             })
             .OrderBy(x => x.Name)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Promedio de calificacion por colaborador.
+    /// Solo considera tareas que tienen calificacion (rating != null).
+    /// </summary>
+    private static List<CollaboratorAvgRating> CalculateAvgRatingByCollaborator(List<TaskItem> tasks)
+    {
+        return tasks
+            .Where(t => !string.IsNullOrEmpty(t.AssignedToName) && t.Rating.HasValue)
+            .GroupBy(t => t.AssignedToName!)
+            .Select(g => new CollaboratorAvgRating
+            {
+                Name = g.Key,
+                AvgRating = Math.Round(g.Average(t => t.Rating!.Value), 1),
+                TaskCount = g.Count()
+            })
+            .OrderByDescending(x => x.AvgRating)
             .ToList();
     }
 }

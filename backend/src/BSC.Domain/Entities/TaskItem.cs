@@ -73,7 +73,7 @@ public class TaskItem
     [BsonElement("observations")]
     public string? Observations { get; set; }
 
-    // Calificacion (1-10, asignada por Lider, modificable por Gerente)
+    // Calificacion automatica (porcentaje 0-100)
     [BsonElement("rating")]
     public int? Rating { get; set; }
 
