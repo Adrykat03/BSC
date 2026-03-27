@@ -82,11 +82,11 @@ const Header = ({ isMobile, onOpenSidebar }) => {
       <div className="header__right">
         {user && (
           <>
-          {/* Help icon — download user manual */}
+          {/* Help icon — download user manual PDF */}
           <a
-            href="/Manual_FlowPulse.html"
-            download="Manual_FlowPulse.html"
-            data-tooltip="Descargar manual de usuario"
+            href="/Manual_FlowPulse.pdf"
+            download="Manual_FlowPulse.pdf"
+            title="Descargar manual de usuario"
             style={{ position: 'relative', marginRight: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
           >
             <HelpCircle size={22} style={{ color: 'var(--color-text-secondary)' }} />

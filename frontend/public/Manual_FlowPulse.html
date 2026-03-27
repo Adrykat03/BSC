@@ -46,10 +46,13 @@
   .flow-arrow { color: #9ca3af; margin: 0 4px; font-size: 18px; }
   .star { color: #F59E0B; }
   .star-gray { color: #D1D5DB; }
+  h2 { page-break-before: always; }
+  h3, h4 { page-break-after: avoid; }
+  table, .tip, .note, .flow-diagram, .toc { page-break-inside: avoid; }
+  tr { page-break-inside: avoid; }
   @media print {
     .cover { padding: 60px 40px; }
     body { background: #fff; }
-    h2 { page-break-before: always; }
     .no-print { display: none; }
   }
   @media (max-width: 640px) {
