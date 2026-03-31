@@ -21,6 +21,7 @@
 | FUNC-016 | Calificacion de tareas y campana de notificaciones | Completada | 2026-03-25 |
 | FUNC-017 | Manual de usuario descargable (HTML/PDF) | Completada | 2026-03-27 |
 | FUNC-018 | Calificacion automatica por porcentaje y estrellas mensuales | Completada | 2026-03-27 |
+| FUNC-019 | Rebranding Nomina2, filtro colaboradores, grafico rendimiento | Completada | 2026-03-31 |
 
 ---
 
@@ -223,6 +224,31 @@
   - Home.jsx: nuevo grafico de barras con promedio de calificacion por colaborador, estrellas mensuales solo para colaboradores con reset mensual y frases motivacionales segun promedio
   - TaskModal.jsx: barra de progreso con codigo de color (verde/amarillo/rojo) mostrando porcentaje de calificacion
   - Tasks.jsx: exportacion XLSX muestra porcentajes en lugar de estrellas
+- **Security:** Pendiente
+
+---
+
+### [FUNC-019] Rebranding Nomina2, filtro colaboradores, grafico rendimiento
+- **Estado:** Completada
+- **Fecha:** 2026-03-31
+- **Descripcion:** Rebranding completo de FlowPulse a Nomina2, filtro de busqueda en colaboradores, grafico de rendimiento mensual y regeneracion del manual.
+- **Backend:**
+  - TasksController.cs: frase "día libre" con tilde corregida, logica de fin de mes muestra frase como principal (no bonus)
+  - Docker: backend reconstruido
+- **Frontend:**
+  - Rebranding: logo Nomina2 (Logo2.png) reemplaza logo anterior en login y sidebar, titulo del navegador "Nomina2", todas las referencias FlowPulse eliminadas
+  - Login.jsx: eliminado texto "FlowPulse", logo ampliado a 240px
+  - Sidebar.jsx: logo centrado, maxHeight 160px, separacion reducida con menu
+  - Header.jsx: fallback title "Nomina2", manual renombrado a Manual_Nomina2.pdf
+  - Colaboradores.jsx: nuevo filtro de busqueda en tiempo real (nombre, cedula, area, correo, rol) con icono Search y paginacion ajustada
+  - Home.jsx: grafico de dona (Doughnut) en MonthlyStarsCard mostrando porcentaje de rendimiento mensual del colaborador con color segun estrellas, frase "dia libre" con estilo destacado (badge verde)
+  - Login.css: logo max-width 240px
+  - components.css: sidebar__logo centrado con max-height 120px
+  - Manual_Nomina2.html/pdf: renombrado, contenido actualizado con calificacion por porcentaje, estrellas mensuales, grafico de rendimiento, tildes y eñes corregidas, margenes del PDF ajustados
+  - generateManualPdf.js: referencias actualizadas a Nomina2
+  - config/nginx/default.conf: regla no-cache para logo.png
+- **Datos:** Rol Lider agregado a los 18 colaboradores que tenian solo rol Colaborador (MongoDB)
+- **Documentacion:** Presentacion PPTX generada (Presentacion_Nomina2.pptx) con 24 slides y capturas
 - **Security:** Pendiente
 
 ---
