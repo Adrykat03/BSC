@@ -15,7 +15,7 @@ const pageTitles = {
 
 const Header = ({ isMobile, onOpenSidebar }) => {
   const location = useLocation();
-  const title = pageTitles[location.pathname] || 'FlowPulse';
+  const title = pageTitles[location.pathname] || 'Nomina2';
   const { user, logout, switchRole } = useContext(SessionContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [switchingRole, setSwitchingRole] = useState(false);
@@ -84,8 +84,8 @@ const Header = ({ isMobile, onOpenSidebar }) => {
           <>
           {/* Help icon — download user manual PDF */}
           <a
-            href="/Manual_FlowPulse.pdf"
-            download="Manual_FlowPulse.pdf"
+            href="/Manual_Nomina2.pdf"
+            download="Manual_Nomina2.pdf"
             data-tooltip="Descargar manual"
             style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
           >

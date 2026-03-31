@@ -45,8 +45,7 @@ const Login = () => {
         <div className="card">
           <div className="card__body">
             <div className="login-logo">
-              <img src="/logo.png" alt="FlowPulse" />
-              <h1 className="login-logo__title">FlowPulse</h1>
+              <img src="/logo.png" alt="Nomina2" />
             </div>
 
             {error && (

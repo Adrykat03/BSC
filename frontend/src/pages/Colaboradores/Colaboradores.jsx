@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, Pencil, Trash2, Users, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import Swal from 'sweetalert2';
 import toast, { Toaster } from 'react-hot-toast';
 import { colaboradorService } from '../../services/colaboradorService';
@@ -15,11 +15,24 @@ const Colaboradores = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedColaborador, setSelectedColaborador] = useState(null);
   const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const totalCount = allColaboradores.length;
+  const filtered = useMemo(() => {
+    if (!searchTerm.trim()) return allColaboradores;
+    const term = searchTerm.toLowerCase();
+    return allColaboradores.filter((c) =>
+      c.nombreCompleto?.toLowerCase().includes(term) ||
+      c.cedula?.toLowerCase().includes(term) ||
+      c.area?.toLowerCase().includes(term) ||
+      c.correo?.toLowerCase().includes(term) ||
+      c.rolNames?.some((r) => r.toLowerCase().includes(term))
+    );
+  }, [allColaboradores, searchTerm]);
+
+  const totalCount = filtered.length;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  const colaboradores = allColaboradores.slice(
+  const colaboradores = filtered.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE
   );
@@ -186,12 +199,25 @@ const Colaboradores = () => {
 
       <div className="card">
         <div className="card__body">
+          <div style={{ marginBottom: 'var(--spacing-4)', position: 'relative', maxWidth: '360px' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)' }} />
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Buscar por nombre, cedula, area, correo o rol..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+              style={{ paddingLeft: '36px' }}
+            />
+          </div>
           {colaboradores.length === 0 && !loading ? (
             <div className="empty-state">
               <Users size={48} className="empty-state__icon" />
-              <h3 className="empty-state__title">No hay colaboradores</h3>
+              <h3 className="empty-state__title">{searchTerm ? 'Sin resultados' : 'No hay colaboradores'}</h3>
               <p className="empty-state__description">
-                Aun no se han creado colaboradores. Crea el primero haciendo clic en "Nuevo Colaborador".
+                {searchTerm
+                  ? `No se encontraron colaboradores que coincidan con "${searchTerm}".`
+                  : 'Aun no se han creado colaboradores. Crea el primero haciendo clic en "Nuevo Colaborador".'}
               </p>
             </div>
           ) : (

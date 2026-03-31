@@ -91,12 +91,15 @@ body {
 
 .sidebar__logo {
   padding: var(--spacing-4);
-  margin-bottom: var(--spacing-6);
+  margin-bottom: var(--spacing-2);
+  display: flex;
+  justify-content: center;
 }
 
 .sidebar__logo img {
   max-width: 100%;
   height: auto;
+  max-height: 160px;
 }
 
 .sidebar__section {

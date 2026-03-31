@@ -30,7 +30,7 @@ export function generateManualPdf() {
       doc.setPage(i);
       doc.setFontSize(9);
       doc.setTextColor(...GRAY);
-      doc.text(`FlowPulse - Manual de Usuario`, MARGIN, FOOTER_Y);
+      doc.text(`Nomina2 - Manual de Usuario`, MARGIN, FOOTER_Y);
       doc.text(`Pagina ${i - 1}`, PAGE_W - MARGIN, FOOTER_Y, { align: 'right' });
     }
   };
@@ -152,7 +152,7 @@ export function generateManualPdf() {
   doc.setTextColor(...WHITE);
   doc.setFontSize(48);
   doc.setFont('helvetica', 'bold');
-  doc.text('FlowPulse', PAGE_W / 2, 100, { align: 'center' });
+  doc.text('Nomina2', PAGE_W / 2, 100, { align: 'center' });
   doc.setFontSize(22);
   doc.setFont('helvetica', 'normal');
   doc.text('Manual de Usuario', PAGE_W / 2, 120, { align: 'center' });
@@ -208,7 +208,7 @@ export function generateManualPdf() {
   //  1. INTRODUCCION
   // ══════════════════════════════════════
   heading2('1. Introduccion');
-  para('FlowPulse es un sistema BackOffice para la gestion de tareas y monitoreo de alertas de nomina. Permite a los equipos organizar, asignar, dar seguimiento y calificar tareas de forma colaborativa, con controles diferenciados por rol.');
+  para('Nomina2 es un sistema BackOffice para la gestion de tareas y monitoreo de alertas de nomina. Permite a los equipos organizar, asignar, dar seguimiento y calificar tareas de forma colaborativa, con controles diferenciados por rol.');
   para('El sistema cuenta con cuatro roles principales, cada uno con permisos y vistas especificas:');
   table(
     ['Rol', 'Descripcion'],
@@ -664,5 +664,5 @@ export function generateManualPdf() {
   addFooter();
 
   // ── Save ──
-  doc.save('Manual_FlowPulse.pdf');
+  doc.save('Manual_Nomina2.pdf');
 }

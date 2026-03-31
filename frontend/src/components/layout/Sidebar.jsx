@@ -26,7 +26,7 @@ const Sidebar = ({ isMobile, onCloseSidebar }) => {
       )}
 
       <div className="sidebar__logo">
-        <img src="/logo.png" alt="FlowPulse" style={{ maxWidth: '100%', height: 'auto', maxHeight: '48px' }} />
+        <img src="/logo.png" alt="Nomina2" style={{ maxWidth: '100%', height: 'auto', maxHeight: '160px' }} />
       </div>
 
       <nav>

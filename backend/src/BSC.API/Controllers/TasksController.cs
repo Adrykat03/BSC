@@ -176,11 +176,12 @@ public class TasksController : ControllerBase
                 result.Phrase = "Avanza, tu lider puede aclarar tus dudas";
             }
 
-            // Frase especial de fin de mes para 100%
+            // Fin de mes: frase especial para quien logre 100%
             var lastDayOfMonth = monthStart.AddMonths(1).AddDays(-1).Day;
             if (now.Day == lastDayOfMonth && avg >= 100)
             {
-                result.BonusPhrase = "Excelente trabajo, tienes un dia libre";
+                result.Phrase = "Excelente trabajo, tienes un día libre";
+                result.BonusPhrase = null;
             }
         }
 

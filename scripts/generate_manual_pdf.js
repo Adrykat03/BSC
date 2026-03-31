@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const BASE_URL = process.env.BASE_URL || 'http://bsc_frontend:3000';
 const API_URL = process.env.API_URL || 'http://bsc_backend:8080';
-const OUTPUT = '/output/Manual_FlowPulse.pdf';
+const OUTPUT = '/output/Manual_Nomina2.pdf';
 const SCREENSHOTS = '/output/screenshots';
 const PASSWORD = 'Manual2026!';
 
@@ -250,8 +250,8 @@ function buildManualHtml(img) {
 <head>
 <meta charset="UTF-8">
 <style>
-  @page { margin: 0; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { margin: 12mm 14mm; }
+  * { padding: 0; box-sizing: border-box; }
   body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; line-height: 1.6; font-size: 11px; }
   .cover { background: linear-gradient(135deg, #E31837 0%, #a01228 100%); color: #fff; padding: 120px 40px 80px; text-align: center; page-break-after: always; height: 100vh; display: flex; flex-direction: column; justify-content: center; }
   .cover h1 { font-size: 52px; margin-bottom: 10px; letter-spacing: 2px; }
@@ -296,27 +296,27 @@ function buildManualHtml(img) {
 
 <!-- PORTADA -->
 <div class="cover">
-  <h1>FlowPulse</h1>
+  <h1>Nomina2</h1>
   <div class="subtitle">Manual de Usuario</div>
-  <div class="desc">Sistema de Gestion de Tareas y Alertas de Nomina</div>
-  <div class="version">Version 1.0 &mdash; Marzo 2026</div>
+  <div class="desc">Sistema de Gestión de Tareas y Alertas de Nómina</div>
+  <div class="version">Versión 1.0 &mdash; Marzo 2026</div>
 </div>
 
 <!-- TOC -->
 <div class="toc">
   <h2 style="page-break-before:avoid;">Contenido</h2>
   <ol>
-    <li>Introduccion</li>
-    <li>Inicio de Sesion</li>
+    <li>Introducción</li>
+    <li>Inicio de Sesión</li>
     <li>Roles del Sistema</li>
-    <li>Navegacion</li>
+    <li>Navegación</li>
     <li>Dashboard</li>
-    <li>Gestion de Tareas</li>
-    <li>Calificacion de Tareas</li>
+    <li>Gestión de Tareas</li>
+    <li>Calificación de Tareas</li>
     <li>Carga de Evidencia</li>
     <li>Exportar e Importar Tareas</li>
-    <li>Administracion de Roles</li>
-    <li>Administracion de Colaboradores</li>
+    <li>Administración de Roles</li>
+    <li>Administración de Colaboradores</li>
     <li>Alertas Payroll</li>
     <li>Notificaciones</li>
     <li>Flujo de Estados de Tareas</li>
@@ -325,34 +325,34 @@ function buildManualHtml(img) {
 </div>
 
 <!-- 1 -->
-<h2>1. Introduccion</h2>
-<p><strong>FlowPulse</strong> es un sistema BackOffice para la gestion de tareas y monitoreo de alertas de nomina. Permite a los equipos organizar, asignar, dar seguimiento y calificar tareas de forma colaborativa, con controles diferenciados por rol.</p>
+<h2>1. Introducción</h2>
+<p><strong>Nomina2</strong> es un sistema BackOffice para la gestión de tareas y monitoreo de alertas de nómina. Permite a los equipos organizar, asignar, dar seguimiento y calificar tareas de forma colaborativa, con controles diferenciados por rol.</p>
 <table>
-  <tr><th>Rol</th><th>Descripcion</th></tr>
+  <tr><th>Rol</th><th>Descripción</th></tr>
   <tr><td><strong>Administrador</strong></td><td>Gestiona roles y colaboradores del sistema</td></tr>
-  <tr><td><strong>Gerente</strong></td><td>Crea tareas, asigna lideres, aprueba completadas, ve dashboard completo</td></tr>
-  <tr><td><strong>Lider</strong></td><td>Asigna colaboradores, valida tareas completadas, califica</td></tr>
-  <tr><td><strong>Colaborador</strong></td><td>Ejecuta tareas, sube evidencia, envia a validacion</td></tr>
+  <tr><td><strong>Gerente</strong></td><td>Crea tareas, asigna líderes, aprueba completadas, ve dashboard completo</td></tr>
+  <tr><td><strong>Líder</strong></td><td>Asigna colaboradores, valida tareas completadas</td></tr>
+  <tr><td><strong>Colaborador</strong></td><td>Ejecuta tareas, sube evidencia, envía a validación</td></tr>
 </table>
 
 <!-- 2 -->
-<h2>2. Inicio de Sesion</h2>
+<h2>2. Inicio de Sesión</h2>
 <p>Para acceder al sistema:</p>
 <ol>
   <li>Ingrese a la URL del sistema en su navegador.</li>
-  <li>Introduzca su <strong>correo electronico</strong> corporativo.</li>
-  <li>Introduzca su <strong>contrasena</strong>.</li>
-  <li>Haga clic en <strong>"Iniciar sesion"</strong>.</li>
+  <li>Introduzca su <strong>correo electrónico</strong> corporativo.</li>
+  <li>Introduzca su <strong>contraseña</strong>.</li>
+  <li>Haga clic en <strong>"Iniciar sesión"</strong>.</li>
 </ol>
 ${ss('01_login')}
-<div class="tip"><strong>Consejo:</strong> Si tiene multiples roles asignados, al iniciar sesion se activara el rol de mayor privilegio. Puede cambiar de rol desde el menu de usuario en la esquina superior derecha.</div>
+<div class="tip"><strong>Consejo:</strong> Si tiene múltiples roles asignados, al iniciar sesión se activará el rol de mayor privilegio. Puede cambiar de rol desde el menú de usuario en la esquina superior derecha.</div>
 
 <h3>Cambiar de Rol</h3>
-<p>Si su cuenta tiene mas de un rol:</p>
+<p>Si su cuenta tiene más de un rol:</p>
 <ol>
   <li>Haga clic en su nombre en la esquina superior derecha.</li>
-  <li>En el menu desplegable, seleccione el rol al que desea cambiar.</li>
-  <li>La pagina se recargara con los permisos del nuevo rol.</li>
+  <li>En el menú desplegable, seleccione el rol al que desea cambiar.</li>
+  <li>La página se recargará con los permisos del nuevo rol.</li>
 </ol>
 
 <!-- 3 -->
@@ -366,61 +366,60 @@ ${ss('01_login')}
 <h3>Gerente</h3>
 <ul>
   <li>Accede a: <strong>Dashboard</strong>, <strong>Tareas</strong>, <strong>Alertas Payroll</strong></li>
-  <li>Crea y edita tareas, asigna Lideres</li>
+  <li>Crea y edita tareas, asigna Líderes</li>
   <li>Aprueba tareas como "Completa" o las devuelve</li>
-  <li>Cancela y restaura tareas, califica tareas (1-10 estrellas)</li>
+  <li>Cancela y restaura tareas</li>
   <li>Descarga reportes XLSX completos</li>
 </ul>
-<h3>Lider</h3>
+<h3>Líder</h3>
 <ul>
   <li>Accede a: <strong>Dashboard</strong>, <strong>Tareas</strong>, <strong>Alertas Payroll</strong></li>
   <li>Asigna tareas a Colaboradores, valida tareas completadas</li>
-  <li>Reasigna tareas si requieren correccion</li>
-  <li>Califica tareas (1-10 estrellas)</li>
+  <li>Reasigna tareas si requieren corrección</li>
 </ul>
 <h3>Colaborador</h3>
 <ul>
   <li>Accede a: <strong>Dashboard</strong> (vista limitada), <strong>Tareas</strong>, <strong>Alertas Payroll</strong></li>
   <li>Ve el detalle de tareas asignadas, sube evidencia</li>
-  <li>Envia tareas a validacion</li>
+  <li>Envía tareas a validación</li>
 </ul>
 
 <!-- 4 -->
-<h2>4. Navegacion</h2>
+<h2>4. Navegación</h2>
 <h3>Barra Lateral</h3>
 <table>
-  <tr><th>Menu</th><th>Admin</th><th>Gerente</th><th>Lider</th><th>Colaborador</th></tr>
-  <tr><td>Dashboard</td><td>-</td><td>Si</td><td>Si</td><td>Si</td></tr>
-  <tr><td>Tareas</td><td>-</td><td>Si</td><td>Si</td><td>Si</td></tr>
-  <tr><td>Roles</td><td>Si</td><td>-</td><td>-</td><td>-</td></tr>
-  <tr><td>Colaboradores</td><td>Si</td><td>-</td><td>-</td><td>-</td></tr>
-  <tr><td>Alertas Payroll</td><td>Si</td><td>Si</td><td>Si</td><td>Si</td></tr>
+  <tr><th>Menú</th><th>Admin</th><th>Gerente</th><th>Líder</th><th>Colaborador</th></tr>
+  <tr><td>Dashboard</td><td>-</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+  <tr><td>Tareas</td><td>-</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+  <tr><td>Roles</td><td>Sí</td><td>-</td><td>-</td><td>-</td></tr>
+  <tr><td>Colaboradores</td><td>Sí</td><td>-</td><td>-</td><td>-</td></tr>
+  <tr><td>Alertas Payroll</td><td>Sí</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
 </table>
 <h3>Barra Superior</h3>
-<p>Contiene: titulo de la pagina, icono de ayuda (descarga este manual), campana de notificaciones y menu de usuario.</p>
+<p>Contiene: título de la página, ícono de ayuda (descarga este manual), campana de notificaciones y menú de usuario.</p>
 ${ss('03_header')}
 
 <!-- 5 -->
 <h2>5. Dashboard</h2>
-<p>El Dashboard presenta un resumen estadistico de las tareas. El contenido varia segun su rol.</p>
+<p>El Dashboard presenta un resumen estadístico de las tareas. El contenido varía según su rol.</p>
 ${ss('02_dashboard_gerente')}
 <h3>Componentes del Dashboard</h3>
 <table>
-  <tr><th>Componente</th><th>Gerente</th><th>Lider</th><th>Colaborador</th></tr>
-  <tr><td>Tarjetas KPI</td><td>Si</td><td>-</td><td>-</td></tr>
-  <tr><td>Mapa de calor</td><td>Si</td><td>Si</td><td>-</td></tr>
-  <tr><td>Tiempo promedio por estado</td><td>Si</td><td>Si</td><td>Si</td></tr>
-  <tr><td>Distribucion por estado</td><td>Si</td><td>Si</td><td>Si</td></tr>
-  <tr><td>Por colaborador y estado</td><td>Si</td><td>Si</td><td>Si</td></tr>
-  <tr><td>Descargar reporte XLSX</td><td>Si</td><td>-</td><td>-</td></tr>
+  <tr><th>Componente</th><th>Gerente</th><th>Líder</th><th>Colaborador</th></tr>
+  <tr><td>Tarjetas KPI</td><td>Sí</td><td>-</td><td>-</td></tr>
+  <tr><td>Mapa de calor</td><td>Sí</td><td>Sí</td><td>-</td></tr>
+  <tr><td>Tiempo promedio por estado</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+  <tr><td>Distribución por estado</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+  <tr><td>Por colaborador y estado</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+  <tr><td>Descargar reporte XLSX</td><td>Sí</td><td>-</td><td>-</td></tr>
 </table>
 
 <!-- 6 -->
-<h2>6. Gestion de Tareas</h2>
+<h2>6. Gestión de Tareas</h2>
 <h3>Vista de Tareas — Gerente</h3>
 ${ss('04_tasks_gerente')}
 
-<h3>Vista de Tareas — Lider</h3>
+<h3>Vista de Tareas — Líder</h3>
 ${ss('11_tasks_lider')}
 
 <h3>Vista de Tareas — Colaborador</h3>
@@ -429,25 +428,25 @@ ${ss('12_tasks_colaborador')}
 <h3>Crear Tarea</h3>
 <ol>
   <li>Haga clic en <strong>"+ Nueva Tarea"</strong>.</li>
-  <li>Complete: Titulo, Descripcion, Fecha de entrega, Tiempo estimado, Insumos, Observaciones.</li>
-  <li>Opcionalmente asigne un Lider.</li>
+  <li>Complete: Título, Descripción, Fecha de entrega, Tiempo estimado, Insumos, Observaciones.</li>
+  <li>Opcionalmente asigne un Líder.</li>
   <li>Haga clic en <strong>"Guardar"</strong>.</li>
 </ol>
 ${ss('05_task_modal_create')}
 
 <h3>Editar Tarea</h3>
-<p>Haga clic en el icono de lapiz para abrir el modal de edicion.</p>
+<p>Haga clic en el ícono de lápiz para abrir el modal de edición.</p>
 ${ss('06_task_modal_edit')}
-<div class="note"><strong>Nota:</strong> El Lider no puede modificar la fecha de entrega. Solo el Gerente puede hacerlo.</div>
+<div class="note"><strong>Nota:</strong> El Líder no puede modificar la fecha de entrega. Solo el Gerente puede hacerlo.</div>
 
 <h3>Estados de una Tarea</h3>
 <table>
   <tr><th>Estado</th><th>Significado</th><th>Color</th></tr>
-  <tr><td><span class="badge badge--creada">Creada</span></td><td>Recien creada, sin asignar</td><td>Gris</td></tr>
-  <tr><td><span class="badge badge--asignada">Asignada</span></td><td>Asignada a lider o colaborador</td><td>Azul</td></tr>
-  <tr><td><span class="badge badge--cpv">Completa - Por Validar</span></td><td>Esperando validacion</td><td>Naranja</td></tr>
-  <tr><td><span class="badge badge--reasignada">Reasignada</span></td><td>Devuelta para correccion</td><td>Rojo</td></tr>
-  <tr><td><span class="badge badge--cv">Completa - Validada</span></td><td>Validada, pendiente aprobacion</td><td>Verde claro</td></tr>
+  <tr><td><span class="badge badge--creada">Creada</span></td><td>Recién creada, sin asignar</td><td>Gris</td></tr>
+  <tr><td><span class="badge badge--asignada">Asignada</span></td><td>Asignada a líder o colaborador</td><td>Azul</td></tr>
+  <tr><td><span class="badge badge--cpv">Completa - Por Validar</span></td><td>Esperando validación</td><td>Naranja</td></tr>
+  <tr><td><span class="badge badge--reasignada">Reasignada</span></td><td>Devuelta para corrección</td><td>Rojo</td></tr>
+  <tr><td><span class="badge badge--cv">Completa - Validada</span></td><td>Validada, pendiente aprobación</td><td>Verde claro</td></tr>
   <tr><td><span class="badge badge--completa">Completa</span></td><td>Finalizada</td><td>Verde</td></tr>
   <tr><td><span class="badge badge--cancelada">Cancelada</span></td><td>Cancelada</td><td>Rojo oscuro</td></tr>
 </table>
@@ -462,19 +461,47 @@ ${ss('06_task_modal_edit')}
 </table>
 
 <h3>Historial de una Tarea</h3>
-<p>Haga clic en el icono de reloj para ver la linea de tiempo de cambios.</p>
+<p>Haga clic en el ícono de reloj para ver la línea de tiempo de cambios.</p>
 ${ss('09_history_modal')}
 
 <!-- 7 -->
-<h2>7. Calificacion de Tareas</h2>
-<p>El Lider y el Gerente pueden calificar tareas con <strong>10 estrellas</strong>.</p>
-<ol>
-  <li>Abra la tarea.</li>
-  <li>En "Calificacion", haga clic en la estrella deseada: <span class="star">&#9733;&#9733;&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="star-gray">&#9733;&#9733;&#9733;</span> = 7/10</li>
-  <li>La calificacion se guarda al hacer clic en Guardar, cambiar estado o asignar.</li>
-</ol>
+<h2>7. Calificación de Tareas</h2>
+<p>La calificación de tareas se calcula <strong>automáticamente</strong> como un porcentaje basado en el desempeño:</p>
+<table>
+  <tr><th>Criterio</th><th>Efecto</th></tr>
+  <tr><td>Base</td><td>100%</td></tr>
+  <tr><td>Entrega tardía</td><td>-30%</td></tr>
+  <tr><td>Por cada reasignación</td><td>-10%</td></tr>
+</table>
+<p>La calificación se asigna automáticamente al completar la tarea. Se muestra como una barra de progreso con código de color:</p>
+<ul>
+  <li><strong>Verde:</strong> 70% o más</li>
+  <li><strong>Amarillo:</strong> 40% - 69%</li>
+  <li><strong>Rojo:</strong> menos de 40%</li>
+</ul>
 ${ss('07_task_modal_rating')}
-<div class="tip"><strong>Importante:</strong> Las estrellas cambian visualmente al hacer clic. Se persisten al presionar un boton de accion.</div>
+<div class="tip"><strong>Nota:</strong> La calificación no es editable manualmente. Se recalcula cada vez que cambia el estado de la tarea.</div>
+
+<h3>Estrellas Mensuales</h3>
+<p>Los colaboradores reciben una calificación mensual de <strong>1 a 5 estrellas</strong> basada en el promedio de sus calificaciones del mes, acompañada de una frase motivacional:</p>
+<table>
+  <tr><th>Estrellas</th><th>Promedio</th><th>Mensaje</th></tr>
+  <tr><td><span class="star">&#9733;&#9733;&#9733;&#9733;&#9733;</span></td><td>90% - 100%</td><td>Excelente desempeño</td></tr>
+  <tr><td><span class="star">&#9733;&#9733;&#9733;&#9733;</span><span class="star-gray">&#9733;</span></td><td>70% - 89%</td><td>Muy buen trabajo</td></tr>
+  <tr><td><span class="star">&#9733;&#9733;&#9733;</span><span class="star-gray">&#9733;&#9733;</span></td><td>50% - 69%</td><td>Buen esfuerzo, sigue mejorando</td></tr>
+  <tr><td><span class="star">&#9733;&#9733;</span><span class="star-gray">&#9733;&#9733;&#9733;</span></td><td>30% - 49%</td><td>Hay oportunidades de mejora</td></tr>
+  <tr><td><span class="star">&#9733;</span><span class="star-gray">&#9733;&#9733;&#9733;&#9733;</span></td><td>0% - 29%</td><td>Necesita atención</td></tr>
+</table>
+<p>Las estrellas mensuales se reinician al inicio de cada mes y son visibles solo para el colaborador en su Dashboard.</p>
+
+<h3>Gráfico de Rendimiento Mensual</h3>
+<p>Junto a las estrellas y la frase motivacional, el Colaborador verá un <strong>gráfico de dona</strong> que muestra visualmente su porcentaje de rendimiento mensual:</p>
+<ul>
+  <li>El <strong>porcentaje</strong> se muestra en el centro del gráfico</li>
+  <li>El <strong>color</strong> coincide con el nivel de estrellas (verde, azul, amarillo o rojo)</li>
+  <li>El gráfico se <strong>reinicia cada mes</strong> ya que muestra el promedio de calificaciones del mes en curso</li>
+</ul>
+<div class="note"><strong>Nota:</strong> Este gráfico es exclusivo del Dashboard del Colaborador y permite visualizar de un vistazo el rendimiento acumulado del mes.</div>
 
 <!-- 8 -->
 <h2>8. Carga de Evidencia</h2>
@@ -490,7 +517,7 @@ ${ss('13_task_detail_colab')}
 <!-- 9 -->
 <h2>9. Exportar e Importar Tareas</h2>
 <h3>Exportar a Excel</h3>
-<p>Desde Tareas, haga clic en el icono de descarga. Se genera un .xlsx con todas las tareas incluyendo calificacion.</p>
+<p>Desde Tareas, haga clic en el ícono de descarga. Se genera un .xlsx con todas las tareas incluyendo calificación.</p>
 <h3>Importar (Carga Masiva)</h3>
 <ol>
   <li>Descargue la plantilla.</li>
@@ -498,55 +525,55 @@ ${ss('13_task_detail_colab')}
   <li>Suba el archivo .xlsx.</li>
 </ol>
 <table>
-  <tr><th>Columna</th><th>Requerida</th><th>Descripcion</th></tr>
-  <tr><td>Titulo</td><td>Si</td><td>Nombre de la tarea</td></tr>
-  <tr><td>Descripcion</td><td>Si</td><td>Descripcion detallada</td></tr>
-  <tr><td>Fecha de entrega</td><td>Si</td><td>DD/MM/AAAA HH:mm</td></tr>
-  <tr><td>Tiempo estimado (h)</td><td>Si</td><td>Horas estimadas</td></tr>
+  <tr><th>Columna</th><th>Requerida</th><th>Descripción</th></tr>
+  <tr><td>Título</td><td>Sí</td><td>Nombre de la tarea</td></tr>
+  <tr><td>Descripción</td><td>Sí</td><td>Descripción detallada</td></tr>
+  <tr><td>Fecha de entrega</td><td>Sí</td><td>DD/MM/AAAA HH:mm</td></tr>
+  <tr><td>Tiempo estimado (h)</td><td>Sí</td><td>Horas estimadas</td></tr>
   <tr><td>Insumos</td><td>No</td><td>Recursos necesarios</td></tr>
-  <tr><td>Email lider</td><td>No</td><td>Correo del lider</td></tr>
+  <tr><td>Email líder</td><td>No</td><td>Correo del líder</td></tr>
   <tr><td>Email colaborador</td><td>No</td><td>Correo del colaborador</td></tr>
 </table>
 
 <!-- 10 -->
-<h2>10. Administracion de Roles</h2>
+<h2>10. Administración de Roles</h2>
 <p><em>Solo Administrador.</em></p>
 ${ss('14_roles')}
 <ol>
   <li>Navegue a <strong>Roles</strong>.</li>
   <li>Haga clic en <strong>"+ Nuevo Rol"</strong>.</li>
-  <li>Ingrese nombre y descripcion.</li>
+  <li>Ingrese nombre y descripción.</li>
   <li>Haga clic en <strong>"Guardar"</strong>.</li>
 </ol>
 
 <!-- 11 -->
-<h2>11. Administracion de Colaboradores</h2>
+<h2>11. Administración de Colaboradores</h2>
 <p><em>Solo Administrador.</em></p>
 ${ss('15_colaboradores')}
-<h4>Requisitos de Contrasena</h4>
+<h4>Requisitos de Contraseña</h4>
 <ul>
-  <li>Minimo 8 caracteres</li>
-  <li>Al menos una mayuscula, una minuscula, un numero</li>
-  <li>Al menos un caracter especial (@$!%*?&#)</li>
+  <li>Mínimo 8 caracteres</li>
+  <li>Al menos una mayúscula, una minúscula, un número</li>
+  <li>Al menos un carácter especial (@$!%*?&#)</li>
 </ul>
 
 <!-- 12 -->
 <h2>12. Alertas Payroll</h2>
-<p>Dashboard de notificaciones del sistema de nomina.</p>
+<p>Dashboard de notificaciones del sistema de nómina.</p>
 ${ss('10_alertas_payroll')}
 <h3>Indicadores</h3>
 <ul>
-  <li><strong>Total Alertas</strong> — Numero total</li>
-  <li><strong>Activas</strong> — Requieren atencion</li>
+  <li><strong>Total Alertas</strong> — Número total</li>
+  <li><strong>Activas</strong> — Requieren atención</li>
   <li><strong>En Proceso</strong> — Siendo atendidas</li>
   <li><strong>Resueltas</strong> — Solucionadas</li>
   <li><strong>Caducadas</strong> — Expiraron</li>
-  <li><strong>Error Envio</strong> — Fallas de notificacion</li>
+  <li><strong>Error Envío</strong> — Fallas de notificación</li>
 </ul>
 
 <!-- 13 -->
 <h2>13. Notificaciones</h2>
-<p>En la barra superior encontrara un icono de campana con un circulo rojo que indica tareas pendientes (Asignada o Reasignada). Se actualiza cada 60 segundos.</p>
+<p>En la barra superior encontrará un ícono de campana con un círculo rojo que indica tareas pendientes (Asignada o Reasignada). Se actualiza cada 60 segundos.</p>
 
 <!-- 14 -->
 <h2>14. Flujo de Estados de Tareas</h2>
@@ -574,17 +601,17 @@ ${ss('10_alertas_payroll')}
 <!-- 15 -->
 <h2>15. Preguntas Frecuentes</h2>
 <h4>No puedo ver mis tareas</h4>
-<p>Verifique que inicio sesion con el rol correcto. Cambie de rol desde el menu de usuario.</p>
+<p>Verifique que inició sesión con el rol correcto. Cambie de rol desde el menú de usuario.</p>
 <h4>No puedo cambiar el estado</h4>
-<p>Solo puede cambiar a estados permitidos para su rol. Vea la tabla de transiciones en la seccion 6.</p>
-<h4>La calificacion no se guarda</h4>
-<p>Las estrellas son un selector visual. Se guardan al presionar Guardar o cambiar estado.</p>
+<p>Solo puede cambiar a estados permitidos para su rol. Vea la tabla de transiciones en la sección 6.</p>
+<h4>La calificación no cambia</h4>
+<p>La calificación es automática y se recalcula al completar la tarea. No se puede editar manualmente.</p>
 <h4>No puedo crear tareas</h4>
-<p>Solo Gerente y Lider pueden crear tareas.</p>
+<p>Solo Gerente y Líder pueden crear tareas.</p>
 <h4>El archivo no se sube</h4>
 <p>Verifique que no supere 20 MB.</p>
 
-<footer>FlowPulse &copy; 2026 &mdash; Manual de Usuario v1.0</footer>
+<footer>Nomina2 &copy; 2026 &mdash; Manual de Usuario v1.0</footer>
 </body>
 </html>`;
 }

@@ -403,13 +403,41 @@ const MonthlyStarsCard = ({ data }) => {
   if (!data) return null;
   const { stars, phrase, bonusPhrase, avgRating, taskCount, hasTasks } = data;
   const color = STAR_COLORS[stars] || '#2E7D32';
+  const pct = hasTasks ? avgRating : 0;
 
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const currentMonth = monthNames[new Date().getMonth()];
 
+  const doughnutData = {
+    datasets: [{
+      data: [pct, 100 - pct],
+      backgroundColor: [color, '#E5E7EB'],
+      borderWidth: 0,
+      cutout: '75%',
+    }],
+  };
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+  };
+  const centerPlugin = {
+    id: 'monthlyCenter',
+    afterDraw(chart) {
+      const { ctx, width, height } = chart;
+      ctx.save();
+      ctx.font = `bold 22px Inter, sans-serif`;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${pct}%`, width / 2, height / 2);
+      ctx.restore();
+    },
+  };
+
   return (
     <div className="card mb-6" style={{ border: `2px solid ${color}20`, background: `linear-gradient(135deg, ${color}08 0%, #fff 100%)` }}>
-      <div className="card__body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', padding: '20px 24px' }}>
+      <div className="card__body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap', padding: '20px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
           {/* Stars */}
           <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
@@ -421,12 +449,13 @@ const MonthlyStarsCard = ({ data }) => {
           </div>
           {/* Phrase */}
           <div>
-            <p style={{ fontWeight: 700, fontSize: '15px', color, margin: 0 }}>
-              {phrase}
-            </p>
-            {bonusPhrase && (
-              <p style={{ fontWeight: 700, fontSize: '14px', color: '#2E7D32', margin: '4px 0 0', background: '#dcfce7', display: 'inline-block', padding: '2px 12px', borderRadius: '12px' }}>
-                {bonusPhrase}
+            {phrase && phrase.includes('día libre') ? (
+              <p style={{ fontWeight: 700, fontSize: '14px', color: '#2E7D32', margin: 0, background: '#dcfce7', display: 'inline-block', padding: '2px 12px', borderRadius: '12px' }}>
+                {phrase}
+              </p>
+            ) : (
+              <p style={{ fontWeight: 700, fontSize: '15px', color, margin: 0 }}>
+                {phrase}
               </p>
             )}
             <p style={{ fontSize: '12px', color: '#6B7280', margin: '4px 0 0' }}>
@@ -436,6 +465,10 @@ const MonthlyStarsCard = ({ data }) => {
               }
             </p>
           </div>
+        </div>
+        {/* Doughnut chart */}
+        <div style={{ width: '100px', height: '100px', flexShrink: 0 }}>
+          <Doughnut data={doughnutData} options={doughnutOptions} plugins={[centerPlugin]} />
         </div>
         {/* Month badge */}
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
