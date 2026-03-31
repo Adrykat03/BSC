@@ -10,10 +10,17 @@
 | FUNC-000 | Estructura base del proyecto | Completada | 2026-03-16 |
 | FUNC-001 | Gestion de Roles | En Progreso | 2026-03-17 |
 | FUNC-002 | CRUD Colaboradores | Completada | 2026-03-17 |
-| FUNC-003 | Gestion de Tareas | En Progreso | 2026-03-17 |
+| FUNC-003 | Gestion de Tareas | Completada | 2026-03-17 |
 | FUNC-009 | Modo Responsive (móvil/tablet) | Completada | 2026-03-18 |
 | FUNC-010 | Bugfix evidencias y observaciones en tareas | Completada | 2026-03-18 |
 | FUNC-011 | Dashboard solo Gerente, switch rol, plantilla carga masiva | Completada | 2026-03-18 |
+| FUNC-012 | Fix switch-role JWT y busqueda server-side en tareas | Completada | 2026-03-18 |
+| FUNC-013 | Evidencias opcionales y auditoria completa en modal | Completada | 2026-03-18 |
+| FUNC-014 | Dashboard multi-rol y visibilidad de tareas por perfil | Completada | 2026-03-23 |
+| FUNC-015 | UX tareas: tooltips, transiciones de estado, toolbar modal | Completada | 2026-03-24 |
+| FUNC-016 | Calificacion de tareas y campana de notificaciones | Completada | 2026-03-25 |
+| FUNC-017 | Manual de usuario descargable (HTML/PDF) | Completada | 2026-03-27 |
+| FUNC-018 | Calificacion automatica por porcentaje y estrellas mensuales | Completada | 2026-03-27 |
 
 ---
 
@@ -62,7 +69,7 @@
 ---
 
 ### [FUNC-003] Gestion de Tareas
-- **Estado:** En Progreso
+- **Estado:** Completada
 - **Fecha:** 2026-03-17
 - **Descripcion:** CRUD de tareas para el sistema BackOffice. Permite crear, listar, editar y eliminar tareas.
 - **Backend:** Pendiente.
@@ -105,6 +112,118 @@
   - routes.jsx: HomeOrRedirect redirige Lider/Colaborador a /tasks
   - Tasks.jsx: plantilla con fila de ejemplo, header de fecha con formato DD/MM/AAAA HH:mm, parseo robusto de fechas (serial Excel + string), fix conteo de tareas creadas (totalCreated/totalFailed del backend)
 - **Security:** Aprobado (0 criticos, 0 altos, 2 bajos: console.error en produccion e inline styles menores)
+
+---
+
+### [FUNC-012] Fix switch-role JWT y busqueda server-side en tareas
+- **Estado:** Completada
+- **Fecha:** 2026-03-18
+- **Descripcion:** Correccion de parsing JWT para roles multiples y busqueda server-side en tareas con filtrado regex.
+- **Backend:** AuthController y TasksController: fix lectura de claims JWT (ASP.NET remapea 'roles' a ClaimTypes.Role), fix GetUserRole que devolvia siempre el primer rol del array. GetTaskItemsQuery/Handler: busqueda server-side con regex en titulo, descripcion, nombre de colaborador/lider. Colaborador ahora ve tareas Completa y Completa-Validada.
+- **Frontend:** Tasks.jsx: busqueda con debounce 300ms que consulta al backend. tasksService.js actualizado con parametro de busqueda.
+- **Security:** Pendiente
+
+---
+
+### [FUNC-013] Evidencias opcionales y auditoria completa en modal
+- **Estado:** Completada
+- **Fecha:** 2026-03-18
+- **Descripcion:** Refactorizacion de evidencias para que archivos y texto sean opcionales, y todos los botones del modal guarden datos antes de actuar.
+- **Backend:** UploadEvidenceCommand/Handler/Validator: archivos y texto de evidencia opcionales, solo observaciones requeridas para guardar. Eliminada validacion FluentValidation que exigia evidencia obligatoria.
+- **Frontend:** TaskModal.jsx: todos los botones (cambio de estado, guardar, asignar) ejecutan guardado previo de datos del formulario antes de la accion, eliminando race conditions. Colaborador puede guardar solo observaciones sin evidencia.
+- **Security:** Pendiente
+
+---
+
+### [FUNC-014] Dashboard multi-rol y visibilidad de tareas por perfil
+- **Estado:** Completada
+- **Fecha:** 2026-03-23
+- **Descripcion:** Dashboard habilitado para todos los roles con filtrado por perfil, visibilidad de tareas por rol, retomar tarea, exportacion XLSX y alertas payroll.
+- **Backend:**
+  - GetDashboardQuery/Handler: dashboard filtrado por rol (Gerente ve todo, Lider ve sus asignadas, Colaborador ve las propias)
+  - GetTaskItemsQueryHandler: visibilidad de estados por rol (Colaborador: Asignada/Reasignada/Completa-Por Validar; Lider: hasta Completa-Validada; Gerente: todos incluyendo Completa/Cancelada)
+  - PUT /api/tasks/{id}/revert: revertir estado de tarea
+  - GET /api/tasks/export: exportacion filtrada XLSX
+  - Heatmap basado en suma de horas estimadas (no conteo de tareas)
+  - EstimatedTime como campo decimal (step 0.5)
+  - Highlight cards: colaborador eficiente y lider top basados en suma de tiempo estimado completado
+  - Ocultar Dashboard para rol Administrador, redirigir a /roles
+- **Frontend:**
+  - Home.jsx: dashboard multi-rol, heatmap oculto para Colaborador, total completas en doughnut, highlights solo para Gerente, click-to-download XLSX por colaborador/estado, Reasignadas Historicas como categoria oculta por defecto
+  - Sidebar.jsx: Dashboard visible segun rol
+  - routes.jsx: redireccion por rol (Lider/Colaborador a /tasks, Admin a /roles)
+  - AlertasPayroll: nueva pagina con dashboard de payroll integrado
+  - Seeds: seed_100_tareas.js para datos de prueba
+- **Security:** Pendiente
+
+---
+
+### [FUNC-015] UX tareas: tooltips, transiciones de estado, toolbar modal
+- **Estado:** Completada
+- **Fecha:** 2026-03-24
+- **Descripcion:** Mejoras de UX en gestion de tareas: tooltips, rediseno de transiciones de estado por rol, toolbar en modal y correcciones de graficos.
+- **Backend:**
+  - ChangeTaskStatusCommandHandler y TaskStateTransitions.cs: eliminada validacion de fecha limite al cambiar estado
+  - TaskItemRepository/GetTaskItemsQueryHandler: eliminada restriccion de fecha en queries para Lider y Colaborador
+- **Frontend:**
+  - Tasks.jsx: tooltips en botones (descarga plantilla, carga, exportar), tareas vencidas gestionables por todos los roles
+  - TaskModal.jsx: footer rediseñado como toolbar compacta con iconos y tooltips, transiciones de estado sincronizadas entre tabla y modal
+  - Transiciones por rol: Gerente (completar/devolver/cancelar), Lider (validar/reasignar), Colaborador (enviar a validacion sin restriccion de fecha)
+  - Icono de cancelar cambiado a Eraser
+  - Home.jsx: conteo correcto de completas en grafico de distribucion, tareas canceladas excluidas del heatmap historico
+  - Puerto frontend cambiado de 3000 a 3030
+- **Security:** Pendiente
+
+---
+
+### [FUNC-016] Calificacion de tareas y campana de notificaciones
+- **Estado:** Completada
+- **Fecha:** 2026-03-25
+- **Descripcion:** Sistema de calificacion manual 1-10 estrellas para tareas y campana de notificaciones con badge de tareas pendientes.
+- **Backend:**
+  - RateTaskCommand/Handler: nuevo comando para calificar tareas
+  - TaskItem.cs: campo Rating agregado a la entidad
+  - TaskItemDto/TaskItemMapper: rating incluido en DTOs y mapeo
+  - TasksController: endpoint para calificar tareas
+- **Frontend:**
+  - TaskModal.jsx: selector de estrellas 1-10, solo Lider/Gerente pueden calificar, rating se guarda al cambiar estado/guardar/asignar
+  - Tasks.jsx: columna Rating en tabla y exportacion XLSX
+  - Header.jsx: campana de notificaciones con badge rojo mostrando tareas pendientes
+  - Fix: 'Líder' con tilde en BD ahora coincide con constante 'Lider'
+- **Security:** Pendiente
+
+---
+
+### [FUNC-017] Manual de usuario descargable (HTML/PDF)
+- **Estado:** Completada
+- **Fecha:** 2026-03-27
+- **Descripcion:** Manual de usuario completo con 15 secciones, descargable desde el header, generacion PDF con capturas automaticas via Playwright.
+- **Backend:** scripts/generate_manual_pdf.js: script Playwright que captura 18 screenshots de todas las paginas y roles para generar el PDF.
+- **Frontend:**
+  - Header.jsx: icono de ayuda (HelpCircle) junto a campana de notificaciones con tooltip
+  - Manual_FlowPulse.html: manual completo con 15 secciones, tablas, badges y diagramas de flujo de estados
+  - Manual_FlowPulse.pdf: PDF estatico generado con Playwright (portada, indice, tablas, capturas)
+  - routes.jsx: ruta para descarga del manual
+  - Fix alineacion de icono de ayuda y tooltip consistente con el sistema
+- **Security:** Pendiente
+
+---
+
+### [FUNC-018] Calificacion automatica por porcentaje y estrellas mensuales
+- **Estado:** Completada
+- **Fecha:** 2026-03-27
+- **Descripcion:** Reemplazo de calificacion manual por sistema automatico basado en porcentaje, grafico de promedio por colaborador y estrellas mensuales motivacionales.
+- **Backend:**
+  - ChangeTaskStatusCommandHandler: calificacion automatica al completar tarea (100% base, -30% por entrega tardia, -10% por cada reasignacion)
+  - GetDashboardQueryHandler: nuevo calculo de promedio de calificacion por colaborador y estrellas mensuales
+  - DashboardDto.cs: nuevos DTOs para promedio y estrellas mensuales
+  - MonthlyStarsDto.cs: DTO para estrellas mensuales (1-5) con frases motivacionales
+  - TaskItem.cs: campo Rating actualizado para almacenar porcentaje
+- **Frontend:**
+  - Home.jsx: nuevo grafico de barras con promedio de calificacion por colaborador, estrellas mensuales solo para colaboradores con reset mensual y frases motivacionales segun promedio
+  - TaskModal.jsx: barra de progreso con codigo de color (verde/amarillo/rojo) mostrando porcentaje de calificacion
+  - Tasks.jsx: exportacion XLSX muestra porcentajes en lugar de estrellas
+- **Security:** Pendiente
 
 ---
 
