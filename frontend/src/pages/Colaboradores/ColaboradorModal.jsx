@@ -10,8 +10,6 @@ const passwordRules = [
   { label: 'Al menos un caracter especial (@$!%*?&#)', test: (v) => /[@$!%*?&#]/.test(v) },
 ];
 
-const EXCLUSIVE_ROLES = ['Gerente', 'Administrador'];
-
 const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) => {
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
@@ -76,31 +74,12 @@ const ColaboradorModal = ({ isOpen, onClose, onSubmit, colaborador, loading }) =
 
   const allPasswordRulesMet = passwordRules.every((rule) => rule.test(formData.password));
 
-  // Determine if an exclusive role is selected
-  const exclusiveRoleIds = roles.filter((r) => EXCLUSIVE_ROLES.includes(r.name)).map((r) => r.id);
-  const selectedExclusiveId = formData.rolIds.find((id) => exclusiveRoleIds.includes(id));
-  const hasNonExclusiveSelected = formData.rolIds.some((id) => !exclusiveRoleIds.includes(id));
-
   const handleRoleToggle = (roleId) => {
-    const role = roles.find((r) => r.id === roleId);
-    if (!role) return;
-
     setFormData((prev) => {
       const isSelected = prev.rolIds.includes(roleId);
-
-      if (EXCLUSIVE_ROLES.includes(role.name)) {
-        // Exclusive role: toggle solo, desmarca todo lo demás
-        return { ...prev, rolIds: isSelected ? [] : [roleId] };
-      }
-
-      // Non-exclusive: desmarca cualquier rol exclusivo que estuviera
-      let newRolIds;
-      if (isSelected) {
-        newRolIds = prev.rolIds.filter((id) => id !== roleId);
-      } else {
-        const withoutExclusive = prev.rolIds.filter((id) => !exclusiveRoleIds.includes(id));
-        newRolIds = [...withoutExclusive, roleId];
-      }
+      const newRolIds = isSelected
+        ? prev.rolIds.filter((id) => id !== roleId)
+        : [...prev.rolIds, roleId];
       return { ...prev, rolIds: newRolIds };
     });
     if (errors.rolIds) {
