@@ -22,6 +22,7 @@
 | FUNC-017 | Manual de usuario descargable (HTML/PDF) | Completada | 2026-03-27 |
 | FUNC-018 | Calificacion automatica por porcentaje y estrellas mensuales | Completada | 2026-03-27 |
 | FUNC-019 | Rebranding Nomina2, filtro colaboradores, grafico rendimiento | Completada | 2026-03-31 |
+| FUNC-020 | Seleccion multiple de roles sin restriccion | Completada | 2026-04-01 |
 
 ---
 
@@ -249,6 +250,16 @@
   - config/nginx/default.conf: regla no-cache para logo.png
 - **Datos:** Rol Lider agregado a los 18 colaboradores que tenian solo rol Colaborador (MongoDB)
 - **Documentacion:** Presentacion PPTX generada (Presentacion_Nomina2.pptx) con 24 slides y capturas
+- **Security:** Pendiente
+
+---
+
+### [FUNC-020] Seleccion multiple de roles sin restriccion
+- **Estado:** Completada
+- **Fecha:** 2026-04-01
+- **Descripcion:** Eliminada la restriccion que impedia asignar mas de dos roles a un colaborador. Ahora se pueden seleccionar todos los roles disponibles.
+- **Backend:** Sin cambios.
+- **Frontend:** ColaboradorModal.jsx: eliminada logica de EXCLUSIVE_ROLES que restringia roles Gerente/Administrador como exclusivos. handleRoleToggle simplificado a toggle libre sin restricciones.
 - **Security:** Pendiente
 
 ---
