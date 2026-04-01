@@ -11,7 +11,7 @@ Description: Alerta para notificar novedades en los biometricos (nombres de disp
 
 */
 
-CREATE PROCEDURE [Avisos].[pa_biometricos_inactivos]
+alter PROCEDURE [Avisos].[pa_biometricos_inactivos]
 	-- Parametro para llenar tablas o ejecutar consultas 
 	@tipo int
 AS 
