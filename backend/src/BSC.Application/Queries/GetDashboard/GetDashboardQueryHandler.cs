@@ -13,11 +13,13 @@ namespace BSC.Application.Queries.GetDashboard;
 public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiResponse<DashboardDto>>
 {
     private readonly ITaskItemRepository _taskItemRepository;
+    private readonly IBscDashboardConfigRepository _bscConfigRepository;
     private readonly ILogger<GetDashboardQueryHandler> _logger;
 
-    public GetDashboardQueryHandler(ITaskItemRepository taskItemRepository, ILogger<GetDashboardQueryHandler> logger)
+    public GetDashboardQueryHandler(ITaskItemRepository taskItemRepository, IBscDashboardConfigRepository bscConfigRepository, ILogger<GetDashboardQueryHandler> logger)
     {
         _taskItemRepository = taskItemRepository;
+        _bscConfigRepository = bscConfigRepository;
         _logger = logger;
     }
 
@@ -69,6 +71,12 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             allTasks = new List<TaskItem>();
         }
 
+        // Obtener configuracion BSC para excluir tareas BSC del promedio general
+        var bscConfig = await _bscConfigRepository.GetActiveConfigAsync();
+        var bscEmails = bscConfig?.Emails ?? new List<string>();
+        var bscPattern = bscConfig?.TaskTitlePattern ?? "";
+        var bscEmailSet = new HashSet<string>(bscEmails, StringComparer.OrdinalIgnoreCase);
+
         var dashboard = new DashboardDto
         {
             CollaboratorHeatmap = CalculateCollaboratorHeatmap(tasks),
@@ -79,7 +87,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             TasksByStatus = CalculateTasksByStatus(tasks),
             Highlights = CalculateHighlights(tasks),
             CompletionTimeline = CalculateCompletionTimeline(tasks),
-            AvgRatingByCollaborator = CalculateAvgRatingByCollaborator(tasks)
+            AvgRatingByCollaborator = CalculateAvgRatingByCollaborator(tasks, bscEmailSet, bscPattern)
         };
 
         return ApiResponse<DashboardDto>.Ok(dashboard);
@@ -348,11 +356,27 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
     /// <summary>
     /// Promedio de calificacion por colaborador.
     /// Solo considera tareas que tienen calificacion (rating != null).
+    /// Para colaboradores BSC, excluye las tareas que coincidan con el patron BSC.
     /// </summary>
-    private static List<CollaboratorAvgRating> CalculateAvgRatingByCollaborator(List<TaskItem> tasks)
+    private static List<CollaboratorAvgRating> CalculateAvgRatingByCollaborator(
+        List<TaskItem> tasks, HashSet<string> bscEmails, string bscPattern)
     {
-        return tasks
+        var ratedTasks = tasks
             .Where(t => !string.IsNullOrEmpty(t.AssignedToName) && t.Rating.HasValue)
+            .ToList();
+
+        // Excluir tareas BSC para colaboradores BSC en el calculo de promedio general
+        if (bscEmails.Count > 0 && !string.IsNullOrEmpty(bscPattern))
+        {
+            ratedTasks = ratedTasks.Where(t =>
+            {
+                if (!string.IsNullOrEmpty(t.AssignedToEmail) && bscEmails.Contains(t.AssignedToEmail))
+                    return t.Title.IndexOf(bscPattern, StringComparison.OrdinalIgnoreCase) < 0;
+                return true;
+            }).ToList();
+        }
+
+        return ratedTasks
             .GroupBy(t => t.AssignedToName!)
             .Select(g => new CollaboratorAvgRating
             {

@@ -100,6 +100,7 @@ const Home = () => {
   const [selectedCollaborators, setSelectedCollaborators] = useState([]);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [monthlyStars, setMonthlyStars] = useState(null);
+  const [bscMonthlyStars, setBscMonthlyStars] = useState(null);
 
   const isGerente = user?.role === 'Gerente';
   const isColaborador = user?.role === 'Colaborador';
@@ -109,6 +110,15 @@ const Home = () => {
     tasksService.getMonthlyStars()
       .then(data => setMonthlyStars(data))
       .catch(() => setMonthlyStars(null));
+    tasksService.hasBscDashboard()
+      .then(config => {
+        if (config?.hasBscDashboard) {
+          tasksService.getBscMonthlyStars()
+            .then(data => setBscMonthlyStars(data))
+            .catch(() => setBscMonthlyStars(null));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleDownloadReport = async () => {
@@ -299,6 +309,7 @@ const Home = () => {
 
       {/* Monthly Stars Card - solo Colaborador */}
       {isColaborador && monthlyStars && <MonthlyStarsCard data={monthlyStars} />}
+      {isColaborador && bscMonthlyStars && <MonthlyStarsCard data={bscMonthlyStars} label="BSC" />}
 
       {dashboard && (
         <>
@@ -399,7 +410,7 @@ const STAR_COLORS = {
   5: '#2E7D32',
 };
 
-const MonthlyStarsCard = ({ data }) => {
+const MonthlyStarsCard = ({ data, label }) => {
   if (!data) return null;
   const { stars, phrase, bonusPhrase, avgRating, taskCount, hasTasks } = data;
   const color = STAR_COLORS[stars] || '#2E7D32';
@@ -440,12 +451,13 @@ const MonthlyStarsCard = ({ data }) => {
       <div className="card__body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap', padding: '20px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
           {/* Stars */}
-          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexShrink: 0 }}>
             {[1, 2, 3, 4, 5].map(i => (
               <span key={i} style={{ fontSize: '28px', color: i <= stars ? color : '#D1D5DB', transition: 'color 300ms' }}>
                 &#9733;
               </span>
             ))}
+            {label && <span style={{ background: color, color: '#fff', padding: '2px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, marginLeft: '8px' }}>{label}</span>}
           </div>
           {/* Phrase */}
           <div>
@@ -460,7 +472,7 @@ const MonthlyStarsCard = ({ data }) => {
             )}
             <p style={{ fontSize: '12px', color: '#6B7280', margin: '4px 0 0' }}>
               {hasTasks
-                ? `Promedio ${currentMonth}: ${avgRating}% (${taskCount} tarea${taskCount !== 1 ? 's' : ''})`
+                ? `Promedio${label ? ' ' + label : ''} ${currentMonth}: ${avgRating}% (${taskCount} tarea${taskCount !== 1 ? 's' : ''})`
                 : `${currentMonth}: Sin tareas entregadas aun`
               }
             </p>

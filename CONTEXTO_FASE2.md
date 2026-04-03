@@ -7,18 +7,27 @@
 
 | ID | Nombre | Estado | Fecha |
 |----|--------|--------|-------|
-| F2-001 | Seleccion multiple de roles sin restriccion | Completada | 2026-04-01 |
+| F2-001 | Dashboard BSC con excepciones de promedio mensual | Completada | 2026-04-02 |
 
 ---
 
 ## Detalle de Funcionalidades
 
-### [F2-001] Seleccion multiple de roles sin restriccion
+### [F2-001] Dashboard BSC con excepciones de promedio mensual
 - **Estado:** Completada
-- **Fecha:** 2026-04-01
-- **Descripcion:** Eliminada la restriccion que impedia asignar mas de dos roles a un colaborador. Ahora se pueden seleccionar todos los roles disponibles.
-- **Backend:** Sin cambios.
-- **Frontend:** ColaboradorModal.jsx: eliminada logica de EXCLUSIVE_ROLES que restringia roles Gerente/Administrador como exclusivos. handleRoleToggle simplificado a toggle libre sin restricciones.
+- **Fecha:** 2026-04-02
+- **Descripcion:** Card adicional "BSC" en el dashboard de colaboradores configurados, mostrando el promedio mensual solo de tareas con titulo "Proceso mensual liquidaciones". Esas tareas se excluyen del promedio general. Configuracion flexible en MongoDB (agregar/quitar usuarios, desactivar excepcion).
+- **Backend:**
+  - Nueva entidad BscDashboardConfig (emails, taskTitlePattern, isActive) en coleccion MongoDB `BscDashboardConfigs`
+  - IBscDashboardConfigRepository + BscDashboardConfigRepository: lectura de config activa
+  - TasksController: helper CalculateMonthlyStarsFromTasks extraido, endpoint monthly-stars modificado para excluir tareas BSC de usuarios configurados, nuevos endpoints GET /api/tasks/bsc-monthly-stars y GET /api/tasks/has-bsc-dashboard
+  - GetDashboardQueryHandler: AvgRatingByCollaborator excluye tareas BSC del promedio general para colaboradores configurados
+  - Archivos nuevos: BscDashboardConfig.cs, IBscDashboardConfigRepository.cs, BscDashboardConfigRepository.cs
+  - Archivos modificados: TasksController.cs, GetDashboardQueryHandler.cs, DependencyInjection.cs
+- **Frontend:**
+  - tasksService.js: metodos hasBscDashboard() y getBscMonthlyStars()
+  - Home.jsx: estado bscMonthlyStars, fetch condicional, segundo MonthlyStarsCard con badge "BSC" y texto "Promedio BSC {mes}"
+- **Datos:** Seed seed_bsc_config.js con emails isabella.sanchez@kfc.com.ec y manuel.zapata@kfc.com.ec, patron "Proceso mensual liquidaciones"
 - **Security:** Pendiente
 
 ---

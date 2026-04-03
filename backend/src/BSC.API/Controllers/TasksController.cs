@@ -31,13 +31,15 @@ public class TasksController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ITaskItemRepository _taskItemRepository;
+    private readonly IBscDashboardConfigRepository _bscConfigRepository;
 
     private const string FilesBasePath = "/app/files";
 
-    public TasksController(IMediator mediator, ITaskItemRepository taskItemRepository)
+    public TasksController(IMediator mediator, ITaskItemRepository taskItemRepository, IBscDashboardConfigRepository bscConfigRepository)
     {
         _mediator = mediator;
         _taskItemRepository = taskItemRepository;
+        _bscConfigRepository = bscConfigRepository;
     }
 
     private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -110,6 +112,7 @@ public class TasksController : ControllerBase
     /// <summary>
     /// Obtiene las estrellas mensuales del colaborador autenticado.
     /// Se calcula a partir del promedio de calificacion de tareas entregadas en el mes actual.
+    /// Las tareas BSC se excluyen para colaboradores configurados en BscDashboardConfig.
     /// </summary>
     [HttpGet("monthly-stars")]
     [ProducesResponseType(typeof(ApiResponse<MonthlyStarsDto>), StatusCodes.Status200OK)]
@@ -132,6 +135,78 @@ public class TasksController : ControllerBase
             return firstCpv.ChangedAt >= monthStart && firstCpv.ChangedAt < monthEnd;
         }).ToList();
 
+        // Excluir tareas BSC para colaboradores configurados
+        var bscConfig = await _bscConfigRepository.GetActiveConfigAsync();
+        if (bscConfig != null && bscConfig.Emails.Any(e => e.Equals(email, StringComparison.OrdinalIgnoreCase)))
+        {
+            monthlyRated = monthlyRated
+                .Where(t => t.Title.IndexOf(bscConfig.TaskTitlePattern, StringComparison.OrdinalIgnoreCase) < 0)
+                .ToList();
+        }
+
+        var result = CalculateMonthlyStarsFromTasks(monthlyRated, now, monthStart);
+        return Ok(ApiResponse<MonthlyStarsDto>.Ok(result));
+    }
+
+    /// <summary>
+    /// Obtiene las estrellas mensuales BSC del colaborador autenticado.
+    /// Solo aplica para colaboradores configurados en BscDashboardConfig.
+    /// Considera unicamente tareas cuyo titulo coincida con el patron BSC.
+    /// </summary>
+    [HttpGet("bsc-monthly-stars")]
+    [ProducesResponseType(typeof(ApiResponse<MonthlyStarsDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetBscMonthlyStars()
+    {
+        var email = GetUserEmail();
+        var bscConfig = await _bscConfigRepository.GetActiveConfigAsync();
+
+        if (bscConfig == null || !bscConfig.Emails.Any(e => e.Equals(email, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Ok(ApiResponse<MonthlyStarsDto>.Ok(null));
+        }
+
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var monthEnd = monthStart.AddMonths(1);
+
+        var tasks = await _taskItemRepository.GetForDashboardByAssigneeAsync(email, null, null);
+
+        // Filtrar tareas cuya primera entrega (CPV) fue en el mes actual, tienen rating y coinciden con el patron BSC
+        var monthlyRated = tasks.Where(t =>
+        {
+            if (!t.Rating.HasValue) return false;
+            if (t.Title.IndexOf(bscConfig.TaskTitlePattern, StringComparison.OrdinalIgnoreCase) < 0) return false;
+            var firstCpv = t.StatusHistory?
+                .FirstOrDefault(h => h.ToStatus == "Completa - Por Validar");
+            if (firstCpv == null) return false;
+            return firstCpv.ChangedAt >= monthStart && firstCpv.ChangedAt < monthEnd;
+        }).ToList();
+
+        var result = CalculateMonthlyStarsFromTasks(monthlyRated, now, monthStart);
+        return Ok(ApiResponse<MonthlyStarsDto>.Ok(result));
+    }
+
+    /// <summary>
+    /// Indica si el colaborador autenticado tiene acceso al dashboard BSC.
+    /// </summary>
+    [HttpGet("has-bsc-dashboard")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<IActionResult> HasBscDashboard()
+    {
+        var email = GetUserEmail();
+        var bscConfig = await _bscConfigRepository.GetActiveConfigAsync();
+
+        var hasBscDashboard = bscConfig != null
+            && bscConfig.Emails.Any(e => e.Equals(email, StringComparison.OrdinalIgnoreCase));
+
+        return Ok(new { hasBscDashboard });
+    }
+
+    /// <summary>
+    /// Calcula las estrellas mensuales a partir de una lista de tareas calificadas.
+    /// </summary>
+    private static MonthlyStarsDto CalculateMonthlyStarsFromTasks(List<Domain.Entities.TaskItem> monthlyRated, DateTime now, DateTime monthStart)
+    {
         var result = new MonthlyStarsDto();
 
         if (monthlyRated.Count == 0)
@@ -185,7 +260,7 @@ public class TasksController : ControllerBase
             }
         }
 
-        return Ok(ApiResponse<MonthlyStarsDto>.Ok(result));
+        return result;
     }
 
     /// <summary>
@@ -218,7 +293,7 @@ public class TasksController : ControllerBase
     /// </summary>
     /// <param name="id">ID de la tarea.</param>
     /// <returns>Datos de la tarea.</returns>
-    [HttpGet("{id}")]
+    [HttpGet("{id:length(24)}")]
     [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(string id)

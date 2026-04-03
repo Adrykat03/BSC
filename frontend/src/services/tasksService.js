@@ -15,6 +15,16 @@ export const tasksService = {
     return response.data;
   },
 
+  async hasBscDashboard() {
+    const response = await apiClient.get(`${ENDPOINT}/has-bsc-dashboard`);
+    return response;
+  },
+
+  async getBscMonthlyStars() {
+    const response = await apiClient.get(`${ENDPOINT}/bsc-monthly-stars`);
+    return response.data;
+  },
+
   async getAll(page = 1, pageSize = 20, search = '') {
     let url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
     if (search && search.trim()) {
