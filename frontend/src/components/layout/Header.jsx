@@ -27,10 +27,9 @@ const Header = ({ isMobile, onOpenSidebar }) => {
   const fetchPendingCount = useCallback(async () => {
     if (!user) return;
     try {
-      const result = await tasksService.getAll(1, 100);
-      const items = result.items || [];
-      const count = items.filter(t => t.status === 'Asignada' || t.status === 'Reasignada').length;
-      setPendingCount(count);
+      const asignadas = await tasksService.getAll(1, 1, '', 'Asignada');
+      const reasignadas = await tasksService.getAll(1, 1, '', 'Reasignada');
+      setPendingCount((asignadas.totalCount || 0) + (reasignadas.totalCount || 0));
     } catch {
       setPendingCount(0);
     }
@@ -109,7 +108,17 @@ const Header = ({ isMobile, onOpenSidebar }) => {
             <HelpCircle size={20} style={{ color: 'var(--color-text-secondary)' }} />
           </a>
           {/* Notification bell */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+          <div
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+            onClick={() => {
+              if (pendingCount > 0) {
+                toast(`Tiene ${pendingCount} tarea${pendingCount > 1 ? 's' : ''} pendiente${pendingCount > 1 ? 's' : ''} por cumplir`, { icon: '\u{1F514}', duration: 4000 });
+              } else {
+                toast('No tiene tareas pendientes', { icon: '\u{2705}', duration: 3000 });
+              }
+            }}
+            data-tooltip={pendingCount > 0 ? `${pendingCount} tarea${pendingCount > 1 ? 's' : ''} pendiente${pendingCount > 1 ? 's' : ''}` : 'Sin tareas pendientes'}
+          >
             <Bell size={22} style={{ color: 'var(--color-text-secondary)' }} />
             {pendingCount > 0 && (
               <span style={{
