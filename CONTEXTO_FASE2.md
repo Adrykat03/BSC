@@ -190,12 +190,13 @@
 ### [F2-012] Corregir filtro dashboard por DueDate y seed automatico BSC
 - **Estado:** Completada
 - **Fecha:** 2026-04-07
-- **Descripcion:** Dos correcciones: (1) El filtro de rango de fechas del dashboard filtraba por CreatedAt en vez de DueDate, excluyendo tareas completadas del grafico "Comparativa de tareas completadas en el tiempo". Corregido para usar DueDate con timezone Ecuador UTC-5, consistente con el listado de tareas. (2) La configuracion BSC (BscDashboardConfigs) solo existia en MongoDB local, impidiendo que el servidor mostrara los cards BSC para Isabella Sanchez y Manuel Zapata. Se agrego seed automatico al startup del backend.
+- **Descripcion:** Tres correcciones: (1) El filtro de rango de fechas del dashboard filtraba por CreatedAt en vez de DueDate, excluyendo tareas completadas del grafico "Comparativa de tareas completadas en el tiempo". Corregido para usar DueDate con timezone Ecuador UTC-5, consistente con el listado de tareas. (2) La configuracion BSC (BscDashboardConfigs) solo existia en MongoDB local, impidiendo que el servidor mostrara los cards BSC para Isabella Sanchez y Manuel Zapata. Se agrego seed automatico al startup del backend. (3) El conteo acumulado de tareas completadas por dia era incorrecto: cuando varias tareas se completaban el mismo dia, el frontend mostraba solo 1 porque el backend enviaba multiples puntos con la misma fecha y find() tomaba el primero. Corregido agrupando por fecha y enviando solo el conteo maximo del dia.
 - **Backend:**
   - TaskItemRepository.cs: nuevo metodo `ApplyDashboardDateFilter` que filtra por DueDate con UTC-5 Ecuador, aplicado a GetAllForDashboardAsync, GetForDashboardByLeaderAsync y GetForDashboardByAssigneeAsync
   - IBscDashboardConfigRepository.cs: nuevo metodo `SeedIfEmptyAsync()`
   - BscDashboardConfigRepository.cs: implementacion de SeedIfEmptyAsync que crea el documento de configuracion BSC si no existe (emails Isabella Sanchez y Manuel Zapata, patron "Proceso mensual liquidaciones")
   - Program.cs: llamada a SeedIfEmptyAsync al iniciar la aplicacion
+  - GetDashboardQueryHandler.cs: CalculateCompletionTimeline agrupa dataPoints por fecha, conservando solo el CumulativeCount maximo de cada dia
 - **Frontend:** Sin cambios.
 - **Security:** Pendiente
 
