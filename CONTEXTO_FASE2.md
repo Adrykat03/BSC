@@ -12,6 +12,8 @@
 | F2-003 | Fecha y hora en campo Fecha de entrega en reportes | Completada | 2026-04-07 |
 | F2-004 | Filtro Tareas Tardias en grafico por colaborador | Completada | 2026-04-07 |
 | F2-005 | Menu de tareas para Administrador con eliminacion masiva | Completada | 2026-04-07 |
+| F2-006 | Ultima conexion visible para Gerente al iniciar sesion | Completada | 2026-04-07 |
+| F2-007 | Aumentar limite de carga masiva a 600 tareas | Completada | 2026-04-07 |
 
 ---
 
@@ -89,6 +91,38 @@
   - Sidebar.jsx: enlace "Tareas" agregado en seccion Administrador con icono ClipboardList
   - Tasks.jsx: checkboxes de seleccion individual/total, boton "Eliminar (N)" con confirmacion SweetAlert2, VISIBLE_STATUSES incluye todos los estados para admin, columna "Asignado a" visible para admin
   - tasksService.js: metodo `bulkDelete(ids)` via POST
+- **Security:** Pendiente
+
+---
+
+### [F2-006] Ultima conexion visible para Gerente al iniciar sesion
+- **Estado:** Completada
+- **Fecha:** 2026-04-07
+- **Descripcion:** Al iniciar sesion se muestra la fecha y hora de la ultima conexion del usuario, fija debajo del badge del rol en la esquina superior derecha del header.
+- **Backend:**
+  - Colaborador.cs: nuevo campo `LastLoginAt` (DateTime nullable)
+  - IColaboradorRepository.cs: nuevo metodo `UpdateLastLoginAsync(string id, DateTime loginAt)`
+  - ColaboradorRepository.cs: implementacion con `UpdateOneAsync`
+  - LoginCommandHandler.cs: guarda timestamp actual y devuelve el anterior en la respuesta
+  - LoginDto.cs: campo `LastLoginAt` agregado a `LoginResponseDto`
+- **Frontend:**
+  - SessionContext.jsx: login retorna `data` para acceder a `lastLoginAt`
+  - Login.jsx: guarda `lastLoginAt` en sessionStorage al loguearse
+  - Header.jsx: lee sessionStorage, muestra texto fijo "Ultima conexion: DD/MM/YYYY HH:mm" debajo del rol
+  - Layout.jsx: Toaster global agregado para toasts del layout
+- **Security:** Pendiente
+
+---
+
+### [F2-007] Aumentar limite de carga masiva a 600 tareas
+- **Estado:** Completada
+- **Fecha:** 2026-04-07
+- **Descripcion:** Limite de carga masiva de tareas aumentado de 100 a 600 en frontend y backend.
+- **Backend:**
+  - CreateTaskItemsBulkCommandValidator.cs: limite cambiado a 600
+  - CreateTaskItemsBulkCommandHandler.cs: validacion hardcodeada cambiada a 600
+- **Frontend:**
+  - Tasks.jsx: validacion de filas cambiada a 600
 - **Security:** Pendiente
 
 ---

@@ -12,4 +12,5 @@ public interface IColaboradorRepository
     Task UpdateAsync(Colaborador colaborador);
     Task DeleteAsync(string id);
     Task<List<Colaborador>> GetByRolIdAsync(string rolId);
+    Task UpdateLastLoginAsync(string id, DateTime loginAt);
 }

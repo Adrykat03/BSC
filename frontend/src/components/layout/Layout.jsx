@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
@@ -27,6 +28,7 @@ const Layout = () => {
 
   return (
     <div className="layout">
+      <Toaster position="top-center" />
       {/* Backdrop for mobile sidebar */}
       {isMobile && (
         <div

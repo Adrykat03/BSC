@@ -81,6 +81,7 @@ export const SessionProvider = ({ children }) => {
     setToken(newToken);
     const claims = parseJwt(newToken);
     setUser(extractUser(claims));
+    return data;
   }, []);
 
   const switchRole = useCallback(async (newRole) => {

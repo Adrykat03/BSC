@@ -16,6 +16,7 @@ public class LoginResponseDto
 {
     public string Token { get; set; } = string.Empty;
     public LoginUserDto User { get; set; } = new();
+    public DateTime? LastLoginAt { get; set; }
 }
 
 /// <summary>

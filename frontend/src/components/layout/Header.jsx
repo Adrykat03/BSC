@@ -42,6 +42,23 @@ const Header = ({ isMobile, onOpenSidebar }) => {
     return () => clearInterval(interval);
   }, [fetchPendingCount]);
 
+  // Show last login permanently after login
+  const [lastLoginText, setLastLoginText] = useState('');
+  useEffect(() => {
+    const lastLogin = sessionStorage.getItem('fp_last_login');
+    if (lastLogin) {
+      sessionStorage.removeItem('fp_last_login');
+      const lastDate = new Date(lastLogin);
+      if (!isNaN(lastDate.getTime())) {
+        const formatted = lastDate.toLocaleString('es-EC', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+        setLastLoginText(formatted);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -132,6 +149,11 @@ const Header = ({ isMobile, onOpenSidebar }) => {
                 <span className="badge badge--active" style={{ fontSize: '11px' }}>
                   {user.role}
                 </span>
+                {lastLoginText && (
+                  <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                    Última conexión: {lastLoginText}
+                  </span>
+                )}
               </div>
               <ChevronDown size={16} style={{ color: 'var(--color-text-secondary)' }} />
             </div>

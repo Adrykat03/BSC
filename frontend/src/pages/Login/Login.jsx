@@ -26,7 +26,10 @@ const Login = () => {
 
     try {
       setLoading(true);
-      await login(email, password);
+      const data = await login(email, password);
+      if (data.lastLoginAt) {
+        sessionStorage.setItem('fp_last_login', data.lastLoginAt);
+      }
       navigate('/', { replace: true });
     } catch (err) {
       const msg =

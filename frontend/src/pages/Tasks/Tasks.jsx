@@ -573,8 +573,8 @@ const Tasks = () => {
         return;
       }
 
-      if (rows.length > 100) {
-        toast.error('El archivo excede el limite de 100 tareas por carga.');
+      if (rows.length > 600) {
+        toast.error('El archivo excede el limite de 600 tareas por carga.');
         e.target.value = '';
         return;
       }

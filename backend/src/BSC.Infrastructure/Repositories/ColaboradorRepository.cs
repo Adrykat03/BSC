@@ -66,4 +66,11 @@ public class ColaboradorRepository : IColaboradorRepository
                      & Builders<Colaborador>.Filter.Eq(c => c.IsDeleted, false);
         return await _collection.Find(filter).ToListAsync();
     }
+
+    public async Task UpdateLastLoginAsync(string id, DateTime loginAt)
+    {
+        var filter = Builders<Colaborador>.Filter.Eq(c => c.Id, id);
+        var update = Builders<Colaborador>.Update.Set(c => c.LastLoginAt, loginAt);
+        await _collection.UpdateOneAsync(filter, update);
+    }
 }

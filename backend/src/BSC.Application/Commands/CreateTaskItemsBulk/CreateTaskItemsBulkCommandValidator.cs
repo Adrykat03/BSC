@@ -14,7 +14,7 @@ public class CreateTaskItemsBulkCommandValidator : AbstractValidator<CreateTaskI
             .NotEmpty().WithMessage("Debe incluir al menos una tarea.");
 
         RuleFor(x => x.Tasks.Count)
-            .LessThanOrEqualTo(100).WithMessage("No se pueden crear mas de 100 tareas a la vez.")
+            .LessThanOrEqualTo(600).WithMessage("No se pueden crear mas de 600 tareas a la vez.")
             .When(x => x.Tasks != null);
 
         RuleFor(x => x.CreatedByEmail)

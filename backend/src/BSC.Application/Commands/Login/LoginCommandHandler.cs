@@ -73,6 +73,10 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             );
         }
 
+        // Track last login
+        var previousLogin = colaborador.LastLoginAt;
+        await _colaboradorRepository.UpdateLastLoginAsync(colaborador.Id, DateTime.UtcNow);
+
         // Default to highest-privilege role: Administrador > Gerente > Lider > Colaborador
         var rolePriority = new[] { "Administrador", "Gerente", "Lider", "Colaborador" };
         var activeRole = rolePriority.FirstOrDefault(r => roleNames.Contains(r)) ?? roleNames.First();
@@ -93,7 +97,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
                 Name = colaborador.NombreCompleto,
                 Email = colaborador.Correo,
                 Roles = roleNames
-            }
+            },
+            LastLoginAt = previousLogin
         };
 
         _logger.LogInformation("Login exitoso para: {Email} con rol activo: {Role}", request.Email, activeRole);

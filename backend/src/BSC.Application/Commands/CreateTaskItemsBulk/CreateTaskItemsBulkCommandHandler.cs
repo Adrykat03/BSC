@@ -51,11 +51,11 @@ public class CreateTaskItemsBulkCommandHandler : IRequestHandler<CreateTaskItems
             );
         }
 
-        if (request.Tasks.Count > 100)
+        if (request.Tasks.Count > 600)
         {
             return ApiResponse<BulkCreateResultDto>.Fail(
                 "Se excedio el limite maximo de tareas por carga.",
-                new List<string> { "El maximo permitido es 100 tareas por carga masiva." }
+                new List<string> { "El maximo permitido es 600 tareas por carga masiva." }
             );
         }
 
