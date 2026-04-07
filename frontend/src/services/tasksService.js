@@ -25,10 +25,19 @@ export const tasksService = {
     return response.data;
   },
 
-  async getAll(page = 1, pageSize = 20, search = '') {
+  async getAll(page = 1, pageSize = 20, search = '', status = '', dateFilter = '', sortDueDate = '') {
     let url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
     if (search && search.trim()) {
       url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    if (status) {
+      url += `&status=${encodeURIComponent(status)}`;
+    }
+    if (dateFilter) {
+      url += `&dateFilter=${encodeURIComponent(dateFilter)}`;
+    }
+    if (sortDueDate) {
+      url += `&sortDueDate=${encodeURIComponent(sortDueDate)}`;
     }
     const response = await apiClient.get(url);
     return response.data ?? { items: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 };

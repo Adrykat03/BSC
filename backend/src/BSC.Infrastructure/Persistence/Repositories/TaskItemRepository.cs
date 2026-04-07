@@ -35,24 +35,70 @@ public class TaskItemRepository : ITaskItemRepository
         return filter;
     }
 
-    public async Task<List<TaskItem>> GetAllAsync(int page, int pageSize, string? search = null)
+    private static FilterDefinition<TaskItem> ApplyStatusFilter(FilterDefinition<TaskItem> filter, string? status)
+    {
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            filter &= Builders<TaskItem>.Filter.Eq(t => t.Status, status);
+        }
+        return filter;
+    }
+
+    private static FilterDefinition<TaskItem> ApplyDateFilter(FilterDefinition<TaskItem> filter, string? dateFilter)
+    {
+        if (string.IsNullOrWhiteSpace(dateFilter)) return filter;
+
+        var now = DateTime.UtcNow;
+        var today = now.Date;
+
+        switch (dateFilter)
+        {
+            case "hoy":
+                filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, today);
+                break;
+            case "ayer":
+                var yesterday = today.AddDays(-1);
+                filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, yesterday);
+                filter &= Builders<TaskItem>.Filter.Lt(t => t.CreatedAt, today);
+                break;
+            case "semana":
+                var dayOfWeek = (int)today.DayOfWeek;
+                var weekStart = today.AddDays(-dayOfWeek);
+                filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, weekStart);
+                break;
+        }
+        return filter;
+    }
+
+    private IFindFluent<TaskItem, TaskItem> ApplySorting(IFindFluent<TaskItem, TaskItem> query, string? sortDueDate)
+    {
+        if (sortDueDate == "asc")
+            return query.SortBy(t => t.DueDate);
+        if (sortDueDate == "desc")
+            return query.SortByDescending(t => t.DueDate);
+        return query.SortBy(t => t.CreatedAt);
+    }
+
+    public async Task<List<TaskItem>> GetAllAsync(int page, int pageSize, string? search = null, string? status = null, string? dateFilter = null, string? sortDueDate = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
         filter = ApplySearchFilter(filter, search);
+        filter = ApplyStatusFilter(filter, status);
+        filter = ApplyDateFilter(filter, dateFilter);
         var skip = (page - 1) * pageSize;
 
-        return await _collection
-            .Find(filter)
-            .SortByDescending(t => t.CreatedAt)
+        return await ApplySorting(_collection.Find(filter), sortDueDate)
             .Skip(skip)
             .Limit(pageSize)
             .ToListAsync();
     }
 
-    public async Task<int> GetTotalCountAsync(string? search = null)
+    public async Task<int> GetTotalCountAsync(string? search = null, string? status = null, string? dateFilter = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
         filter = ApplySearchFilter(filter, search);
+        filter = ApplyStatusFilter(filter, status);
+        filter = ApplyDateFilter(filter, dateFilter);
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
@@ -76,56 +122,60 @@ public class TaskItemRepository : ITaskItemRepository
         return alwaysFilter;
     }
 
-    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null)
+    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFilter = null, string? sortDueDate = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
                    & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
+        filter = ApplyStatusFilter(filter, statusFilter);
+        filter = ApplyDateFilter(filter, dateFilter);
 
         var skip = (page - 1) * pageSize;
 
-        return await _collection
-            .Find(filter)
-            .SortByDescending(t => t.CreatedAt)
+        return await ApplySorting(_collection.Find(filter), sortDueDate)
             .Skip(skip)
             .Limit(pageSize)
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByLeaderEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null)
+    public async Task<int> GetCountByLeaderEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFilter = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
                    & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
+        filter = ApplyStatusFilter(filter, statusFilter);
+        filter = ApplyDateFilter(filter, dateFilter);
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
-    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null)
+    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFilter = null, string? sortDueDate = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
                    & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
+        filter = ApplyStatusFilter(filter, statusFilter);
+        filter = ApplyDateFilter(filter, dateFilter);
 
         var skip = (page - 1) * pageSize;
 
-        return await _collection
-            .Find(filter)
-            .SortByDescending(t => t.CreatedAt)
+        return await ApplySorting(_collection.Find(filter), sortDueDate)
             .Skip(skip)
             .Limit(pageSize)
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null)
+    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFilter = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
                    & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
+        filter = ApplyStatusFilter(filter, statusFilter);
+        filter = ApplyDateFilter(filter, dateFilter);
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }

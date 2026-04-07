@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import {
   Plus, Pencil, Trash2, ClipboardList, ChevronLeft, ChevronRight,
   Eye, Search, History, Undo2, Download, FileSpreadsheet, Upload,
+  ArrowUpDown, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
@@ -81,6 +82,8 @@ const Tasks = () => {
   // Search debounce ref
   const searchDebounceRef = useRef(null);
   const searchRef = useRef('');
+  const filterStatusRef = useRef('');
+  const filterDateRef = useRef('');
 
   // History modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -90,6 +93,8 @@ const Tasks = () => {
   const [searchText, setSearchText] = useState('');
   const [filterStatus, setFilterStatus] = useState(''); // '' = todas
   const [filterDate, setFilterDate] = useState(''); // '' = todas, 'hoy', 'ayer', 'semana'
+  const [sortDueDate, setSortDueDate] = useState(''); // '' = default, 'asc', 'desc'
+  const sortDueDateRef = useRef('');
 
   // Close inline modals with Escape
   useEffect(() => {
@@ -106,7 +111,7 @@ const Tasks = () => {
   const isLider = role === 'Lider';
   const isColaborador = role === 'Colaborador';
 
-  const loadTasks = useCallback(async (currentPage = 1, search) => {
+  const loadTasks = useCallback(async (currentPage = 1, search, statusVal, dateVal, sortVal) => {
     try {
       setLoading(true);
       setError(null);
@@ -114,7 +119,10 @@ const Tasks = () => {
       if (search !== undefined) {
         searchRef.current = search;
       }
-      const data = await tasksService.getAll(currentPage, PAGE_SIZE, searchValue);
+      const statusValue = statusVal !== undefined ? statusVal : filterStatusRef.current;
+      const dateValue = dateVal !== undefined ? dateVal : filterDateRef.current;
+      const sortValue = sortVal !== undefined ? sortVal : sortDueDateRef.current;
+      const data = await tasksService.getAll(currentPage, PAGE_SIZE, searchValue, statusValue, dateValue, sortValue);
       setTasks(data.items ?? []);
       setTotalPages(data.totalPages);
       setTotalCount(data.totalCount);
@@ -132,7 +140,7 @@ const Tasks = () => {
 
   const goToPage = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      loadTasks(newPage);
+      loadTasks(newPage, searchRef.current, filterStatusRef.current, filterDateRef.current, sortDueDateRef.current);
     }
   };
 
@@ -669,33 +677,7 @@ const Tasks = () => {
     { value: 'semana', label: 'Esta semana' },
   ];
 
-  const matchesDate = (task) => {
-    if (!filterDate) return true;
-    const created = new Date(task.createdAt);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-    const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - today.getDay());
-    if (filterDate === 'hoy') return created >= today;
-    if (filterDate === 'ayer') return created >= yesterday && created < today;
-    if (filterDate === 'semana') return created >= weekStart;
-    return true;
-  };
-
-  const filteredTasks = tasks.filter((task) => {
-    if (isColaborador) {
-      const allowed = ['Asignada', 'Reasignada', 'Completa - Por Validar'];
-      if (!allowed.includes(task.status)) return false;
-    } else if (isLider) {
-      const allowed = ['Asignada', 'Reasignada', 'Completa - Por Validar', 'Completa - Validada'];
-      if (!allowed.includes(task.status)) return false;
-    }
-    // Gerente ve todo (Creada, Asignada, CPV, Reasignada, CV, Completa, Cancelada)
-
-    if (filterStatus && task.status !== filterStatus) return false;
-    if (!matchesDate(task)) return false;
-    return true;
-  });
+  const filteredTasks = tasks;
 
   const startItem = (page - 1) * PAGE_SIZE + 1;
   const endItem = Math.min(page * PAGE_SIZE, totalCount);
@@ -771,7 +753,7 @@ const Tasks = () => {
               setSearchText(val);
               if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
               searchDebounceRef.current = setTimeout(() => {
-                loadTasks(1, val);
+                loadTasks(1, val, filterStatusRef.current, filterDateRef.current, sortDueDateRef.current);
               }, 300);
             }}
             style={{ width: '100%' }}
@@ -782,7 +764,12 @@ const Tasks = () => {
         <select
           className="form-control form-select"
           value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value); setSearchText(''); searchRef.current = ''; loadTasks(1, ''); }}
+          onChange={(e) => {
+            const val = e.target.value;
+            setFilterStatus(val);
+            filterStatusRef.current = val;
+            loadTasks(1, searchRef.current, val, filterDateRef.current, sortDueDateRef.current);
+          }}
           style={{ width: '220px', minWidth: '150px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px', flex: '0 1 220px' }}
         >
           <option value="">Estado: Todas</option>
@@ -794,7 +781,12 @@ const Tasks = () => {
         <select
           className="form-control form-select"
           value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setFilterDate(val);
+            filterDateRef.current = val;
+            loadTasks(1, searchRef.current, filterStatusRef.current, val, sortDueDateRef.current);
+          }}
           style={{ width: '180px', minWidth: '140px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px', flex: '0 1 180px' }}
         >
           {DATE_OPTIONS.map((opt) => (
@@ -825,20 +817,27 @@ const Tasks = () => {
                       {(isGerente || isLider) && <th>Asignado a</th>}
                       <th className="table__col--secondary">Lider</th>
                       <th>Estado</th>
-                      <th className="table__col--secondary">Entrega</th>
+                      <th
+                        className="table__col--secondary"
+                        style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                        onClick={() => {
+                          const next = sortDueDate === '' ? 'asc' : sortDueDate === 'asc' ? 'desc' : '';
+                          setSortDueDate(next);
+                          sortDueDateRef.current = next;
+                          loadTasks(1, searchRef.current, filterStatusRef.current, filterDateRef.current, next);
+                        }}
+                        data-tooltip={sortDueDate === '' ? 'Ordenar por entrega' : sortDueDate === 'asc' ? 'Ascendente' : 'Descendente'}
+                      >
+                        Entrega {sortDueDate === 'asc' ? <ArrowUp size={14} style={{ verticalAlign: 'middle' }} /> : sortDueDate === 'desc' ? <ArrowDown size={14} style={{ verticalAlign: 'middle' }} /> : <ArrowUpDown size={14} style={{ verticalAlign: 'middle', opacity: 0.4 }} />}
+                      </th>
                       <th className="table__col--secondary" data-tooltip="Tiempo estimado (horas)">&#128339;</th>
                       <th className="table__col--secondary">Calificacion</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[...filteredTasks]
+                    {filteredTasks
                       .map((t) => ({ ...t, _urgency: getUrgency(t) }))
-                      .sort((a, b) => {
-                        const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-                        const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-                        return aDate - bDate;
-                      })
                       .map((task) => {
                       const transitions = getStatusTransitions(task.status, role);
                       const isSelected = selectedRowId === task.id;

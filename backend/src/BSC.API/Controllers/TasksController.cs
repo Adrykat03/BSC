@@ -274,7 +274,10 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? status = null,
+        [FromQuery] string? dateFilter = null,
+        [FromQuery] string? sortDueDate = null)
     {
         var query = new GetTaskItemsQuery
         {
@@ -282,7 +285,10 @@ public class TasksController : ControllerBase
             PageSize = pageSize,
             UserEmail = GetUserEmail(),
             UserRole = GetUserRole(),
-            Search = search
+            Search = search,
+            Status = status,
+            DateFilter = dateFilter,
+            SortDueDate = sortDueDate
         };
         var result = await _mediator.Send(query);
         return Ok(result);
