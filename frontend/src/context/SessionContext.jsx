@@ -88,6 +88,9 @@ export const SessionProvider = ({ children }) => {
     const data = await authService.switchRole(newRole);
     const newToken = data.token;
     sessionStorage.setItem(TOKEN_KEY, newToken);
+    if (data.lastLoginAt) {
+      sessionStorage.setItem('fp_last_login', data.lastLoginAt);
+    }
     setToken(newToken);
     const claims = parseJwt(newToken);
     setUser(extractUser(claims));

@@ -1,5 +1,6 @@
 using BSC.Application.DTOs;
 using BSC.Application.Interfaces;
+using BSC.Domain.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -12,23 +13,25 @@ namespace BSC.Application.Commands.SwitchRole;
 public class SwitchRoleCommandHandler : IRequestHandler<SwitchRoleCommand, ApiResponse<LoginResponseDto>>
 {
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IColaboradorRepository _colaboradorRepository;
     private readonly ILogger<SwitchRoleCommandHandler> _logger;
 
-    public SwitchRoleCommandHandler(IJwtTokenService jwtTokenService, ILogger<SwitchRoleCommandHandler> logger)
+    public SwitchRoleCommandHandler(IJwtTokenService jwtTokenService, IColaboradorRepository colaboradorRepository, ILogger<SwitchRoleCommandHandler> logger)
     {
         _jwtTokenService = jwtTokenService;
+        _colaboradorRepository = colaboradorRepository;
         _logger = logger;
     }
 
-    public Task<ApiResponse<LoginResponseDto>> Handle(SwitchRoleCommand request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<LoginResponseDto>> Handle(SwitchRoleCommand request, CancellationToken cancellationToken)
     {
         // Validar que el rol solicitado esta entre los roles del usuario
         if (!request.UserRoles.Any(r => r.Equals(request.Role, StringComparison.OrdinalIgnoreCase)))
         {
-            return Task.FromResult(ApiResponse<LoginResponseDto>.Fail(
+            return ApiResponse<LoginResponseDto>.Fail(
                 "Rol no valido.",
                 new List<string> { $"El usuario no tiene el rol '{request.Role}'." }
-            ));
+            );
         }
 
         var token = _jwtTokenService.GenerateToken(
@@ -39,6 +42,14 @@ public class SwitchRoleCommandHandler : IRequestHandler<SwitchRoleCommand, ApiRe
             request.Role
         );
 
+        // Track last login on role switch
+        var colaborador = await _colaboradorRepository.GetByCorreoAsync(request.UserEmail);
+        DateTime? previousLogin = colaborador?.LastLoginAt;
+        if (colaborador != null)
+        {
+            await _colaboradorRepository.UpdateLastLoginAsync(colaborador.Id, DateTime.UtcNow);
+        }
+
         var response = new LoginResponseDto
         {
             Token = token,
@@ -48,11 +59,12 @@ public class SwitchRoleCommandHandler : IRequestHandler<SwitchRoleCommand, ApiRe
                 Name = request.UserName,
                 Email = request.UserEmail,
                 Roles = request.UserRoles
-            }
+            },
+            LastLoginAt = previousLogin
         };
 
         _logger.LogInformation("Cambio de rol activo para {Email}: {Role}", request.UserEmail, request.Role);
 
-        return Task.FromResult(ApiResponse<LoginResponseDto>.Ok(response, "Rol activo cambiado exitosamente."));
+        return ApiResponse<LoginResponseDto>.Ok(response, "Rol activo cambiado exitosamente.");
     }
 }
