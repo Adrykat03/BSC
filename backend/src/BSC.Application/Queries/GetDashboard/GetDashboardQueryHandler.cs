@@ -369,14 +369,26 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
                     .OrderBy(d => d)
                     .ToList();
 
+                // Agrupar por fecha: solo conservar el conteo acumulado maximo de cada dia
                 var dataPoints = new List<TimelineDataPoint>();
                 for (int i = 0; i < completionDates.Count; i++)
                 {
-                    dataPoints.Add(new TimelineDataPoint
+                    var dateStr = completionDates[i].ToString("yyyy-MM-dd");
+                    var cumulative = i + 1;
+
+                    // Si ya existe un punto para esta fecha, actualizar el conteo
+                    if (dataPoints.Count > 0 && dataPoints[^1].Date == dateStr)
                     {
-                        Date = completionDates[i].ToString("yyyy-MM-dd"),
-                        CumulativeCount = i + 1
-                    });
+                        dataPoints[^1].CumulativeCount = cumulative;
+                    }
+                    else
+                    {
+                        dataPoints.Add(new TimelineDataPoint
+                        {
+                            Date = dateStr,
+                            CumulativeCount = cumulative
+                        });
+                    }
                 }
 
                 return new CollaboratorCompletionTimeline
