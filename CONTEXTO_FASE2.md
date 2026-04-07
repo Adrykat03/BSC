@@ -11,6 +11,7 @@
 | F2-002 | Columna ultima actualizacion colaborador en reportes | Completada | 2026-04-07 |
 | F2-003 | Fecha y hora en campo Fecha de entrega en reportes | Completada | 2026-04-07 |
 | F2-004 | Filtro Tareas Tardias en grafico por colaborador | Completada | 2026-04-07 |
+| F2-005 | Menu de tareas para Administrador con eliminacion masiva | Completada | 2026-04-07 |
 
 ---
 
@@ -70,6 +71,24 @@
 - **Frontend:**
   - Home.jsx: prop `lateTasks` en TasksByCollaboratorChart, dataset rosa oculto por defecto, handleClick soporta export de tareas tardias
   - tasksService.js: parametro `lateTasks` en `exportByCollaborator`
+- **Security:** Pendiente
+
+---
+
+### [F2-005] Menu de tareas para Administrador con eliminacion masiva
+- **Estado:** Completada
+- **Fecha:** 2026-04-07
+- **Descripcion:** Nuevo menu "Tareas" para el rol Administrador que muestra todas las tareas del sistema independiente del estado. Permite seleccionar una, varias o todas las tareas y eliminarlas masivamente con confirmacion previa indicando la cantidad.
+- **Backend:**
+  - TaskStateTransitions.cs: nueva constante `RolAdministrador = "Administrador"`
+  - GetTaskItemsQueryHandler.cs: caso Administrador que ve todas las tareas (igual que Gerente)
+  - ITaskItemRepository.cs: nuevo metodo `BulkDeleteAsync(List<string> ids)`
+  - TaskItemRepository.cs: implementacion con `UpdateManyAsync` para soft delete masivo
+  - TasksController.cs: endpoint `POST /api/tasks/bulk-delete` con `BulkDeleteRequest`
+- **Frontend:**
+  - Sidebar.jsx: enlace "Tareas" agregado en seccion Administrador con icono ClipboardList
+  - Tasks.jsx: checkboxes de seleccion individual/total, boton "Eliminar (N)" con confirmacion SweetAlert2, VISIBLE_STATUSES incluye todos los estados para admin, columna "Asignado a" visible para admin
+  - tasksService.js: metodo `bulkDelete(ids)` via POST
 - **Security:** Pendiente
 
 ---
