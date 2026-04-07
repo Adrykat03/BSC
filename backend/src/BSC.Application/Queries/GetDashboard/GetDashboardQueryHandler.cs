@@ -84,6 +84,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             AvgTimeByStatus = CalculateAvgTimeByStatus(tasks),
             TasksByCollaboratorAndStatus = CalculateTasksByCollaboratorAndStatus(tasks),
             HistoricReassignedByCollaborator = CalculateHistoricReassigned(tasks),
+            LateTasksByCollaborator = CalculateLateTasks(tasks),
             TasksByStatus = CalculateTasksByStatus(tasks),
             Highlights = CalculateHighlights(tasks),
             CompletionTimeline = CalculateCompletionTimeline(tasks),
@@ -222,6 +223,40 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
                 if (!counts.ContainsKey(task.AssignedToName))
                     counts[task.AssignedToName] = 0;
                 counts[task.AssignedToName] += reassignCount;
+            }
+        }
+
+        return counts
+            .Select(kvp => new CollaboratorReassignedCount
+            {
+                Name = kvp.Key,
+                Count = kvp.Value
+            })
+            .OrderByDescending(x => x.Count)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Calcula la cantidad de tareas entregadas tarde por colaborador.
+    /// Una tarea es tardia si fue enviada a validacion despues de la fecha de entrega.
+    /// </summary>
+    private static List<CollaboratorReassignedCount> CalculateLateTasks(List<TaskItem> tasks)
+    {
+        var counts = new Dictionary<string, int>();
+
+        foreach (var task in tasks)
+        {
+            if (string.IsNullOrEmpty(task.AssignedToName) || task.StatusHistory == null || !task.DueDate.HasValue)
+                continue;
+
+            var sentLate = task.StatusHistory
+                .Any(h => h.ToStatus == TaskStatuses.CompletaPorValidar && h.ChangedAt > task.DueDate.Value);
+
+            if (sentLate)
+            {
+                if (!counts.ContainsKey(task.AssignedToName))
+                    counts[task.AssignedToName] = 0;
+                counts[task.AssignedToName]++;
             }
         }
 

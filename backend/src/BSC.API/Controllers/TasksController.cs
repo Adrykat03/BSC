@@ -13,6 +13,7 @@ using BSC.Application.DTOs;
 using BSC.Application.Queries.GetDashboard;
 using BSC.Application.Queries.GetTaskItemById;
 using BSC.Application.Queries.GetTaskItems;
+using BSC.Domain.Constants;
 using BSC.Domain.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -65,7 +66,8 @@ public class TasksController : ControllerBase
         [FromQuery] string? status = null,
         [FromQuery] string? historicStatus = null,
         [FromQuery] DateTime? from = null,
-        [FromQuery] DateTime? to = null)
+        [FromQuery] DateTime? to = null,
+        [FromQuery] bool lateTasks = false)
     {
         if (string.IsNullOrWhiteSpace(collaboratorName))
             return BadRequest(ApiResponse<object>.Fail("El nombre del colaborador es requerido."));
@@ -84,6 +86,14 @@ public class TasksController : ControllerBase
         }
 
         var dtos = tasks.Select(BSC.Application.Mappings.TaskItemMapper.ToDto).ToList();
+
+        if (lateTasks)
+        {
+            dtos = dtos.Where(d => d.DueDate.HasValue && d.StatusHistory != null &&
+                d.StatusHistory.Any(h => h.ToStatus == TaskStatuses.CompletaPorValidar && h.ChangedAt > d.DueDate.Value))
+                .ToList();
+        }
+
         return Ok(ApiResponse<List<TaskItemDto>>.Ok(dtos));
     }
 

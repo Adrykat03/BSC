@@ -128,12 +128,13 @@ export const tasksService = {
     window.URL.revokeObjectURL(url);
   },
 
-  async exportByCollaborator(collaboratorName, status, from, to, { historicStatus } = {}) {
+  async exportByCollaborator(collaboratorName, status, from, to, { historicStatus, lateTasks } = {}) {
     const params = new URLSearchParams({ collaboratorName });
     if (historicStatus) params.append('historicStatus', historicStatus);
     else if (status) params.append('status', status);
     if (from) params.append('from', from);
     if (to) params.append('to', to);
+    if (lateTasks) params.append('lateTasks', 'true');
     const response = await apiClient.get(`${ENDPOINT}/export?${params.toString()}`);
     return response.data ?? [];
   },

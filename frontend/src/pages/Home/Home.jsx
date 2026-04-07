@@ -146,7 +146,7 @@ const Home = () => {
         'Email lider': t.assignedLeaderEmail || '',
         'Colaborador asignado': t.assignedToName || '',
         'Email colaborador': t.assignedToEmail || '',
-        'Fecha de entrega': formatDateDDMMYYYY(t.dueDate),
+        'Fecha de entrega': formatDateTimeDDMMYYYY(t.dueDate),
         'Tiempo estimado (h)': t.estimatedTime ?? '',
         'Tiempo real (h)': t.actualTime ?? '',
         'Insumos': t.insumos || '',
@@ -156,6 +156,7 @@ const Home = () => {
         'Creado por': t.createdBy || '',
         'Fecha de creacion': formatDateTimeDDMMYYYY(t.createdAt),
         'Ultima actualizacion': formatDateTimeDDMMYYYY(t.updatedAt),
+        'Ultima actualizacion Colaborador': getLastCollaboratorUpdate(t),
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
@@ -367,7 +368,7 @@ const Home = () => {
             </div>
             <div className="card__body">
               <div className="chart-container" style={{ height: Math.max(300, (dashboard.tasksByCollaboratorAndStatus?.length || 1) * 40 + 80) + 'px' }}>
-                <TasksByCollaboratorChart data={dashboard.tasksByCollaboratorAndStatus} historicReassigned={dashboard.historicReassignedByCollaborator} dateFrom={dateFrom} dateTo={dateTo} />
+                <TasksByCollaboratorChart data={dashboard.tasksByCollaboratorAndStatus} historicReassigned={dashboard.historicReassignedByCollaborator} lateTasks={dashboard.lateTasksByCollaborator} dateFrom={dateFrom} dateTo={dateTo} />
               </div>
             </div>
           </div>
@@ -755,6 +756,15 @@ const TasksByStatusDoughnut = ({ data }) => {
 /* ========================================
    Tasks by Collaborator & Status (Horizontal Stacked Bar)
    ======================================== */
+const getLastCollaboratorUpdate = (task) => {
+  if (!task.statusHistory || !task.assignedToEmail) return '';
+  const collabEntries = task.statusHistory
+    .filter((h) => h.changedByEmail === task.assignedToEmail)
+    .sort((a, b) => new Date(b.changedAt) - new Date(a.changedAt));
+  if (collabEntries.length === 0) return '';
+  return formatDateTimeDDMMYYYY(collabEntries[0].changedAt);
+};
+
 const downloadTasksXlsx = (tasks, fileName) => {
   const rows = tasks.map((t) => ({
     'Titulo': t.title || '',
@@ -762,7 +772,7 @@ const downloadTasksXlsx = (tasks, fileName) => {
     'Estado': t.status || '',
     'Lider asignado': t.assignedLeaderName || '',
     'Colaborador asignado': t.assignedToName || '',
-    'Fecha de entrega': formatDateDDMMYYYY(t.dueDate),
+    'Fecha de entrega': formatDateTimeDDMMYYYY(t.dueDate),
     'Tiempo estimado (h)': t.estimatedTime ?? '',
     'Tiempo real (h)': t.actualTime ?? '',
     'Insumos': t.insumos || '',
@@ -771,6 +781,7 @@ const downloadTasksXlsx = (tasks, fileName) => {
     'Calificacion': t.rating != null ? `${t.rating}%` : 'Pendiente',
     'Creado por': t.createdBy || '',
     'Fecha de creacion': formatDateTimeDDMMYYYY(t.createdAt),
+    'Ultima actualizacion Colaborador': getLastCollaboratorUpdate(t),
   }));
   if (rows.length === 0) {
     alert('No hay tareas para descargar.');
@@ -787,7 +798,7 @@ const downloadTasksXlsx = (tasks, fileName) => {
   XLSX.writeFile(wb, fileName);
 };
 
-const TasksByCollaboratorChart = ({ data, historicReassigned, dateFrom, dateTo }) => {
+const TasksByCollaboratorChart = ({ data, historicReassigned, lateTasks, dateFrom, dateTo }) => {
   const chartRef = useRef(null);
 
   if (!data || data.length === 0) {
@@ -831,6 +842,24 @@ const TasksByCollaboratorChart = ({ data, historicReassigned, dateFrom, dateTo }
     hidden: true,
   });
 
+  // Build lookup for late tasks counts
+  const lateMap = {};
+  if (lateTasks) {
+    lateTasks.forEach((item) => {
+      lateMap[item.name] = item.count;
+    });
+  }
+
+  // Add "Tareas Tardías" dataset, hidden by default
+  datasets.push({
+    label: 'Tareas Tardías',
+    data: collaboratorNames.map((name) => lateMap[name] || 0),
+    backgroundColor: '#E91E63',
+    borderRadius: 4,
+    maxBarThickness: 30,
+    hidden: true,
+  });
+
   const chartData = {
     labels: collaboratorNames,
     datasets,
@@ -847,11 +876,12 @@ const TasksByCollaboratorChart = ({ data, historicReassigned, dateFrom, dateTo }
       const collaboratorName = collaboratorNames[el.index];
       const statusLabel = chartData.datasets[el.datasetIndex].label;
       const isHistoric = statusLabel === 'Reasignadas - Históricas';
-      const statusParam = isHistoric ? null : statusLabel;
+      const isLate = statusLabel === 'Tareas Tardías';
+      const statusParam = (isHistoric || isLate) ? null : statusLabel;
       try {
-        const exportOpts = isHistoric ? { historicStatus: 'Reasignada' } : {};
+        const exportOpts = isHistoric ? { historicStatus: 'Reasignada' } : isLate ? { lateTasks: true } : {};
         const tasks = await tasksService.exportByCollaborator(collaboratorName, statusParam, dateFrom || undefined, dateTo || undefined, exportOpts);
-        const safeStatus = (isHistoric ? 'Reasignadas_Historicas' : statusLabel).replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '').replace(/\s+/g, '_');
+        const safeStatus = (isHistoric ? 'Reasignadas_Historicas' : isLate ? 'Tareas_Tardias' : statusLabel).replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '').replace(/\s+/g, '_');
         const safeName = collaboratorName.replace(/\s+/g, '_');
         downloadTasksXlsx(tasks, `${safeName}_${safeStatus}.xlsx`);
       } catch (err) {

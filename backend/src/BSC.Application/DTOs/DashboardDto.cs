@@ -32,6 +32,12 @@ public class DashboardDto
     public List<CollaboratorReassignedCount> HistoricReassignedByCollaborator { get; set; } = new();
 
     /// <summary>
+    /// Cantidad de tareas entregadas tarde por colaborador.
+    /// Una tarea es tardia si se envio a validacion despues de la fecha de entrega.
+    /// </summary>
+    public List<CollaboratorReassignedCount> LateTasksByCollaborator { get; set; } = new();
+
+    /// <summary>
     /// Total de tareas por estado (para gráfico pastel).
     /// </summary>
     public List<StatusCountItem> TasksByStatus { get; set; } = new();

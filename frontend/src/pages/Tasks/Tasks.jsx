@@ -431,18 +431,28 @@ const Tasks = () => {
 
   // ---- Export XLSX ----
   const handleExportXlsx = () => {
+    const getLastCollaboratorUpdate = (task) => {
+      if (!task.statusHistory || !task.assignedToEmail) return '';
+      const collabEntries = task.statusHistory
+        .filter((h) => h.changedByEmail === task.assignedToEmail)
+        .sort((a, b) => new Date(b.changedAt) - new Date(a.changedAt));
+      if (collabEntries.length === 0) return '';
+      return new Date(collabEntries[0].changedAt).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
+
     const rows = filteredTasks.map((t) => ({
       'Titulo': t.title || '',
       'Descripcion': t.description || '',
       'Estado': t.status || '',
       'Lider asignado': t.assignedLeaderName || '',
       'Colaborador asignado': t.assignedToName || '',
-      'Fecha de entrega': t.dueDate ? new Date(t.dueDate).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+      'Fecha de entrega': t.dueDate ? new Date(t.dueDate).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
       'Tiempo estimado (h)': t.estimatedTime ?? '',
       'Tiempo real (h)': t.actualTime ?? '',
       'Observaciones': t.observations || '',
       'Calificacion': t.rating != null ? `${t.rating}%` : 'Pendiente',
       'Fecha de creacion': t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+      'Ultima actualizacion Colaborador': getLastCollaboratorUpdate(t),
     }));
 
     const ws = XLSX.utils.json_to_sheet(rows);
