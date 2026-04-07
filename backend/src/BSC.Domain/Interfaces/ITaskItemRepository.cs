@@ -17,6 +17,7 @@ public interface ITaskItemRepository
     Task<TaskItem> CreateAsync(TaskItem taskItem);
     Task<TaskItem> UpdateAsync(TaskItem taskItem);
     Task DeleteAsync(string id);
+    Task BulkDeleteAsync(List<string> ids);
     Task<List<TaskItem>> GetByCollaboratorNameAsync(string collaboratorName, string? status, DateTime? from, DateTime? to);
     Task<List<TaskItem>> GetByCollaboratorWithHistoricStatusAsync(string collaboratorName, string historicStatus, DateTime? from, DateTime? to);
     Task<List<TaskItem>> GetAllForDashboardAsync(DateTime? from, DateTime? to);

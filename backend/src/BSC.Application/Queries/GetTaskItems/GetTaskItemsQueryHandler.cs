@@ -40,6 +40,12 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
                     totalCount = await _taskItemRepository.GetTotalCountAsync(request.Search, request.Status, request.DateFilter);
                     break;
 
+                case TaskStateTransitions.RolAdministrador:
+                    // Administrador ve todas las tareas
+                    taskItems = await _taskItemRepository.GetAllAsync(page, pageSize, request.Search, request.Status, request.DateFilter, request.SortDueDate);
+                    totalCount = await _taskItemRepository.GetTotalCountAsync(request.Search, request.Status, request.DateFilter);
+                    break;
+
                 case TaskStateTransitions.RolLider:
                     // Lider ve Asignada, Reasignada, CPV y CV sin restriccion de fecha
                     var leaderStatuses = new List<string>

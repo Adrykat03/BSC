@@ -6,6 +6,7 @@ namespace BSC.Domain.Constants;
 public static class TaskStateTransitions
 {
     public const string RolGerente = "Gerente";
+    public const string RolAdministrador = "Administrador";
     public const string RolLider = "Lider";
     public const string RolColaborador = "Colaborador";
 

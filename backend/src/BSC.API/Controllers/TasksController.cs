@@ -634,4 +634,23 @@ public class TasksController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Elimina multiples tareas (soft delete).
+    /// </summary>
+    [HttpPost("bulk-delete")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> BulkDelete([FromBody] BulkDeleteRequest request)
+    {
+        if (request?.Ids == null || request.Ids.Count == 0)
+            return BadRequest(ApiResponse<object>.Fail("Debe seleccionar al menos una tarea."));
+
+        await _taskItemRepository.BulkDeleteAsync(request.Ids);
+        return NoContent();
+    }
+}
+
+public class BulkDeleteRequest
+{
+    public List<string> Ids { get; set; } = new();
 }

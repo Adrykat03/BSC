@@ -209,6 +209,15 @@ public class TaskItemRepository : ITaskItemRepository
         await _collection.UpdateOneAsync(filter, update);
     }
 
+    public async Task BulkDeleteAsync(List<string> ids)
+    {
+        var filter = Builders<TaskItem>.Filter.In(t => t.Id, ids);
+        var update = Builders<TaskItem>.Update
+            .Set(t => t.IsDeleted, true)
+            .Set(t => t.DeletedAt, DateTime.UtcNow);
+        await _collection.UpdateManyAsync(filter, update);
+    }
+
     public async Task<List<TaskItem>> GetByCollaboratorNameAsync(string collaboratorName, string? status, DateTime? from, DateTime? to)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)

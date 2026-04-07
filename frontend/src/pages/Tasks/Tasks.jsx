@@ -76,6 +76,9 @@ const Tasks = () => {
   // Row selection (visual only)
   const [selectedRowId, setSelectedRowId] = useState(null);
 
+  // Admin selection
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
   // Bulk upload file input ref
   const bulkFileInputRef = useRef(null);
 
@@ -107,6 +110,7 @@ const Tasks = () => {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [historyModalOpen]);
 
+  const isAdmin = role === 'Administrador';
   const isGerente = role === 'Gerente';
   const isLider = role === 'Lider';
   const isColaborador = role === 'Colaborador';
@@ -127,6 +131,7 @@ const Tasks = () => {
       setTotalPages(data.totalPages);
       setTotalCount(data.totalCount);
       setPage(data.page);
+      setSelectedIds(new Set());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -137,6 +142,47 @@ const Tasks = () => {
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredTasks.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredTasks.map((t) => t.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const result = await Swal.fire({
+      title: 'Eliminar tareas',
+      text: `¿Estas seguro de eliminar ${selectedIds.size} tarea${selectedIds.size > 1 ? 's' : ''}? Esta accion no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#E31837',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (result.isConfirmed) {
+      try {
+        await tasksService.bulkDelete(Array.from(selectedIds));
+        toast.success(`${selectedIds.size} tarea${selectedIds.size > 1 ? 's' : ''} eliminada${selectedIds.size > 1 ? 's' : ''}`);
+        setSelectedIds(new Set());
+        loadTasks(1, searchRef.current, filterStatusRef.current, filterDateRef.current, sortDueDateRef.current);
+      } catch (err) {
+        toast.error('Error al eliminar: ' + (err.message || 'Error desconocido'));
+      }
+    }
+  };
 
   const goToPage = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -675,7 +721,7 @@ const Tasks = () => {
 
   // ---- Filter logic (client-side on loaded data) ----
   const VISIBLE_STATUSES = (() => {
-    if (isGerente) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada', 'Completa', 'Cancelada'];
+    if (isAdmin || isGerente) return ['Creada', 'Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada', 'Completa', 'Cancelada'];
     if (isLider) return ['Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'];
     if (isColaborador) return ['Asignada', 'Completa - Por Validar', 'Reasignada'];
     return [];
@@ -714,6 +760,17 @@ const Tasks = () => {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '4px' }}>
+            {isAdmin && selectedIds.size > 0 && (
+              <button
+                className="btn btn--sm"
+                style={{ backgroundColor: '#E31837', color: '#fff', border: 'none' }}
+                onClick={handleBulkDelete}
+                data-tooltip={`Eliminar ${selectedIds.size} tarea${selectedIds.size > 1 ? 's' : ''}`}
+              >
+                <Trash2 size={16} />
+                Eliminar ({selectedIds.size})
+              </button>
+            )}
             <button
               className="btn btn--secondary btn--sm btn--icon"
               onClick={handleExportXlsx}
@@ -823,8 +880,18 @@ const Tasks = () => {
                 <table className="table">
                   <thead>
                     <tr>
+                      {isAdmin && (
+                        <th style={{ width: '40px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={filteredTasks.length > 0 && selectedIds.size === filteredTasks.length}
+                            onChange={toggleSelectAll}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </th>
+                      )}
                       <th>Titulo</th>
-                      {(isGerente || isLider) && <th>Asignado a</th>}
+                      {(isAdmin || isGerente || isLider) && <th>Asignado a</th>}
                       <th className="table__col--secondary">Lider</th>
                       <th>Estado</th>
                       <th
@@ -864,8 +931,18 @@ const Tasks = () => {
                             transition: 'outline 150ms',
                           }}
                         >
+                          {isAdmin && (
+                            <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(task.id)}
+                                onChange={() => toggleSelect(task.id)}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                              />
+                            </td>
+                          )}
                           <td className="font-semibold">{task.title}</td>
-                          {(isGerente || isLider) && (
+                          {(isAdmin || isGerente || isLider) && (
                             <td className="text-secondary">
                               {task.assignedToName || 'Sin asignar'}
                             </td>

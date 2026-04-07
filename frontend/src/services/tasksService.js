@@ -139,6 +139,11 @@ export const tasksService = {
     return response.data ?? [];
   },
 
+  async bulkDelete(ids) {
+    const response = await apiClient.post(`${ENDPOINT}/bulk-delete`, { ids });
+    return response;
+  },
+
   async bulkCreate(tasks) {
     const response = await apiClient.post(`${ENDPOINT}/bulk`, { tasks });
     return response.data;

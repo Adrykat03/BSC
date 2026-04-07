@@ -74,6 +74,18 @@ const Sidebar = ({ isMobile, onCloseSidebar }) => {
                   <span>Colaboradores</span>
                 </NavLink>
               </li>
+              <li className="sidebar__nav-item">
+                <NavLink
+                  to="/tasks"
+                  className={({ isActive }) =>
+                    `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
+                  }
+                  onClick={handleNavClick}
+                >
+                  <ClipboardList className="sidebar__nav-icon" size={20} />
+                  <span>Tareas</span>
+                </NavLink>
+              </li>
             </>
           )}
 
