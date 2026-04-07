@@ -18,6 +18,7 @@
 | F2-009 | Grafico promedio BSC por colaborador en dashboard Gerente | Completada | 2026-04-07 |
 | F2-010 | Filtro rango de fechas por Entrega y mejoras iconos modal | Completada | 2026-04-07 |
 | F2-011 | Correccion campana de notificaciones y mensaje al clic | Completada | 2026-04-07 |
+| F2-012 | Corregir filtro dashboard por DueDate y seed automatico BSC | Completada | 2026-04-07 |
 
 ---
 
@@ -182,6 +183,20 @@
 - **Backend:** Sin cambios (usa filtros server-side existentes).
 - **Frontend:**
   - Header.jsx: fetchPendingCount usa tasksService.getAll con filtro status para Asignada y Reasignada, suma totalCount de ambas consultas. Clic en campana muestra toast con cantidad o "No tiene tareas pendientes".
+- **Security:** Pendiente
+
+---
+
+### [F2-012] Corregir filtro dashboard por DueDate y seed automatico BSC
+- **Estado:** Completada
+- **Fecha:** 2026-04-07
+- **Descripcion:** Dos correcciones: (1) El filtro de rango de fechas del dashboard filtraba por CreatedAt en vez de DueDate, excluyendo tareas completadas del grafico "Comparativa de tareas completadas en el tiempo". Corregido para usar DueDate con timezone Ecuador UTC-5, consistente con el listado de tareas. (2) La configuracion BSC (BscDashboardConfigs) solo existia en MongoDB local, impidiendo que el servidor mostrara los cards BSC para Isabella Sanchez y Manuel Zapata. Se agrego seed automatico al startup del backend.
+- **Backend:**
+  - TaskItemRepository.cs: nuevo metodo `ApplyDashboardDateFilter` que filtra por DueDate con UTC-5 Ecuador, aplicado a GetAllForDashboardAsync, GetForDashboardByLeaderAsync y GetForDashboardByAssigneeAsync
+  - IBscDashboardConfigRepository.cs: nuevo metodo `SeedIfEmptyAsync()`
+  - BscDashboardConfigRepository.cs: implementacion de SeedIfEmptyAsync que crea el documento de configuracion BSC si no existe (emails Isabella Sanchez y Manuel Zapata, patron "Proceso mensual liquidaciones")
+  - Program.cs: llamada a SeedIfEmptyAsync al iniciar la aplicacion
+- **Frontend:** Sin cambios.
 - **Security:** Pendiente
 
 ---
