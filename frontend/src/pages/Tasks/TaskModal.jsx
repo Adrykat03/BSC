@@ -907,20 +907,20 @@ const TaskModal = ({
                     buttons.push({ icon: <><CornerDownLeft size={16} /><UserCheck size={16} /></>, title: 'Devolver al Colaborador (Reasignada)', status: 'Reasignada', color: 'var(--color-warning)' });
                   }
                   if (['Asignada', 'Completa - Por Validar', 'Reasignada', 'Completa - Validada'].includes(s)) {
-                    buttons.push({ icon: <Eraser size={16} />, title: 'Cancelar tarea', status: 'Cancelada', color: 'var(--color-error)' });
+                    buttons.push({ icon: <Trash2 size={16} />, title: 'Cancelar tarea', status: 'Cancelada', color: 'var(--color-error)' });
                   }
                 }
 
                 if (isLider) {
                   if (s === 'Completa - Por Validar') {
-                    buttons.push({ icon: <><CheckCircle size={16} /><ArrowRightCircle size={16} /></>, title: 'Validar y enviar al Gerente', status: 'Completa - Validada', color: 'var(--color-success)' });
+                    buttons.push({ icon: <CheckCircle size={16} />, title: 'Validar y enviar al Gerente', status: 'Completa - Validada', color: '#3B82F6' });
                     buttons.push({ icon: <CornerDownLeft size={16} />, title: 'Reasignar al Colaborador', status: 'Reasignada', color: 'var(--color-warning)' });
                   }
                 }
 
                 if (isColaborador) {
                   if (s === 'Asignada' || s === 'Reasignada') {
-                    buttons.push({ icon: <><Send size={16} /><CheckCircle size={16} /></>, title: 'Enviar a validacion', status: 'Completa - Por Validar', color: 'var(--color-success)' });
+                    buttons.push({ icon: <Send size={16} />, title: 'Enviar a validacion', status: 'Completa - Por Validar', color: 'var(--color-success)' });
                   }
                 }
 
@@ -978,12 +978,13 @@ const TaskModal = ({
               {/* Save / Submit */}
               <button
                 type="submit"
-                className="btn btn--primary btn--sm"
+                className="btn btn--sm"
                 disabled={loading}
                 title={isColaborador ? 'Guardar evidencia y observaciones' : isEditing ? 'Guardar cambios de la tarea' : 'Crear nueva tarea'}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px' }}
+                data-tooltip="Guardar cambios"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px', backgroundColor: '#1B2A4A', color: '#fff', border: 'none' }}
               >
-                <Save size={16} /> {loading ? 'Guardando...' : 'Guardar'}
+                <Save size={16} />
               </button>
             </div>
           </div>

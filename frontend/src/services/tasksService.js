@@ -25,7 +25,7 @@ export const tasksService = {
     return response.data;
   },
 
-  async getAll(page = 1, pageSize = 20, search = '', status = '', dateFilter = '', sortDueDate = '') {
+  async getAll(page = 1, pageSize = 20, search = '', status = '', dateFrom = '', dateTo = '', sortDueDate = '') {
     let url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
     if (search && search.trim()) {
       url += `&search=${encodeURIComponent(search.trim())}`;
@@ -33,8 +33,11 @@ export const tasksService = {
     if (status) {
       url += `&status=${encodeURIComponent(status)}`;
     }
-    if (dateFilter) {
-      url += `&dateFilter=${encodeURIComponent(dateFilter)}`;
+    if (dateFrom) {
+      url += `&dateFrom=${encodeURIComponent(dateFrom)}`;
+    }
+    if (dateTo) {
+      url += `&dateTo=${encodeURIComponent(dateTo)}`;
     }
     if (sortDueDate) {
       url += `&sortDueDate=${encodeURIComponent(sortDueDate)}`;

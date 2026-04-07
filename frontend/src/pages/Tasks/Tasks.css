@@ -3,6 +3,18 @@
    Uses design system variables from /style/variables.css
    ========================================================================== */
 
+/* Date range picker */
+.react-datepicker-flex {
+  flex: 0 1 220px;
+  min-width: 180px;
+}
+
+.react-datepicker-flex .form-control {
+  height: 36px;
+  font-size: 13px;
+  width: 100%;
+}
+
 /* Toolbar responsive */
 @media (max-width: 639px) {
   .tasks-toolbar {
@@ -19,6 +31,10 @@
     width: 100% !important;
     flex: none !important;
     min-height: 44px;
+  }
+
+  .react-datepicker-flex {
+    width: 100% !important;
   }
 
   /* History modal - override inline max-width */

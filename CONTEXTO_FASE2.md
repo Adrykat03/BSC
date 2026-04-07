@@ -16,6 +16,7 @@
 | F2-007 | Aumentar limite de carga masiva a 600 tareas | Completada | 2026-04-07 |
 | F2-008 | Ultima conexion en cambio de rol para todos los roles | Completada | 2026-04-07 |
 | F2-009 | Grafico promedio BSC por colaborador en dashboard Gerente | Completada | 2026-04-07 |
+| F2-010 | Filtro rango de fechas por Entrega y mejoras iconos modal | Completada | 2026-04-07 |
 
 ---
 
@@ -150,6 +151,25 @@
   - GetDashboardQueryHandler.cs: metodo `CalculateBscAvgRating` que filtra tareas por emails BSC y patron de titulo
 - **Frontend:**
   - Home.jsx: nuevo card con AvgRatingChart reutilizado, visible solo si hay datos BSC
+- **Security:** Pendiente
+
+---
+
+### [F2-010] Filtro rango de fechas por Entrega y mejoras iconos modal
+- **Estado:** Completada
+- **Fecha:** 2026-04-07
+- **Descripcion:** Filtro de fecha cambiado a Date Range Picker (react-datepicker) que filtra por DueDate (fecha de entrega) en rango. Mejoras en iconos del modal de tareas.
+- **Backend:**
+  - GetTaskItemsQuery.cs: `DateFilter` reemplazado por `DateFrom`/`DateTo`
+  - TasksController.cs: parametros `dateFrom`/`dateTo` en endpoint GetAll
+  - ITaskItemRepository.cs: parametros `dateFrom`/`dateTo` en metodos de listado
+  - TaskItemRepository.cs: ApplyDateFilter filtra por DueDate con rango y zona horaria Ecuador UTC-5
+- **Frontend:**
+  - Tasks.jsx: react-datepicker con selectsRange como boton con icono Calendar, filtra por fecha de entrega
+  - Tasks.css: estilos para react-datepicker-flex
+  - tasksService.js: parametros `dateFrom`/`dateTo` en getAll
+  - TaskModal.jsx: Cancelar usa Trash2, Enviar a validacion usa solo Send, Validar y enviar al Gerente usa CheckCircle celeste, Guardar solo icono Save color navy con tooltip "Guardar cambios"
+  - Dependencia react-datepicker agregada
 - **Security:** Pendiente
 
 ---

@@ -286,7 +286,8 @@ public class TasksController : ControllerBase
         [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null,
         [FromQuery] string? status = null,
-        [FromQuery] string? dateFilter = null,
+        [FromQuery] string? dateFrom = null,
+        [FromQuery] string? dateTo = null,
         [FromQuery] string? sortDueDate = null)
     {
         var query = new GetTaskItemsQuery
@@ -297,7 +298,8 @@ public class TasksController : ControllerBase
             UserRole = GetUserRole(),
             Search = search,
             Status = status,
-            DateFilter = dateFilter,
+            DateFrom = dateFrom,
+            DateTo = dateTo,
             SortDueDate = sortDueDate
         };
         var result = await _mediator.Send(query);

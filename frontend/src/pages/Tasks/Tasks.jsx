@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import {
   Plus, Pencil, Trash2, ClipboardList, ChevronLeft, ChevronRight,
   Eye, Search, History, Undo2, Download, FileSpreadsheet, Upload,
-  ArrowUpDown, ArrowUp, ArrowDown,
+  ArrowUpDown, ArrowUp, ArrowDown, Calendar, X,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
 import toast, { Toaster } from 'react-hot-toast';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { tasksService } from '../../services/tasksService';
 import { colaboradorService } from '../../services/colaboradorService';
 import SessionContext from '../../context/SessionContext';
@@ -82,11 +84,15 @@ const Tasks = () => {
   // Bulk upload file input ref
   const bulkFileInputRef = useRef(null);
 
+  // Date picker ref
+  const datePickerRef = useRef(null);
+
   // Search debounce ref
   const searchDebounceRef = useRef(null);
   const searchRef = useRef('');
   const filterStatusRef = useRef('');
-  const filterDateRef = useRef('');
+  const filterDateFromRef = useRef(''); // YYYY-MM-DD string for API
+  const filterDateToRef = useRef(''); // YYYY-MM-DD string for API
 
   // History modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -95,7 +101,8 @@ const Tasks = () => {
   // Filters
   const [searchText, setSearchText] = useState('');
   const [filterStatus, setFilterStatus] = useState(''); // '' = todas
-  const [filterDate, setFilterDate] = useState(''); // '' = todas, 'hoy', 'ayer', 'semana'
+  const [filterDateFrom, setFilterDateFrom] = useState(null);
+  const [filterDateTo, setFilterDateTo] = useState(null);
   const [sortDueDate, setSortDueDate] = useState(''); // '' = default, 'asc', 'desc'
   const sortDueDateRef = useRef('');
 
@@ -115,7 +122,7 @@ const Tasks = () => {
   const isLider = role === 'Lider';
   const isColaborador = role === 'Colaborador';
 
-  const loadTasks = useCallback(async (currentPage = 1, search, statusVal, dateVal, sortVal) => {
+  const loadTasks = useCallback(async (currentPage = 1, search, statusVal, dateFromVal, dateToVal, sortVal) => {
     try {
       setLoading(true);
       setError(null);
@@ -124,9 +131,10 @@ const Tasks = () => {
         searchRef.current = search;
       }
       const statusValue = statusVal !== undefined ? statusVal : filterStatusRef.current;
-      const dateValue = dateVal !== undefined ? dateVal : filterDateRef.current;
+      const fromValue = dateFromVal !== undefined ? dateFromVal : filterDateFromRef.current;
+      const toValue = dateToVal !== undefined ? dateToVal : filterDateToRef.current;
       const sortValue = sortVal !== undefined ? sortVal : sortDueDateRef.current;
-      const data = await tasksService.getAll(currentPage, PAGE_SIZE, searchValue, statusValue, dateValue, sortValue);
+      const data = await tasksService.getAll(currentPage, PAGE_SIZE, searchValue, statusValue, fromValue, toValue, sortValue);
       setTasks(data.items ?? []);
       setTotalPages(data.totalPages);
       setTotalCount(data.totalCount);
@@ -177,7 +185,7 @@ const Tasks = () => {
         await tasksService.bulkDelete(Array.from(selectedIds));
         toast.success(`${selectedIds.size} tarea${selectedIds.size > 1 ? 's' : ''} eliminada${selectedIds.size > 1 ? 's' : ''}`);
         setSelectedIds(new Set());
-        loadTasks(1, searchRef.current, filterStatusRef.current, filterDateRef.current, sortDueDateRef.current);
+        loadTasks(1, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, sortDueDateRef.current);
       } catch (err) {
         toast.error('Error al eliminar: ' + (err.message || 'Error desconocido'));
       }
@@ -186,7 +194,7 @@ const Tasks = () => {
 
   const goToPage = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      loadTasks(newPage, searchRef.current, filterStatusRef.current, filterDateRef.current, sortDueDateRef.current);
+      loadTasks(newPage, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, sortDueDateRef.current);
     }
   };
 
@@ -726,12 +734,7 @@ const Tasks = () => {
     if (isColaborador) return ['Asignada', 'Completa - Por Validar', 'Reasignada'];
     return [];
   })();
-  const DATE_OPTIONS = [
-    { value: '', label: 'Todas' },
-    { value: 'hoy', label: 'Hoy' },
-    { value: 'ayer', label: 'Ayer' },
-    { value: 'semana', label: 'Esta semana' },
-  ];
+  // DATE_OPTIONS removed - using date picker instead
 
   const filteredTasks = tasks;
 
@@ -820,7 +823,7 @@ const Tasks = () => {
               setSearchText(val);
               if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
               searchDebounceRef.current = setTimeout(() => {
-                loadTasks(1, val, filterStatusRef.current, filterDateRef.current, sortDueDateRef.current);
+                loadTasks(1, val, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, sortDueDateRef.current);
               }, 300);
             }}
             style={{ width: '100%' }}
@@ -835,7 +838,7 @@ const Tasks = () => {
             const val = e.target.value;
             setFilterStatus(val);
             filterStatusRef.current = val;
-            loadTasks(1, searchRef.current, val, filterDateRef.current, sortDueDateRef.current);
+            loadTasks(1, searchRef.current, val, filterDateFromRef.current, filterDateToRef.current, sortDueDateRef.current);
           }}
           style={{ width: '220px', minWidth: '150px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px', flex: '0 1 220px' }}
         >
@@ -845,21 +848,50 @@ const Tasks = () => {
           ))}
         </select>
 
-        <select
-          className="form-control form-select"
-          value={filterDate}
-          onChange={(e) => {
-            const val = e.target.value;
-            setFilterDate(val);
-            filterDateRef.current = val;
-            loadTasks(1, searchRef.current, filterStatusRef.current, val, sortDueDateRef.current);
-          }}
-          style={{ width: '180px', minWidth: '140px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px', flex: '0 1 180px' }}
-        >
-          {DATE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>Fecha: {opt.label}</option>
-          ))}
-        </select>
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          <button
+            className="btn btn--secondary btn--sm"
+            onClick={() => datePickerRef.current?.setOpen(true)}
+            style={{ height: '36px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+            data-tooltip="Filtrar por fecha de entrega"
+          >
+            <Calendar size={16} />
+            {filterDateFrom && filterDateTo
+              ? `${filterDateFrom.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${filterDateTo.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+              : 'Fecha'}
+            {filterDateFrom && (
+              <X size={14} style={{ cursor: 'pointer', opacity: 0.6 }} onClick={(e) => {
+                e.stopPropagation();
+                setFilterDateFrom(null);
+                setFilterDateTo(null);
+                filterDateFromRef.current = '';
+                filterDateToRef.current = '';
+                loadTasks(1, searchRef.current, filterStatusRef.current, '', '', sortDueDateRef.current);
+              }} />
+            )}
+          </button>
+          <div style={{ position: 'absolute', zIndex: 10 }}>
+            <DatePicker
+              ref={datePickerRef}
+              selectsRange
+              startDate={filterDateFrom}
+              endDate={filterDateTo}
+              onChange={(dates) => {
+                const [start, end] = dates;
+                setFilterDateFrom(start);
+                setFilterDateTo(end);
+                const fmt = (d) => d ? d.toISOString().slice(0, 10) : '';
+                filterDateFromRef.current = fmt(start);
+                filterDateToRef.current = fmt(end);
+                if (start && end) {
+                  loadTasks(1, searchRef.current, filterStatusRef.current, fmt(start), fmt(end), sortDueDateRef.current);
+                }
+              }}
+              dateFormat="dd/MM/yyyy"
+              customInput={<span />}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="card">
@@ -901,7 +933,7 @@ const Tasks = () => {
                           const next = sortDueDate === '' ? 'asc' : sortDueDate === 'asc' ? 'desc' : '';
                           setSortDueDate(next);
                           sortDueDateRef.current = next;
-                          loadTasks(1, searchRef.current, filterStatusRef.current, filterDateRef.current, next);
+                          loadTasks(1, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, next);
                         }}
                         data-tooltip={sortDueDate === '' ? 'Ordenar por entrega' : sortDueDate === 'asc' ? 'Ascendente' : 'Descendente'}
                       >

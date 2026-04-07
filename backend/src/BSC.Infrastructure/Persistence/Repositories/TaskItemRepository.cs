@@ -44,29 +44,22 @@ public class TaskItemRepository : ITaskItemRepository
         return filter;
     }
 
-    private static FilterDefinition<TaskItem> ApplyDateFilter(FilterDefinition<TaskItem> filter, string? dateFilter)
+    private static FilterDefinition<TaskItem> ApplyDateFilter(FilterDefinition<TaskItem> filter, string? dateFrom, string? dateTo)
     {
-        if (string.IsNullOrWhiteSpace(dateFilter)) return filter;
+        var ecuadorOffset = TimeSpan.FromHours(-5);
 
-        var now = DateTime.UtcNow;
-        var today = now.Date;
-
-        switch (dateFilter)
+        if (!string.IsNullOrWhiteSpace(dateFrom) && DateTime.TryParse(dateFrom, out var from))
         {
-            case "hoy":
-                filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, today);
-                break;
-            case "ayer":
-                var yesterday = today.AddDays(-1);
-                filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, yesterday);
-                filter &= Builders<TaskItem>.Filter.Lt(t => t.CreatedAt, today);
-                break;
-            case "semana":
-                var dayOfWeek = (int)today.DayOfWeek;
-                var weekStart = today.AddDays(-dayOfWeek);
-                filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, weekStart);
-                break;
+            var fromUtc = from.Date.Add(-ecuadorOffset);
+            filter &= Builders<TaskItem>.Filter.Gte(t => t.DueDate, fromUtc);
         }
+
+        if (!string.IsNullOrWhiteSpace(dateTo) && DateTime.TryParse(dateTo, out var to))
+        {
+            var toUtc = to.Date.AddDays(1).Add(-ecuadorOffset);
+            filter &= Builders<TaskItem>.Filter.Lt(t => t.DueDate, toUtc);
+        }
+
         return filter;
     }
 
@@ -79,12 +72,12 @@ public class TaskItemRepository : ITaskItemRepository
         return query.SortBy(t => t.CreatedAt);
     }
 
-    public async Task<List<TaskItem>> GetAllAsync(int page, int pageSize, string? search = null, string? status = null, string? dateFilter = null, string? sortDueDate = null)
+    public async Task<List<TaskItem>> GetAllAsync(int page, int pageSize, string? search = null, string? status = null, string? dateFrom = null, string? dateTo = null, string? sortDueDate = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, status);
-        filter = ApplyDateFilter(filter, dateFilter);
+        filter = ApplyDateFilter(filter, dateFrom, dateTo);
         var skip = (page - 1) * pageSize;
 
         return await ApplySorting(_collection.Find(filter), sortDueDate)
@@ -93,12 +86,12 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
-    public async Task<int> GetTotalCountAsync(string? search = null, string? status = null, string? dateFilter = null)
+    public async Task<int> GetTotalCountAsync(string? search = null, string? status = null, string? dateFrom = null, string? dateTo = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, status);
-        filter = ApplyDateFilter(filter, dateFilter);
+        filter = ApplyDateFilter(filter, dateFrom, dateTo);
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
@@ -122,14 +115,14 @@ public class TaskItemRepository : ITaskItemRepository
         return alwaysFilter;
     }
 
-    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFilter = null, string? sortDueDate = null)
+    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null, string? sortDueDate = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
                    & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, statusFilter);
-        filter = ApplyDateFilter(filter, dateFilter);
+        filter = ApplyDateFilter(filter, dateFrom, dateTo);
 
         var skip = (page - 1) * pageSize;
 
@@ -139,26 +132,26 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByLeaderEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFilter = null)
+    public async Task<int> GetCountByLeaderEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
                    & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, statusFilter);
-        filter = ApplyDateFilter(filter, dateFilter);
+        filter = ApplyDateFilter(filter, dateFrom, dateTo);
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
-    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFilter = null, string? sortDueDate = null)
+    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null, string? sortDueDate = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
                    & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, statusFilter);
-        filter = ApplyDateFilter(filter, dateFilter);
+        filter = ApplyDateFilter(filter, dateFrom, dateTo);
 
         var skip = (page - 1) * pageSize;
 
@@ -168,14 +161,14 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFilter = null)
+    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
                    & BuildVisibilityFilter(statuses, conditionalStatuses, visibleBeforeDeadline);
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, statusFilter);
-        filter = ApplyDateFilter(filter, dateFilter);
+        filter = ApplyDateFilter(filter, dateFrom, dateTo);
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }

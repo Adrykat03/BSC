@@ -15,6 +15,7 @@ public class GetTaskItemsQuery : IRequest<ApiResponse<PaginatedResult<TaskItemDt
     public string? UserRole { get; set; }
     public string? Search { get; set; }
     public string? Status { get; set; }
-    public string? DateFilter { get; set; } // "hoy", "ayer", "semana"
+    public string? DateFrom { get; set; } // YYYY-MM-DD
+    public string? DateTo { get; set; } // YYYY-MM-DD
     public string? SortDueDate { get; set; } // "asc", "desc"
 }
