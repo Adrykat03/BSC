@@ -250,15 +250,29 @@ public class TaskItemRepository : ITaskItemRepository
             .ToListAsync();
     }
 
+    private static FilterDefinition<TaskItem> ApplyDashboardDateFilter(FilterDefinition<TaskItem> filter, DateTime? from, DateTime? to)
+    {
+        var ecuadorOffset = TimeSpan.FromHours(-5);
+
+        if (from.HasValue)
+        {
+            var fromUtc = from.Value.Date.Add(-ecuadorOffset);
+            filter &= Builders<TaskItem>.Filter.Gte(t => t.DueDate, fromUtc);
+        }
+
+        if (to.HasValue)
+        {
+            var toUtc = to.Value.Date.AddDays(1).Add(-ecuadorOffset);
+            filter &= Builders<TaskItem>.Filter.Lt(t => t.DueDate, toUtc);
+        }
+
+        return filter;
+    }
+
     public async Task<List<TaskItem>> GetAllForDashboardAsync(DateTime? from, DateTime? to)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
-
-        if (from.HasValue)
-            filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, from.Value);
-
-        if (to.HasValue)
-            filter &= Builders<TaskItem>.Filter.Lte(t => t.CreatedAt, to.Value);
+        filter = ApplyDashboardDateFilter(filter, from, to);
 
         return await _collection
             .Find(filter)
@@ -270,12 +284,7 @@ public class TaskItemRepository : ITaskItemRepository
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, leaderEmail);
-
-        if (from.HasValue)
-            filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, from.Value);
-
-        if (to.HasValue)
-            filter &= Builders<TaskItem>.Filter.Lte(t => t.CreatedAt, to.Value);
+        filter = ApplyDashboardDateFilter(filter, from, to);
 
         return await _collection
             .Find(filter)
@@ -287,12 +296,7 @@ public class TaskItemRepository : ITaskItemRepository
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, assigneeEmail);
-
-        if (from.HasValue)
-            filter &= Builders<TaskItem>.Filter.Gte(t => t.CreatedAt, from.Value);
-
-        if (to.HasValue)
-            filter &= Builders<TaskItem>.Filter.Lte(t => t.CreatedAt, to.Value);
+        filter = ApplyDashboardDateFilter(filter, from, to);
 
         return await _collection
             .Find(filter)
