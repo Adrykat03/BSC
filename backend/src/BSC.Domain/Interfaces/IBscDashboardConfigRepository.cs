@@ -8,4 +8,5 @@ namespace BSC.Domain.Interfaces;
 public interface IBscDashboardConfigRepository
 {
     Task<BscDashboardConfig?> GetActiveConfigAsync();
+    Task SeedIfEmptyAsync();
 }

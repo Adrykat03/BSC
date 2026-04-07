@@ -5,6 +5,7 @@ using BSC.Application;
 using BSC.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using BSC.Domain.Interfaces;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -129,6 +130,13 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration, jwtKey, jwtIssuer, jwtAudience, jwtExpirationMinutes);
 
 var app = builder.Build();
+
+// Seed de configuracion BSC (crea documento si no existe)
+using (var scope = app.Services.CreateScope())
+{
+    var bscConfigRepo = scope.ServiceProvider.GetRequiredService<IBscDashboardConfigRepository>();
+    await bscConfigRepo.SeedIfEmptyAsync();
+}
 
 // Middleware de excepciones globales (primero en el pipeline)
 app.UseMiddleware<ExceptionHandlingMiddleware>();
