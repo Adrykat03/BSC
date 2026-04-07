@@ -88,7 +88,8 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             TasksByStatus = CalculateTasksByStatus(tasks),
             Highlights = CalculateHighlights(tasks),
             CompletionTimeline = CalculateCompletionTimeline(tasks),
-            AvgRatingByCollaborator = CalculateAvgRatingByCollaborator(tasks, bscEmailSet, bscPattern)
+            AvgRatingByCollaborator = CalculateAvgRatingByCollaborator(tasks, bscEmailSet, bscPattern),
+            BscAvgRatingByCollaborator = CalculateBscAvgRating(tasks, bscEmailSet, bscPattern)
         };
 
         return ApiResponse<DashboardDto>.Ok(dashboard);
@@ -412,6 +413,35 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
         }
 
         return ratedTasks
+            .GroupBy(t => t.AssignedToName!)
+            .Select(g => new CollaboratorAvgRating
+            {
+                Name = g.Key,
+                AvgRating = Math.Round(g.Average(t => t.Rating!.Value), 1),
+                TaskCount = g.Count()
+            })
+            .OrderByDescending(x => x.AvgRating)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Calcula el promedio de calificacion solo de tareas BSC para colaboradores configurados.
+    /// </summary>
+    private static List<CollaboratorAvgRating> CalculateBscAvgRating(
+        List<TaskItem> tasks, HashSet<string> bscEmails, string bscPattern)
+    {
+        if (bscEmails.Count == 0 || string.IsNullOrEmpty(bscPattern))
+            return new List<CollaboratorAvgRating>();
+
+        var bscRatedTasks = tasks
+            .Where(t => !string.IsNullOrEmpty(t.AssignedToName)
+                && t.Rating.HasValue
+                && !string.IsNullOrEmpty(t.AssignedToEmail)
+                && bscEmails.Contains(t.AssignedToEmail)
+                && t.Title.IndexOf(bscPattern, StringComparison.OrdinalIgnoreCase) >= 0)
+            .ToList();
+
+        return bscRatedTasks
             .GroupBy(t => t.AssignedToName!)
             .Select(g => new CollaboratorAvgRating
             {

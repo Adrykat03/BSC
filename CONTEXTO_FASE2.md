@@ -14,6 +14,8 @@
 | F2-005 | Menu de tareas para Administrador con eliminacion masiva | Completada | 2026-04-07 |
 | F2-006 | Ultima conexion visible para Gerente al iniciar sesion | Completada | 2026-04-07 |
 | F2-007 | Aumentar limite de carga masiva a 600 tareas | Completada | 2026-04-07 |
+| F2-008 | Ultima conexion en cambio de rol para todos los roles | Completada | 2026-04-07 |
+| F2-009 | Grafico promedio BSC por colaborador en dashboard Gerente | Completada | 2026-04-07 |
 
 ---
 
@@ -123,6 +125,31 @@
   - CreateTaskItemsBulkCommandHandler.cs: validacion hardcodeada cambiada a 600
 - **Frontend:**
   - Tasks.jsx: validacion de filas cambiada a 600
+- **Security:** Pendiente
+
+---
+
+### [F2-008] Ultima conexion en cambio de rol para todos los roles
+- **Estado:** Completada
+- **Fecha:** 2026-04-07
+- **Descripcion:** Al cambiar de rol se actualiza LastLoginAt y se muestra la ultima conexion en el header para todos los roles.
+- **Backend:**
+  - SwitchRoleCommandHandler.cs: inyeccion de IColaboradorRepository, actualiza LastLoginAt y devuelve conexion previa
+- **Frontend:**
+  - SessionContext.jsx: switchRole guarda lastLoginAt en sessionStorage
+- **Security:** Pendiente
+
+---
+
+### [F2-009] Grafico promedio BSC por colaborador en dashboard Gerente
+- **Estado:** Completada
+- **Fecha:** 2026-04-07
+- **Descripcion:** Nuevo grafico de barras "Calificacion promedio BSC por colaborador" en el dashboard del Gerente, debajo del promedio general. Muestra el promedio solo de tareas BSC (titulo "Proceso mensual liquidaciones") para colaboradores configurados en BscDashboardConfig.
+- **Backend:**
+  - DashboardDto.cs: nuevo campo `BscAvgRatingByCollaborator` (List<CollaboratorAvgRating>)
+  - GetDashboardQueryHandler.cs: metodo `CalculateBscAvgRating` que filtra tareas por emails BSC y patron de titulo
+- **Frontend:**
+  - Home.jsx: nuevo card con AvgRatingChart reutilizado, visible solo si hay datos BSC
 - **Security:** Pendiente
 
 ---

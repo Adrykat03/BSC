@@ -388,6 +388,21 @@ const Home = () => {
             </div>
           )}
 
+          {/* Full width: BSC Avg Rating by Collaborator */}
+          {dashboard.bscAvgRatingByCollaborator && dashboard.bscAvgRatingByCollaborator.length > 0 && (
+            <div className="card mb-6">
+              <div className="card__header">
+                <h2 className="card__title">Calificacion promedio BSC por colaborador</h2>
+                <p className="card__subtitle">Promedio basado en tareas BSC (Proceso mensual liquidaciones)</p>
+              </div>
+              <div className="card__body">
+                <div className="chart-container" style={{ height: Math.max(200, (dashboard.bscAvgRatingByCollaborator.length) * 40 + 60) + 'px' }}>
+                  <AvgRatingChart data={dashboard.bscAvgRatingByCollaborator} />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Full width: Completion timeline comparison */}
           <CompletionTimelineCard
             completionTimeline={dashboard.completionTimeline}

@@ -56,6 +56,12 @@ public class DashboardDto
     /// Promedio de calificacion por colaborador (para gráfico de barras).
     /// </summary>
     public List<CollaboratorAvgRating> AvgRatingByCollaborator { get; set; } = new();
+
+    /// <summary>
+    /// Promedio de calificacion de tareas BSC por colaborador configurado.
+    /// Solo incluye tareas cuyo titulo coincide con el patron BSC.
+    /// </summary>
+    public List<CollaboratorAvgRating> BscAvgRatingByCollaborator { get; set; } = new();
 }
 
 /// <summary>
