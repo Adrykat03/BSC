@@ -17,6 +17,7 @@
 | F2-008 | Ultima conexion en cambio de rol para todos los roles | Completada | 2026-04-07 |
 | F2-009 | Grafico promedio BSC por colaborador en dashboard Gerente | Completada | 2026-04-07 |
 | F2-010 | Filtro rango de fechas por Entrega y mejoras iconos modal | Completada | 2026-04-07 |
+| F2-011 | Correccion campana de notificaciones y mensaje al clic | Completada | 2026-04-07 |
 
 ---
 
@@ -170,6 +171,17 @@
   - tasksService.js: parametros `dateFrom`/`dateTo` en getAll
   - TaskModal.jsx: Cancelar usa Trash2, Enviar a validacion usa solo Send, Validar y enviar al Gerente usa CheckCircle celeste, Guardar solo icono Save color navy con tooltip "Guardar cambios"
   - Dependencia react-datepicker agregada
+- **Security:** Pendiente
+
+---
+
+### [F2-011] Correccion campana de notificaciones y mensaje al clic
+- **Estado:** Completada
+- **Fecha:** 2026-04-07
+- **Descripcion:** Corregido el conteo de tareas pendientes en la campana usando filtro server-side por estado (Asignada + Reasignada) con totalCount. Al dar clic en la campana muestra toast con "Tiene N tareas pendientes por cumplir".
+- **Backend:** Sin cambios (usa filtros server-side existentes).
+- **Frontend:**
+  - Header.jsx: fetchPendingCount usa tasksService.getAll con filtro status para Asignada y Reasignada, suma totalCount de ambas consultas. Clic en campana muestra toast con cantidad o "No tiene tareas pendientes".
 - **Security:** Pendiente
 
 ---
