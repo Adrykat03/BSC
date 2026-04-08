@@ -19,6 +19,7 @@
 | F2-010 | Filtro rango de fechas por Entrega y mejoras iconos modal | Completada | 2026-04-07 |
 | F2-011 | Correccion campana de notificaciones y mensaje al clic | Completada | 2026-04-07 |
 | F2-012 | Corregir filtro dashboard por DueDate y seed automatico BSC | Completada | 2026-04-07 |
+| F2-013 | Previsualizacion inline de archivos en modal de tareas | Completada | 2026-04-08 |
 
 ---
 
@@ -198,6 +199,18 @@
   - Program.cs: llamada a SeedIfEmptyAsync al iniciar la aplicacion
   - GetDashboardQueryHandler.cs: CalculateCompletionTimeline agrupa dataPoints por fecha, conservando solo el CumulativeCount maximo de cada dia
 - **Frontend:** Sin cambios.
+- **Security:** Pendiente
+
+---
+
+### [F2-013] Previsualizacion inline de archivos en modal de tareas
+- **Estado:** Completada
+- **Fecha:** 2026-04-08
+- **Descripcion:** Visor de archivos embebido en el modal de tareas con layout split-screen. Al hacer clic en el icono Eye de cualquier archivo (insumo o evidencia), el modal se expande y muestra un panel derecho con la vista previa. Soporta imagenes (PNG, JPG) con zoom interactivo y drag-to-pan, PDFs con visor nativo del navegador, y fallback con descarga para otros formatos. Disponible para todos los roles (Gerente, Lider, Colaborador).
+- **Backend:** Sin cambios.
+- **Frontend:**
+  - tasksService.js: nuevo metodo `previewFile(taskId, fileId)` que retorna blob URL, fileName y mimeType
+  - TaskModal.jsx: icono Eye (lucide-react) agregado antes de Download en FileDropZone y ReadOnlyFileList. Estado `previewData` y `previewZoom` para controlar el panel. Layout split-screen: modal se expande de 800px a 1400px con transicion CSS. Panel derecho con: header (nombre archivo + controles zoom + cerrar), area de contenido con scroll bidireccional. Imagenes: zoom 25%-400% con botones ZoomIn/ZoomOut/Reset, Ctrl+rueda del mouse, y click+drag para desplazar (grab/grabbing). PDFs: iframe a pantalla completa con visor nativo. Otros: mensaje con boton de descarga. Limpieza de blob URLs al cerrar/cambiar archivo.
 - **Security:** Pendiente
 
 ---

@@ -107,6 +107,22 @@ export const tasksService = {
     return response.json();
   },
 
+  async previewFile(taskId, fileId) {
+    const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${taskId}/files/${fileId}`, {
+      headers: getAuthHeader(),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const disposition = response.headers.get('Content-Disposition');
+    let fileName = 'archivo';
+    if (disposition) {
+      const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (match && match[1]) fileName = match[1].replace(/['"]/g, '');
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    return { url, fileName, mimeType: blob.type };
+  },
+
   async downloadFile(taskId, fileId) {
     const response = await fetch(`${API_BASE_URL}${ENDPOINT}/${taskId}/files/${fileId}`, {
       headers: getAuthHeader(),

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Upload, FileText, Download, Trash2, CheckCircle, CornerDownLeft, UserCheck, ArrowRightCircle, Eraser, Save, Send } from 'lucide-react';
+import { X, Upload, FileText, Download, Eye, Trash2, CheckCircle, CornerDownLeft, UserCheck, ArrowRightCircle, Eraser, Save, Send, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
 import { tasksService } from '../../services/tasksService';
@@ -38,6 +38,7 @@ const FileDropZone = ({
   onChange,
   onRemoveNew,
   onRemoveExisting,
+  onPreview,
   onDownload,
   label,
   error,
@@ -179,6 +180,23 @@ const FileDropZone = ({
                 {ef.fileName}{' '}
                 <span style={{ color: 'var(--color-text-disabled)', fontSize: '11px' }}>(guardado)</span>
               </span>
+              {onPreview && (
+                <button
+                  type="button"
+                  data-tooltip="Previsualizar"
+                  onClick={() => onPreview(ef.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    color: 'var(--color-text-secondary)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Eye size={14} />
+                </button>
+              )}
               {onDownload && (
                 <button
                   type="button"
@@ -261,7 +279,7 @@ const FileDropZone = ({
 /* ────────────────────────────────────────────
    ReadOnlyFileList — for read-only file access
    ──────────────────────────────────────────── */
-const ReadOnlyFileList = ({ files, onDownload, label }) => (
+const ReadOnlyFileList = ({ files, onPreview, onDownload, label }) => (
   <div>
     <Label>{label}</Label>
     {files && files.length > 0 ? (
@@ -286,6 +304,17 @@ const ReadOnlyFileList = ({ files, onDownload, label }) => (
           >
             <FileText size={16} style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
             <span style={{ flex: 1, wordBreak: 'break-all' }}>{ef.fileName}</span>
+            {onPreview && (
+              <button
+                type="button"
+                data-tooltip="Previsualizar"
+                className="btn btn--sm btn--ghost"
+                onClick={() => onPreview(ef.id)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px' }}
+              >
+                <Eye size={14} />
+              </button>
+            )}
             <button
               type="button"
               data-tooltip="Descargar"
@@ -359,6 +388,11 @@ const TaskModal = ({
   const [evidenceFiles, setEvidenceFiles] = useState([]);
   const [existingInsumoFiles, setExistingInsumoFiles] = useState([]);
   const [existingEvidenceFiles, setExistingEvidenceFiles] = useState([]);
+  const [previewData, setPreviewData] = useState(null); // { url, fileName, mimeType }
+  const [previewZoom, setPreviewZoom] = useState(100);
+  const previewContainerRef = useRef(null);
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
   const [errors, setErrors] = useState({});
 
   const isEditing = Boolean(task);
@@ -447,6 +481,8 @@ const TaskModal = ({
     setInsumoFiles([]);
     setEvidenceFiles([]);
     setErrors({});
+    if (previewData?.url) window.URL.revokeObjectURL(previewData.url);
+    setPreviewData(null);
   }, [task, isOpen]);
 
   /* ── Validation ── */
@@ -503,6 +539,23 @@ const TaskModal = ({
     } catch (err) {
       toast.error(`Error al eliminar archivo: ${err.message}`);
     }
+  };
+
+  const handlePreviewFile = async (fileId) => {
+    try {
+      if (previewData?.url) window.URL.revokeObjectURL(previewData.url);
+      const data = await tasksService.previewFile(task.id, fileId);
+      setPreviewData(data);
+      setPreviewZoom(100);
+    } catch (err) {
+      toast.error(`Error al previsualizar archivo: ${err.message}`);
+    }
+  };
+
+  const closePreview = () => {
+    if (previewData?.url) window.URL.revokeObjectURL(previewData.url);
+    setPreviewData(null);
+    setPreviewZoom(100);
   };
 
   const handleDownloadFile = async (fileId) => {
@@ -613,8 +666,17 @@ const TaskModal = ({
       <div className={`modal-backdrop ${isOpen ? 'modal-backdrop--open' : ''}`} />
       <div
         className={`modal task-modal ${isOpen ? 'modal--open' : ''}`}
-        style={{ maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        style={{
+          maxWidth: previewData ? '1400px' : '800px',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'row',
+          overflow: 'hidden',
+          transition: 'max-width 0.3s ease',
+        }}
       >
+      {/* ── Left panel: form ── */}
+      <div style={{ flex: previewData ? '0 0 50%' : '1 1 100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, transition: 'flex 0.3s ease' }}>
         {/* ── Header ── */}
         <div className="modal__header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -793,6 +855,7 @@ const TaskModal = ({
                         setInsumoFiles((prev) => prev.filter((_, i) => i !== idx));
                       }}
                       onRemoveExisting={(fileId) => handleRemoveExistingFile(fileId, 'insumo')}
+                      onPreview={handlePreviewFile}
                       onDownload={handleDownloadFile}
                       error={errors.insumoFile}
                     />
@@ -800,6 +863,7 @@ const TaskModal = ({
                     <ReadOnlyFileList
                       label="Archivos de insumo"
                       files={existingInsumoFiles}
+                      onPreview={handlePreviewFile}
                       onDownload={handleDownloadFile}
                     />
                   )}
@@ -854,6 +918,7 @@ const TaskModal = ({
                   <ReadOnlyFileList
                     label="Archivos de evidencia"
                     files={existingEvidenceFiles}
+                    onPreview={handlePreviewFile}
                     onDownload={handleDownloadFile}
                   />
                 ) : (
@@ -871,6 +936,7 @@ const TaskModal = ({
                       setEvidenceFiles((prev) => prev.filter((_, i) => i !== idx));
                     }}
                     onRemoveExisting={(fileId) => handleRemoveExistingFile(fileId, 'evidence')}
+                    onPreview={handlePreviewFile}
                     onDownload={handleDownloadFile}
                     error={errors.evidenceFile}
                   />
@@ -989,6 +1055,145 @@ const TaskModal = ({
             </div>
           </div>
         </form>
+      </div>
+
+      {/* ── Right panel: file preview ── */}
+      {previewData && (
+        <div style={{
+          flex: '0 0 50%',
+          display: 'flex',
+          flexDirection: 'column',
+          borderLeft: '1px solid var(--color-border-main)',
+          background: '#f9fafb',
+          minWidth: 0,
+          overflow: 'hidden',
+        }}>
+          {/* Preview header: filename + zoom controls + close */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            borderBottom: '1px solid var(--color-border-main)',
+            background: '#fff',
+            flexShrink: 0,
+          }}>
+            <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {previewData.fileName}
+            </span>
+            {/* Zoom controls — only for images (PDFs have their own viewer controls) */}
+            {previewData.mimeType?.startsWith('image/') && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                <button type="button" data-tooltip="Alejar" onClick={() => setPreviewZoom((z) => Math.max(25, z - 25))}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--color-text-secondary)', display: 'flex' }}>
+                  <ZoomOut size={16} />
+                </button>
+                <span style={{ fontSize: '12px', fontWeight: 600, minWidth: '42px', textAlign: 'center', color: 'var(--color-text-secondary)', userSelect: 'none' }}>
+                  {previewZoom}%
+                </span>
+                <button type="button" data-tooltip="Acercar" onClick={() => setPreviewZoom((z) => Math.min(400, z + 25))}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--color-text-secondary)', display: 'flex' }}>
+                  <ZoomIn size={16} />
+                </button>
+                <button type="button" data-tooltip="Restablecer zoom" onClick={() => setPreviewZoom(100)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--color-text-secondary)', display: 'flex' }}>
+                  <RotateCcw size={14} />
+                </button>
+              </div>
+            )}
+            <button type="button" onClick={closePreview} data-tooltip="Cerrar vista previa"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--color-text-secondary)', flexShrink: 0, display: 'flex' }}>
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Preview content area */}
+          {previewData.mimeType?.startsWith('image/') ? (
+            <div
+              ref={previewContainerRef}
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                cursor: isDragging.current ? 'grabbing' : previewZoom > 100 ? 'grab' : 'default',
+                userSelect: 'none',
+              }}
+              onWheel={(e) => {
+                if (e.ctrlKey) {
+                  e.preventDefault();
+                  setPreviewZoom((z) => Math.min(400, Math.max(25, z + (e.deltaY < 0 ? 25 : -25))));
+                }
+              }}
+              onMouseDown={(e) => {
+                if (e.button !== 0) return;
+                const el = previewContainerRef.current;
+                if (!el) return;
+                isDragging.current = true;
+                dragStart.current = { x: e.clientX, y: e.clientY, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop };
+                el.style.cursor = 'grabbing';
+              }}
+              onMouseMove={(e) => {
+                if (!isDragging.current) return;
+                const el = previewContainerRef.current;
+                if (!el) return;
+                el.scrollLeft = dragStart.current.scrollLeft - (e.clientX - dragStart.current.x);
+                el.scrollTop = dragStart.current.scrollTop - (e.clientY - dragStart.current.y);
+              }}
+              onMouseUp={() => {
+                isDragging.current = false;
+                const el = previewContainerRef.current;
+                if (el) el.style.cursor = previewZoom > 100 ? 'grab' : 'default';
+              }}
+              onMouseLeave={() => {
+                isDragging.current = false;
+                const el = previewContainerRef.current;
+                if (el) el.style.cursor = previewZoom > 100 ? 'grab' : 'default';
+              }}
+            >
+              <div style={{
+                minWidth: '100%',
+                minHeight: '100%',
+                display: 'flex',
+                alignItems: previewZoom <= 100 ? 'center' : 'flex-start',
+                justifyContent: previewZoom <= 100 ? 'center' : 'flex-start',
+                padding: '16px',
+              }}>
+                <img
+                  src={previewData.url}
+                  alt={previewData.fileName}
+                  draggable={false}
+                  style={{
+                    width: `${previewZoom}%`,
+                    maxWidth: 'none',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    borderRadius: '4px',
+                    transition: 'width 0.15s ease',
+                  }}
+                />
+              </div>
+            </div>
+          ) : previewData.mimeType === 'application/pdf' ? (
+            <iframe
+              src={previewData.url}
+              title={previewData.fileName}
+              style={{ flex: 1, width: '100%', border: 'none' }}
+            />
+          ) : (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+              <div>
+                <FileText size={48} style={{ marginBottom: '12px', opacity: 0.4 }} />
+                <p style={{ fontSize: '13px', margin: '0 0 12px' }}>
+                  Vista previa no disponible para este tipo de archivo.
+                </p>
+                <button type="button" className="btn btn--sm btn--primary"
+                  onClick={() => { const a = document.createElement('a'); a.href = previewData.url; a.download = previewData.fileName; a.click(); }}>
+                  <Download size={14} /> Descargar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       </div>
     </>
   );
