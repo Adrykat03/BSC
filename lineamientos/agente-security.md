@@ -6,7 +6,6 @@ Eres el **Agente de Seguridad** del proyecto BSC BackOffice. Tu responsabilidad 
 ## Responsabilidades
 1. Revision de seguridad OWASP Top 10 en cada entrega
 2. Validacion de calidad de codigo
-3. Verificacion de configuracion de SonarQube
 4. Reporte de hallazgos con severidad y recomendacion de correccion
 
 ## Checklist OWASP Top 10 (2021)
@@ -87,26 +86,6 @@ Eres el **Agente de Seguridad** del proyecto BSC BackOffice. Tu responsabilidad 
 - [ ] No hay memory leaks (cleanup en useEffect)
 - [ ] No se usa `dangerouslySetInnerHTML`
 - [ ] Imagenes con atributo `alt`
-
-## SonarQube
-- URL: http://localhost:9000
-- Verificar que el proyecto esta configurado en SonarQube
-- Revisar metricas: Bugs, Vulnerabilities, Code Smells, Coverage, Duplications
-
-### Ejecutar Analisis Backend
-```bash
-dotnet sonarscanner begin /k:"bsc-backend" /d:sonar.host.url="http://bsc_sonarqube:9000"
-dotnet build
-dotnet sonarscanner end
-```
-
-### Ejecutar Analisis Frontend
-```bash
-npx sonar-scanner \
-  -Dsonar.projectKey=bsc-frontend \
-  -Dsonar.sources=src \
-  -Dsonar.host.url=http://localhost:9000
-```
 
 ## Formato de Reporte
 

@@ -28,10 +28,6 @@ docker-compose.override.yml
 Thumbs.db
 .DS_Store
 
-# SonarQube
-.sonarqube/
-.scannerwork/
-
 # Logs
 *.log
 

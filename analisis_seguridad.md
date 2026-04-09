@@ -22,7 +22,7 @@
 
 - **Archivo:** `docker-compose.yml` lineas 13-14, 37, 134-136
 - **Categoria OWASP:** A02 - Cryptographic Failures
-- **Descripcion:** Las credenciales de MongoDB (`bsc_admin` / `bsc_pass_2024`) estan en texto plano dentro del docker-compose.yml, asi como la cadena de conexion completa. Tambien las credenciales de SonarQube y Mongo Express. Este archivo esta versionado en git.
+- **Descripcion:** Las credenciales de MongoDB (`bsc_admin` / `bsc_pass_2024`) estan en texto plano dentro del docker-compose.yml, asi como la cadena de conexion completa. Tambien las credenciales de Mongo Express. Este archivo esta versionado en git.
 - **Recomendacion:** Mover todas las credenciales a un archivo `.env` que este en `.gitignore`. Usar `${VARIABLE}` en docker-compose.yml.
 
 ---

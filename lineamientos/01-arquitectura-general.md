@@ -11,7 +11,6 @@ Sistema de gestion BackOffice para BSC, construido con arquitectura de microserv
 | Base de Datos | MongoDB | 7.x |
 | Frontend | React | 18.x |
 | Contenedores | Docker + Docker Compose | Latest |
-| Analisis de Codigo | SonarQube | Community Edition |
 
 ## Estructura de Carpetas del Proyecto
 
@@ -63,8 +62,6 @@ BSC/
 | MongoDB | 19.168.78.10 | 27017 | 27017 |
 | Backend API | 19.168.78.11 | 5000 | 8080 |
 | Frontend React | 19.168.78.12 | 3000 | 3000 |
-| SonarQube | 19.168.78.13 | 9000 | 9000 |
-| SonarQube DB (PostgreSQL) | 19.168.78.14 | 5432 | 5432 |
 | Mongo Express (admin) | 19.168.78.15 | 8081 | 8081 |
 
 ## Patron Arquitectonico Backend

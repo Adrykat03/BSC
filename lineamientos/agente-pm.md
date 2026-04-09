@@ -20,7 +20,7 @@ Eres el **Project Manager (PM)** del proyecto BSC BackOffice. Eres el punto de c
 3. PM asigna tareas al Dev Backend
 4. Dev Backend implementa y PM valida
 5. PM solicita revision al agente Security
-6. Security valida OWASP + SonarQube
+6. Security valida OWASP
 7. Si hay hallazgos, PM devuelve al Dev Backend para corregir
 8. PM asigna tareas al Dev Frontend
 9. Dev Frontend implementa y PM valida

@@ -67,44 +67,6 @@ services:
       bsc_net:
         ipv4_address: 19.168.78.12
 
-  # ============================================
-  # SonarQube - Analisis de codigo
-  # ============================================
-  bsc_sonarqube:
-    image: sonarqube:community
-    container_name: bsc_sonarqube
-    restart: unless-stopped
-    environment:
-      SONAR_JDBC_URL: jdbc:postgresql://bsc_sonardb:5432/${SONAR_DB_NAME}
-      SONAR_JDBC_USERNAME: ${SONAR_DB_USER}
-      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD}
-    ports:
-      - "9000:9000"
-    volumes:
-      - bsc_sonarqube_data:/opt/sonarqube/data
-      - bsc_sonarqube_extensions:/opt/sonarqube/extensions
-    depends_on:
-      - bsc_sonardb
-    networks:
-      bsc_net:
-        ipv4_address: 19.168.78.13
-
-  # ============================================
-  # PostgreSQL - Base de datos SonarQube
-  # ============================================
-  bsc_sonardb:
-    image: postgres:15-alpine
-    container_name: bsc_sonardb
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${SONAR_DB_USER}
-      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD}
-      POSTGRES_DB: ${SONAR_DB_NAME}
-    volumes:
-      - bsc_sonardb_data:/var/lib/postgresql/data
-    networks:
-      bsc_net:
-        ipv4_address: 19.168.78.14
 
   # ============================================
   # Mongo Express - Admin UI para MongoDB
@@ -133,12 +95,6 @@ services:
 # ============================================
 volumes:
   bsc_mongo_data:
-    driver: local
-  bsc_sonarqube_data:
-    driver: local
-  bsc_sonarqube_extensions:
-    driver: local
-  bsc_sonardb_data:
     driver: local
 
 # ============================================
