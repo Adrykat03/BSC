@@ -63,3 +63,7 @@ usuarios_nomina.csv
 seeds/seed_usuarios_nomina.js
 *nomina*.csv
 *nomina*.xlsx
+
+# Documentación markdown (solo README.md va al repo)
+*.md
+!README.md
