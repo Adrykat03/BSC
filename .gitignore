@@ -10,6 +10,8 @@ backend/tests/**/obj/
 .vs/
 
 # Node
+node_modules/
+scripts/node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/.env.local
@@ -34,3 +36,30 @@ Thumbs.db
 # Environment
 .env
 *.env.local
+dab/.env
+
+# Secrets / credenciales locales (no commitear)
+credenciales_sv.txt
+credenciales*.txt
+*.secret
+*.pem
+*.key
+
+# Build outputs / artefactos generados (no subir a git)
+manual_output/
+backend/.sonarqube/
+mongo_backup/
+frontend/public/Manual_Nomina2.html
+frontend/public/Manual_Nomina2.pdf
+html/
+
+# Claude Code local
+.claude/
+
+# Archivos de negocio con PII (deben ir a storage externo)
+files/evidencias/
+files/insumos/
+usuarios_nomina.csv
+seeds/seed_usuarios_nomina.js
+*nomina*.csv
+*nomina*.xlsx
