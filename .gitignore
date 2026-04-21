@@ -47,7 +47,6 @@ credenciales*.txt
 
 # Build outputs / artefactos generados (no subir a git)
 manual_output/
-backend/.sonarqube/
 mongo_backup/
 frontend/public/Manual_Nomina2.html
 frontend/public/Manual_Nomina2.pdf
@@ -55,6 +54,13 @@ html/
 
 # Claude Code local
 .claude/
+.mcp.json
+
+# Reportes de seguridad / pentest (no publicar en repo)
+Vulnerabilidades/
+
+# Artefactos de Windows (archivos con sufijo ;C)
+*;C
 
 # Archivos de negocio con PII (deben ir a storage externo)
 files/evidencias/
