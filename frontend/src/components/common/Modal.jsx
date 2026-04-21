@@ -22,9 +22,12 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal">
-      <div className="modal__overlay" />
-      <div className="modal__content">
+    <>
+      <div
+        className="modal-backdrop modal-backdrop--open"
+        onClick={onClose}
+      />
+      <div className="modal modal--open" role="dialog" aria-modal="true">
         <div className="modal__header">
           <h3 className="modal__title">{title}</h3>
           <button className="modal__close" onClick={onClose} type="button">
@@ -40,7 +43,7 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 };
 

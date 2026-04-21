@@ -219,6 +219,40 @@
   color: var(--color-status-inactive-text);
 }
 
+/* Action button (edit) */
+.payroll-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-main);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-paper);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.payroll-action-btn:hover {
+  background: var(--color-primary-bg, #EFF6FF);
+  color: var(--color-primary, #2563EB);
+  border-color: var(--color-primary, #2563EB);
+}
+
+.payroll-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.payroll-edit-hint {
+  display: block;
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .payroll-kpi-row {

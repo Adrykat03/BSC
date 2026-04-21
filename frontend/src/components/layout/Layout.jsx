@@ -6,9 +6,14 @@ import Header from './Header';
 
 const MOBILE_BREAKPOINT = 1024;
 
+const COLLAPSED_KEY = 'fp_sidebar_collapsed';
+
 const Layout = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem(COLLAPSED_KEY) === '1'
+  );
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
@@ -25,6 +30,15 @@ const Layout = () => {
 
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  const toggleCollapse = useCallback(() => {
+    setCollapsed((c) => {
+      const next = !c;
+      localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');
+      return next;
+    });
+  }, []);
+
+  const isCollapsed = !isMobile && collapsed;
 
   return (
     <div className="layout">
@@ -38,12 +52,21 @@ const Layout = () => {
       )}
 
       <aside
-        className={`layout__sidebar${isMobile && sidebarOpen ? ' layout__sidebar--mobile-open' : ''}`}
+        className={
+          'layout__sidebar' +
+          (isMobile && sidebarOpen ? ' layout__sidebar--mobile-open' : '') +
+          (isCollapsed ? ' layout__sidebar--collapsed' : '')
+        }
       >
-        <Sidebar isMobile={isMobile} onCloseSidebar={closeSidebar} />
+        <Sidebar
+          isMobile={isMobile}
+          onCloseSidebar={closeSidebar}
+          collapsed={isCollapsed}
+          onToggleCollapse={toggleCollapse}
+        />
       </aside>
 
-      <div className="layout__main">
+      <div className={`layout__main${isCollapsed ? ' layout__main--expanded' : ''}`}>
         <div className="layout__header">
           <Header isMobile={isMobile} onOpenSidebar={openSidebar} />
         </div>

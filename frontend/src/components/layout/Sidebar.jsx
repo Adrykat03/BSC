@@ -1,9 +1,9 @@
 import { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Shield, ClipboardList, Users, Bell } from 'lucide-react';
+import { Home, Shield, ClipboardList, Users, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
 import SessionContext from '../../context/SessionContext';
 
-const Sidebar = ({ isMobile, onCloseSidebar }) => {
+const Sidebar = ({ isMobile, onCloseSidebar, collapsed = false, onToggleCollapse }) => {
   const { user } = useContext(SessionContext);
   const role = user?.role || '';
   const isAdmin = role === 'Administrador';
@@ -22,6 +22,18 @@ const Sidebar = ({ isMobile, onCloseSidebar }) => {
           aria-label="Cerrar menu"
         >
           &#10005;
+        </button>
+      )}
+
+      {!isMobile && onToggleCollapse && (
+        <button
+          type="button"
+          className="sidebar__collapse-btn"
+          onClick={onToggleCollapse}
+          aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+          title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+        >
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       )}
 

@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { Pencil } from 'lucide-react';
+import Swal from 'sweetalert2';
+import Modal from '../../components/common/Modal';
+import SessionContext from '../../context/SessionContext';
 import { payrollService } from '../../services/payrollService';
 import './AlertasPayroll.css';
 
@@ -30,11 +34,19 @@ const ORIGIN_COLORS = [
   '#06b6d4', '#f97316', '#ec4899',
 ];
 
+const pad2 = (n) => String(n).padStart(2, '0');
+
 function formatDate(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-GT', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
+  const d = new Date(iso);
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()} ` +
+    `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function nowLocalIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` +
+    `T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
 
 function truncate(text, max) {
@@ -187,32 +199,116 @@ const HorizontalBar = ({ items, maxItems = 8 }) => {
 /* ========================================
    Table columns definition
    ======================================== */
-const columns = [
+const baseColumns = [
   { key: 'fechaCreacion', header: 'Fecha', render: (row) => formatDate(row.fechaCreacion) },
   { key: 'estado', header: 'Estado', render: (row) => <StatusBadge status={row.estado} /> },
   { key: 'prioridad', header: 'Prioridad', render: (row) => <PriorityBadge priority={row.prioridad} /> },
+  { key: 'categoria', header: 'Categoría', render: (row) => row.categoria ?? '—' },
   { key: 'origen', header: 'Origen' },
   { key: 'asunto', header: 'Asunto' },
   { key: 'descripcion', header: 'Descripción', render: (row) => truncate(row.descripcion, 80) },
   { key: 'destinatarios', header: 'Notificados', render: (row) => parseDestinatarios(row.destinatarios).join(', ') },
-  { key: 'cantidadRegistros', header: 'Registros', render: (row) => row.cantidadRegistros ?? '—' },
-  { key: 'periodo', header: 'Periodo', render: (row) => formatPeriodo(row.periodoInicio, row.periodoFin) },
+  { key: 'fechaModificacion', header: 'Fecha Resolución', render: (row) => formatDate(row.fechaModificacion) },
+  { key: 'usuarioResolucion', header: 'Usuario Resolución', render: (row) => row.usuarioResolucion ?? '—' },
+  { key: 'notasResolucion', header: 'Notas Resolución', render: (row) => truncate(row.notasResolucion, 60) },
 ];
 
 /* ========================================
    Main Dashboard Component
    ======================================== */
 const AlertasPayroll = () => {
+  const { user } = useContext(SessionContext);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [editEstado, setEditEstado] = useState('P');
+  const [editNotas, setEditNotas] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const loadData = () => {
+    setLoading(true);
     payrollService.getNotificaciones()
       .then(setData)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  const usuarioSesion = user?.email || user?.name || user?.id || '';
+
+  const openEdit = (row) => {
+    setEditing(row);
+    setEditEstado(row.estado === 'R' ? 'R' : 'P');
+    setEditNotas(row.notasResolucion || '');
+  };
+
+  const closeEdit = () => {
+    if (saving) return;
+    setEditing(null);
+  };
+
+  const handleSave = async () => {
+    const result = await Swal.fire({
+      title: '¿Guardar cambios?',
+      text: `Se actualizará la alerta #${editing.idNotificacion} con estado "${ESTADO_LABELS[editEstado]}".`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#2563eb',
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      setSaving(true);
+      await payrollService.updateResolucion(editing.idNotificacion, {
+        estado: editEstado,
+        notasResolucion: editNotas,
+        usuarioResolucion: usuarioSesion,
+        fechaModificacion: nowLocalIso(),
+      });
+      await Swal.fire({
+        title: 'Guardado',
+        text: 'Los cambios se guardaron correctamente.',
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false,
+      });
+      setEditing(null);
+      loadData();
+    } catch (err) {
+      Swal.fire({
+        title: 'Error',
+        text: err.message || 'No se pudieron guardar los cambios.',
+        icon: 'error',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const columns = [
+    ...baseColumns,
+    {
+      key: '__actions',
+      header: 'Acciones',
+      render: (row) => (
+        <button
+          type="button"
+          className="payroll-action-btn"
+          onClick={() => openEdit(row)}
+          title="Editar resolución"
+          aria-label="Editar resolución"
+        >
+          <Pencil size={16} />
+        </button>
+      ),
+    },
+  ];
 
   const stats = useMemo(() => ({
     total: data.length,
@@ -353,6 +449,74 @@ const AlertasPayroll = () => {
           </div>
         </>
       )}
+
+      <Modal
+        isOpen={!!editing}
+        onClose={closeEdit}
+        title={editing ? editing.asunto || `Alerta #${editing.idNotificacion}` : ''}
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={closeEdit}
+              disabled={saving}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+          </>
+        }
+      >
+        {editing && (
+          <div className="payroll-edit-form">
+            <div className="form-group">
+              <label className="form-label" htmlFor="payroll-edit-estado">Estado</label>
+              <select
+                id="payroll-edit-estado"
+                className="form-control"
+                value={editEstado}
+                onChange={(e) => setEditEstado(e.target.value)}
+                disabled={saving}
+              >
+                <option value="P">En Proceso</option>
+                <option value="R">Resuelto</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="payroll-edit-notas">Notas Resolución</label>
+              <textarea
+                id="payroll-edit-notas"
+                className="form-control"
+                rows={4}
+                value={editNotas}
+                onChange={(e) => setEditNotas(e.target.value)}
+                placeholder="Ingrese observaciones sobre la resolución..."
+                disabled={saving}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Usuario Resolución</label>
+              <input
+                type="text"
+                className="form-control"
+                value={usuarioSesion}
+                readOnly
+              />
+              <small className="payroll-edit-hint">
+                Se asigna automáticamente al usuario de la sesión al guardar.
+              </small>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
