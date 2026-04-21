@@ -14,7 +14,7 @@ import {
 } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
 import { Zap, Trophy, Calendar, Filter, Download } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from '@e965/xlsx';
 import { apiClient } from '../../services/api';
 import { tasksService } from '../../services/tasksService';
 import { SessionContext } from '../../context/SessionContext';

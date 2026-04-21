@@ -4,7 +4,7 @@ import {
   Eye, Search, History, Undo2, Download, FileSpreadsheet, Upload,
   ArrowUpDown, ArrowUp, ArrowDown, Calendar, X,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from '@e965/xlsx';
 import Swal from 'sweetalert2';
 import toast, { Toaster } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';

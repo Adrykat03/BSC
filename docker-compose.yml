@@ -5,7 +5,7 @@ services:
   # MongoDB - Base de datos principal
   # ============================================
   bsc_mongo:
-    image: mongo:7
+    image: mongo:7@sha256:43fddee7e532a920f3dfdee9e8f4834398c155c26bcb92d790cc1cd3c630fc40
     container_name: bsc_mongo
     restart: unless-stopped
     environment:
@@ -52,7 +52,7 @@ services:
   # El output (frontend/dist/) se monta como volumen en ./html
   # ============================================
   bsc_frontend:
-    image: nginx:alpine
+    image: nginx:alpine@sha256:8aa63af009a39ecd6c28d61da578a5447378c10bb097a069e3a3e0fb42bb6b19
     container_name: bsc_frontend
     restart: unless-stopped
     ports:
@@ -69,10 +69,26 @@ services:
 
 
   # ============================================
+  # File Server - Apache httpd sirviendo ./files
+  # Usado por nginx (proxy /files/) para evidencias e insumos de tareas
+  # ============================================
+  bsc_fileserver:
+    image: httpd:alpine@sha256:8f26f33a7002658050e9ab2cd6b77502619dfc89d0a6ba2e9e4a202e0ef04596
+    container_name: bsc_fileserver
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    volumes:
+      - ./files:/usr/local/apache2/htdocs
+    networks:
+      bsc_net:
+        ipv4_address: 19.168.78.13
+
+  # ============================================
   # Mongo Express - Admin UI para MongoDB
   # ============================================
   bsc_mongoexpress:
-    image: mongo-express:latest
+    image: mongo-express:1.0.2-20@sha256:30fc6333779340217c6a2bc0bc3cd53aa46028ab8fc6caef41bd00bf0faacf53
     container_name: bsc_mongoexpress
     restart: unless-stopped
     environment:
