@@ -184,9 +184,9 @@
   color: var(--color-info-text);
 }
 
-.payroll-badge--caducada {
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
+.payroll-badge--cerrada {
+  background: var(--color-status-inactive-bg);
+  color: var(--color-status-inactive-text);
 }
 
 .payroll-badge--error {
@@ -199,9 +199,10 @@
   color: var(--color-error-text);
 }
 
+/* Prioridad: Alta = rojo, Media = amarillo, Baja = verde */
 .payroll-badge--alta {
-  background: #FFF7ED;
-  color: #C2410C;
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
 }
 
 .payroll-badge--media {
@@ -210,13 +211,34 @@
 }
 
 .payroll-badge--baja {
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
 .payroll-badge--sin-asignar {
   background: var(--color-status-inactive-bg);
   color: var(--color-status-inactive-text);
+}
+
+/* Descripción: Con novedad = rojo, Sin novedad = verde, Reporteria = celeste, Error Proceso = amarillo */
+.payroll-badge--desc-con-novedad {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.payroll-badge--desc-sin-novedad {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.payroll-badge--desc-reporteria {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.payroll-badge--desc-error {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
 
 /* Action buttons use design system classes: .table__actions + .btn--icon.btn--sm.btn--ghost */

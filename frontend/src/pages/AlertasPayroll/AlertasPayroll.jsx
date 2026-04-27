@@ -3,6 +3,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Download,
   Eye,
   Pencil,
   Search,
@@ -122,7 +123,7 @@ const StatusBadge = ({ status }) => {
     A: 'payroll-badge--activa',
     P: 'payroll-badge--en-proceso',
     R: 'payroll-badge--resuelta',
-    C: 'payroll-badge--caducada',
+    C: 'payroll-badge--cerrada',
     E: 'payroll-badge--error',
   };
   return (
@@ -135,10 +136,14 @@ const StatusBadge = ({ status }) => {
 /* ========================================
    Priority Badge
    ======================================== */
+const normalizePriority = (priority) =>
+  priority ? String(priority).trim().toLowerCase() : '';
+
 const PriorityBadge = ({ priority }) => {
   if (!priority) {
     return <span className="payroll-badge payroll-badge--sin-asignar">Sin asignar</span>;
   }
+  const key = normalizePriority(priority);
   const classMap = {
     critica: 'payroll-badge--critica',
     alta: 'payroll-badge--alta',
@@ -146,10 +151,29 @@ const PriorityBadge = ({ priority }) => {
     baja: 'payroll-badge--baja',
   };
   return (
-    <span className={`payroll-badge ${classMap[priority] || ''}`}>
-      {PRIORIDAD_LABELS[priority] || priority}
+    <span className={`payroll-badge ${classMap[key] || ''}`}>
+      {PRIORIDAD_LABELS[key] || priority}
     </span>
   );
+};
+
+/* ========================================
+   Description Badge
+   ======================================== */
+const DESCRIPCION_CLASS = {
+  'con novedad': 'payroll-badge--desc-con-novedad',
+  'sin novedad': 'payroll-badge--desc-sin-novedad',
+  'reporteria': 'payroll-badge--desc-reporteria',
+  'reportería': 'payroll-badge--desc-reporteria',
+  'error proceso': 'payroll-badge--desc-error',
+};
+
+const DescriptionBadge = ({ descripcion }) => {
+  if (!descripcion) return <span>—</span>;
+  const key = descripcion.trim().toLowerCase();
+  const cls = DESCRIPCION_CLASS[key];
+  if (!cls) return <span>{truncate(descripcion, 80)}</span>;
+  return <span className={`payroll-badge ${cls}`}>{descripcion.trim()}</span>;
 };
 
 /* ========================================
@@ -399,8 +423,8 @@ const baseColumns = [
     key: 'prioridad',
     header: 'Prioridad',
     type: 'text',
-    filterValue: (row) => PRIORIDAD_LABELS[row.prioridad] || row.prioridad || '',
-    sortValue: (row) => PRIORIDAD_LABELS[row.prioridad] || row.prioridad || '',
+    filterValue: (row) => PRIORIDAD_LABELS[normalizePriority(row.prioridad)] || row.prioridad || '',
+    sortValue: (row) => PRIORIDAD_LABELS[normalizePriority(row.prioridad)] || row.prioridad || '',
     render: (row) => <PriorityBadge priority={row.prioridad} />,
   },
   {
@@ -415,7 +439,7 @@ const baseColumns = [
     header: 'Descripción',
     type: 'text',
     filterValue: (row) => row.descripcion || '',
-    render: (row) => truncate(row.descripcion, 80),
+    render: (row) => <DescriptionBadge descripcion={row.descripcion} />,
   },
   {
     key: 'destinatarios',
@@ -535,34 +559,63 @@ const AlertasPayroll = () => {
     }
   };
 
+  const handleDescargar = async (row) => {
+    try {
+      await payrollService.descargarAdjunto({
+        rutaAdjunto: row.rutaAdjunto,
+        nombreAdjunto: row.nombreAdjunto,
+      });
+    } catch (err) {
+      Swal.fire({
+        title: 'No se pudo descargar',
+        text: err.message || 'Ocurrió un error al descargar el adjunto.',
+        icon: 'error',
+      });
+    }
+  };
+
   const columns = useMemo(() => [
     {
       key: '__actions',
       header: 'Acciones',
       sortable: false,
       filterable: false,
-      render: (row) => (
-        <div className="table__actions">
-          <button
-            type="button"
-            className="btn btn--icon btn--sm btn--ghost"
-            onClick={(e) => { e.stopPropagation(); openPreview(row); }}
-            data-tooltip="Ver previsualización"
-            aria-label={`Ver previsualización de ${row.asunto || `alerta ${row.idNotificacion}`}`}
-          >
-            <Eye size={16} />
-          </button>
-          <button
-            type="button"
-            className="btn btn--icon btn--sm btn--ghost"
-            onClick={(e) => { e.stopPropagation(); openEdit(row); }}
-            data-tooltip="Editar resolución"
-            aria-label="Editar resolución"
-          >
-            <Pencil size={16} />
-          </button>
-        </div>
-      ),
+      render: (row) => {
+        const tieneAdjunto = !!row.rutaAdjunto;
+        const nombreAdjunto = row.nombreAdjunto || row.rutaAdjunto?.split('/').pop() || '';
+        return (
+          <div className="table__actions">
+            <button
+              type="button"
+              className="btn btn--icon btn--sm btn--ghost"
+              onClick={(e) => { e.stopPropagation(); openPreview(row); }}
+              data-tooltip="Ver previsualización"
+              aria-label={`Ver previsualización de ${row.asunto || `alerta ${row.idNotificacion}`}`}
+            >
+              <Eye size={16} />
+            </button>
+            <button
+              type="button"
+              className="btn btn--icon btn--sm btn--ghost"
+              onClick={(e) => { e.stopPropagation(); openEdit(row); }}
+              data-tooltip="Editar resolución"
+              aria-label="Editar resolución"
+            >
+              <Pencil size={16} />
+            </button>
+            <button
+              type="button"
+              className="btn btn--icon btn--sm btn--ghost"
+              onClick={(e) => { e.stopPropagation(); handleDescargar(row); }}
+              disabled={!tieneAdjunto}
+              data-tooltip={tieneAdjunto ? `Descargar ${nombreAdjunto}` : 'Sin adjunto'}
+              aria-label={tieneAdjunto ? `Descargar adjunto ${nombreAdjunto}` : 'Sin adjunto disponible'}
+            >
+              <Download size={16} />
+            </button>
+          </div>
+        );
+      },
     },
     ...baseColumns,
   ], []);
@@ -625,7 +678,7 @@ const AlertasPayroll = () => {
     activas: data.filter((n) => n.estado === 'A').length,
     enProceso: data.filter((n) => n.estado === 'P').length,
     resueltas: data.filter((n) => n.estado === 'R').length,
-    caducadas: data.filter((n) => n.estado === 'C').length,
+    cerradas: data.filter((n) => n.estado === 'C').length,
     error: data.filter((n) => n.estado === 'E').length,
   }), [data]);
 
@@ -643,7 +696,7 @@ const AlertasPayroll = () => {
     { label: 'Activas', value: stats.activas, color: COLORS.A },
     { label: 'En Proceso', value: stats.enProceso, color: COLORS.P },
     { label: 'Resueltas', value: stats.resueltas, color: COLORS.R },
-    { label: 'Caducadas', value: stats.caducadas, color: COLORS.C },
+    { label: 'Cerradas', value: stats.cerradas, color: COLORS.C },
     { label: 'Error', value: stats.error, color: COLORS.E },
   ];
 
@@ -688,8 +741,8 @@ const AlertasPayroll = () => {
               <span className="payroll-kpi-card__value" style={{ color: COLORS.R }}>{stats.resueltas}</span>
             </div>
             <div className="payroll-kpi-card">
-              <span className="payroll-kpi-card__label">Caducadas</span>
-              <span className="payroll-kpi-card__value" style={{ color: COLORS.C }}>{stats.caducadas}</span>
+              <span className="payroll-kpi-card__label">Cerradas</span>
+              <span className="payroll-kpi-card__value" style={{ color: COLORS.C }}>{stats.cerradas}</span>
             </div>
             <div className="payroll-kpi-card">
               <span className="payroll-kpi-card__label">Error Envío</span>
