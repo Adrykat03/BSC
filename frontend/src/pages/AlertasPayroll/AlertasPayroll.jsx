@@ -1,5 +1,15 @@
-import { useContext, useEffect, useMemo, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Eye,
+  Pencil,
+  Search,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import Swal from 'sweetalert2';
 import Modal from '../../components/common/Modal';
 import SessionContext from '../../context/SessionContext';
@@ -54,23 +64,54 @@ function truncate(text, max) {
   return text.length > max ? text.slice(0, max) + '...' : text;
 }
 
-function formatPeriodo(inicio, fin) {
-  const fmt = (iso) => {
-    const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-  };
-  if (inicio && fin) return `${fmt(inicio)} - ${fmt(fin)}`;
-  if (inicio) return fmt(inicio);
-  if (fin) return fmt(fin);
-  return '—';
-}
-
 function parseDestinatarios(raw) {
   if (!raw) return [];
   return raw
     .split(/[|;,]/)
     .map((d) => d.trim().toLowerCase())
     .filter(Boolean);
+}
+
+function buildPreviewDocument(html) {
+  if (!html) return '';
+  const looksComplete = /<html[\s>]/i.test(html);
+  if (looksComplete) return html;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">` +
+    `<style>body{font-family:Arial,Helvetica,sans-serif;margin:16px;color:#111;font-size:14px;line-height:1.5;}` +
+    `table{border-collapse:collapse;}img{max-width:100%;height:auto;}</style>` +
+    `</head><body>${html}</body></html>`;
+}
+
+function getFilterText(col, row) {
+  if (typeof col.filterValue === 'function') return String(col.filterValue(row) ?? '');
+  const v = row[col.key];
+  return v == null ? '' : String(v);
+}
+
+function getSortValue(col, row) {
+  if (typeof col.sortValue === 'function') return col.sortValue(row);
+  return row[col.key];
+}
+
+function compareValues(a, b, type) {
+  const aEmpty = a == null || a === '';
+  const bEmpty = b == null || b === '';
+  if (aEmpty && bEmpty) return 0;
+  if (aEmpty) return 1;
+  if (bEmpty) return -1;
+
+  if (type === 'number') {
+    return (Number(a) || 0) - (Number(b) || 0);
+  }
+  if (type === 'date') {
+    const ta = new Date(a).getTime();
+    const tb = new Date(b).getTime();
+    return (isNaN(ta) ? 0 : ta) - (isNaN(tb) ? 0 : tb);
+  }
+  return String(a).localeCompare(String(b), 'es', {
+    sensitivity: 'base',
+    numeric: true,
+  });
 }
 
 /* ========================================
@@ -197,20 +238,213 @@ const HorizontalBar = ({ items, maxItems = 8 }) => {
 };
 
 /* ========================================
+   Sort indicator
+   ======================================== */
+const SortIndicator = ({ dir }) => {
+  if (dir === 'asc') return <ArrowUp size={14} aria-hidden="true" />;
+  if (dir === 'desc') return <ArrowDown size={14} aria-hidden="true" />;
+  return <ArrowUpDown size={14} aria-hidden="true" className="payroll-sort-icon--neutral" />;
+};
+
+/* ========================================
+   Preview Modal (iframe + zoom)
+   ======================================== */
+const PREVIEW_BASE_W = 800;
+const PREVIEW_BASE_H = 1100;
+const ZOOM_MIN = 25;
+const ZOOM_MAX = 300;
+const ZOOM_STEP = 25;
+
+const PreviewModal = ({ row, onClose }) => {
+  const [zoom, setZoom] = useState(100);
+  const scrollRef = useRef(null);
+  const closeBtnRef = useRef(null);
+
+  useEffect(() => {
+    setZoom(100);
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeBtnRef.current?.focus();
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setZoom((z) => {
+        const next = z + (e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP);
+        return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, next));
+      });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  const scale = zoom / 100;
+  const doc = buildPreviewDocument(row?.descripcionHtml);
+  const baseTitle = row?.asunto || `Alerta #${row?.idNotificacion ?? ''}`;
+  const fechaTitle = row?.fechaCreacion ? formatDate(row.fechaCreacion) : null;
+  const title = fechaTitle ? `${baseTitle} — ${fechaTitle}` : baseTitle;
+
+  return (
+    <div
+      className="preview-modal__overlay"
+      role="presentation"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="preview-modal" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="preview-modal__header">
+          <span className="preview-modal__title" title={title}>{title}</span>
+
+          <div className="preview-modal__zoom" role="group" aria-label="Controles de zoom">
+            <button
+              type="button"
+              className="preview-modal__zoom-btn"
+              onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))}
+              disabled={zoom <= ZOOM_MIN}
+              aria-label="Alejar"
+              title="Alejar (Ctrl + rueda)"
+            >
+              <ZoomOut size={16} />
+            </button>
+            <button
+              type="button"
+              className="preview-modal__zoom-pct"
+              onClick={() => setZoom(100)}
+              aria-label={`Zoom ${zoom}%. Clic para restablecer al 100%`}
+              title="Restablecer al 100%"
+            >
+              {zoom}%
+            </button>
+            <button
+              type="button"
+              className="preview-modal__zoom-btn"
+              onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))}
+              disabled={zoom >= ZOOM_MAX}
+              aria-label="Acercar"
+              title="Acercar (Ctrl + rueda)"
+            >
+              <ZoomIn size={16} />
+            </button>
+          </div>
+
+          <button
+            ref={closeBtnRef}
+            type="button"
+            className="preview-modal__close"
+            onClick={onClose}
+            aria-label="Cerrar previsualización"
+            title="Cerrar (Esc)"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div ref={scrollRef} className="preview-modal__scroll">
+          {doc ? (
+            <div
+              className="preview-modal__stage"
+              style={{ width: PREVIEW_BASE_W * scale, height: PREVIEW_BASE_H * scale }}
+            >
+              <iframe
+                title="Previsualización del correo"
+                className="preview-modal__iframe"
+                sandbox=""
+                srcDoc={doc}
+                style={{
+                  width: PREVIEW_BASE_W,
+                  height: PREVIEW_BASE_H,
+                  transform: `scale(${scale})`,
+                  transformOrigin: 'top left',
+                }}
+              />
+            </div>
+          ) : (
+            <div className="preview-modal__empty">Sin previsualización disponible</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ========================================
    Table columns definition
    ======================================== */
 const baseColumns = [
-  { key: 'fechaCreacion', header: 'Fecha', render: (row) => formatDate(row.fechaCreacion) },
-  { key: 'estado', header: 'Estado', render: (row) => <StatusBadge status={row.estado} /> },
-  { key: 'prioridad', header: 'Prioridad', render: (row) => <PriorityBadge priority={row.prioridad} /> },
-  { key: 'categoria', header: 'Categoría', render: (row) => row.categoria ?? '—' },
-  { key: 'origen', header: 'Origen' },
-  { key: 'asunto', header: 'Asunto' },
-  { key: 'descripcion', header: 'Descripción', render: (row) => truncate(row.descripcion, 80) },
-  { key: 'destinatarios', header: 'Notificados', render: (row) => parseDestinatarios(row.destinatarios).join(', ') },
-  { key: 'fechaModificacion', header: 'Fecha Resolución', render: (row) => formatDate(row.fechaModificacion) },
-  { key: 'usuarioResolucion', header: 'Usuario Resolución', render: (row) => row.usuarioResolucion ?? '—' },
-  { key: 'notasResolucion', header: 'Notas Resolución', render: (row) => truncate(row.notasResolucion, 60) },
+  {
+    key: 'fechaCreacion',
+    header: 'Fecha',
+    type: 'date',
+    filterValue: (row) => formatDate(row.fechaCreacion),
+    render: (row) => formatDate(row.fechaCreacion),
+  },
+  {
+    key: 'estado',
+    header: 'Estado',
+    type: 'text',
+    filterValue: (row) => ESTADO_LABELS[row.estado] || row.estado || '',
+    sortValue: (row) => ESTADO_LABELS[row.estado] || row.estado || '',
+    render: (row) => <StatusBadge status={row.estado} />,
+  },
+  {
+    key: 'prioridad',
+    header: 'Prioridad',
+    type: 'text',
+    filterValue: (row) => PRIORIDAD_LABELS[row.prioridad] || row.prioridad || '',
+    sortValue: (row) => PRIORIDAD_LABELS[row.prioridad] || row.prioridad || '',
+    render: (row) => <PriorityBadge priority={row.prioridad} />,
+  },
+  {
+    key: 'categoria',
+    header: 'Categoría',
+    type: 'text',
+    render: (row) => row.categoria ?? '—',
+  },
+  { key: 'asunto', header: 'Asunto', type: 'text' },
+  {
+    key: 'descripcion',
+    header: 'Descripción',
+    type: 'text',
+    filterValue: (row) => row.descripcion || '',
+    render: (row) => truncate(row.descripcion, 80),
+  },
+  {
+    key: 'destinatarios',
+    header: 'Notificados',
+    type: 'text',
+    filterValue: (row) => parseDestinatarios(row.destinatarios).join(', '),
+    render: (row) => parseDestinatarios(row.destinatarios).join(', '),
+  },
+  { key: 'origen', header: 'Origen', type: 'text' },
+  {
+    key: 'fechaModificacion',
+    header: 'Fecha Resolución',
+    type: 'date',
+    filterValue: (row) => (row.fechaModificacion ? formatDate(row.fechaModificacion) : ''),
+    render: (row) => formatDate(row.fechaModificacion),
+  },
+  {
+    key: 'usuarioResolucion',
+    header: 'Usuario Resolución',
+    type: 'text',
+    render: (row) => row.usuarioResolucion ?? '—',
+  },
+  {
+    key: 'notasResolucion',
+    header: 'Notas Resolución',
+    type: 'text',
+    filterValue: (row) => row.notasResolucion || '',
+    render: (row) => truncate(row.notasResolucion, 60),
+  },
 ];
 
 /* ========================================
@@ -221,10 +455,17 @@ const AlertasPayroll = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
   const [editing, setEditing] = useState(null);
   const [editEstado, setEditEstado] = useState('P');
   const [editNotas, setEditNotas] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [previewing, setPreviewing] = useState(null);
+
+  const [sort, setSort] = useState({ key: null, dir: null });
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [columnFilters, setColumnFilters] = useState({});
 
   const loadData = () => {
     setLoading(true);
@@ -242,7 +483,7 @@ const AlertasPayroll = () => {
 
   const openEdit = (row) => {
     setEditing(row);
-    setEditEstado(row.estado === 'R' ? 'R' : 'P');
+    setEditEstado(['P', 'R', 'E'].includes(row.estado) ? row.estado : 'P');
     setEditNotas(row.notasResolucion || '');
   };
 
@@ -250,6 +491,9 @@ const AlertasPayroll = () => {
     if (saving) return;
     setEditing(null);
   };
+
+  const openPreview = (row) => setPreviewing(row);
+  const closePreview = () => setPreviewing(null);
 
   const handleSave = async () => {
     const result = await Swal.fire({
@@ -291,24 +535,90 @@ const AlertasPayroll = () => {
     }
   };
 
-  const columns = [
-    ...baseColumns,
+  const columns = useMemo(() => [
     {
       key: '__actions',
       header: 'Acciones',
+      sortable: false,
+      filterable: false,
       render: (row) => (
-        <button
-          type="button"
-          className="payroll-action-btn"
-          onClick={() => openEdit(row)}
-          title="Editar resolución"
-          aria-label="Editar resolución"
-        >
-          <Pencil size={16} />
-        </button>
+        <div className="table__actions">
+          <button
+            type="button"
+            className="btn btn--icon btn--sm btn--ghost"
+            onClick={(e) => { e.stopPropagation(); openPreview(row); }}
+            data-tooltip="Ver previsualización"
+            aria-label={`Ver previsualización de ${row.asunto || `alerta ${row.idNotificacion}`}`}
+          >
+            <Eye size={16} />
+          </button>
+          <button
+            type="button"
+            className="btn btn--icon btn--sm btn--ghost"
+            onClick={(e) => { e.stopPropagation(); openEdit(row); }}
+            data-tooltip="Editar resolución"
+            aria-label="Editar resolución"
+          >
+            <Pencil size={16} />
+          </button>
+        </div>
       ),
     },
-  ];
+    ...baseColumns,
+  ], []);
+
+  const toggleSort = (key) => {
+    setSort((s) => {
+      if (s.key !== key) return { key, dir: 'asc' };
+      if (s.dir === 'asc') return { key, dir: 'desc' };
+      return { key: null, dir: null };
+    });
+  };
+
+  const clearFilters = () => {
+    setGlobalFilter('');
+    setColumnFilters({});
+  };
+
+  const hasFilters = globalFilter.trim() !== ''
+    || Object.values(columnFilters).some((v) => v && v.trim() !== '');
+
+  const filteredSorted = useMemo(() => {
+    let rows = data;
+
+    const g = globalFilter.trim().toLowerCase();
+    if (g) {
+      rows = rows.filter((row) =>
+        columns.some(
+          (col) => col.filterable !== false && getFilterText(col, row).toLowerCase().includes(g),
+        ),
+      );
+    }
+
+    const activeColFilters = Object.entries(columnFilters)
+      .filter(([, v]) => v && v.trim() !== '');
+    if (activeColFilters.length) {
+      rows = rows.filter((row) =>
+        activeColFilters.every(([key, val]) => {
+          const col = columns.find((c) => c.key === key);
+          if (!col) return true;
+          return getFilterText(col, row).toLowerCase().includes(val.trim().toLowerCase());
+        }),
+      );
+    }
+
+    if (sort.key && sort.dir) {
+      const col = columns.find((c) => c.key === sort.key);
+      if (col) {
+        rows = [...rows].sort((a, b) => {
+          const cmp = compareValues(getSortValue(col, a), getSortValue(col, b), col.type);
+          return sort.dir === 'asc' ? cmp : -cmp;
+        });
+      }
+    }
+
+    return rows;
+  }, [data, globalFilter, columnFilters, sort, columns]);
 
   const stats = useMemo(() => ({
     total: data.length,
@@ -413,24 +723,97 @@ const AlertasPayroll = () => {
               <h2 className="card__title">Notificaciones Recientes</h2>
             </div>
             <div className="card__body">
-              <div className="table-responsive">
+              <div className="payroll-toolbar">
+                <div className="payroll-toolbar__search">
+                  <Search size={16} aria-hidden="true" className="payroll-toolbar__search-icon" />
+                  <input
+                    type="text"
+                    className="payroll-toolbar__search-input"
+                    placeholder="Buscar en todas las columnas..."
+                    value={globalFilter}
+                    onChange={(e) => setGlobalFilter(e.target.value)}
+                    aria-label="Búsqueda global"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn--secondary payroll-toolbar__clear"
+                  onClick={clearFilters}
+                  disabled={!hasFilters}
+                >
+                  Limpiar filtros
+                </button>
+                <span className="payroll-toolbar__count" aria-live="polite">
+                  {filteredSorted.length} de {data.length}
+                </span>
+              </div>
+
+              <div className="table-container payroll-sticky-table">
                 <table className="table">
                   <thead>
-                    <tr>
-                      {columns.map((col) => (
-                        <th key={col.key}>{col.header}</th>
-                      ))}
+                    <tr className="payroll-header-row">
+                      {columns.map((col) => {
+                        const sortable = col.sortable !== false;
+                        const isSorted = sortable && sort.key === col.key;
+                        const ariaSort = sortable
+                          ? (isSorted ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none')
+                          : undefined;
+                        return (
+                          <th
+                            key={col.key}
+                            aria-sort={ariaSort}
+                            className={sortable ? 'payroll-th payroll-th--sortable' : 'payroll-th'}
+                          >
+                            {sortable ? (
+                              <button
+                                type="button"
+                                className="payroll-th__sort-btn"
+                                onClick={() => toggleSort(col.key)}
+                                aria-label={`Ordenar por ${col.header}`}
+                              >
+                                <span>{col.header}</span>
+                                <SortIndicator dir={isSorted ? sort.dir : null} />
+                              </button>
+                            ) : (
+                              <span>{col.header}</span>
+                            )}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                    <tr className="payroll-filters-row">
+                      {columns.map((col) => {
+                        const filterable = col.filterable !== false;
+                        return (
+                          <th key={col.key} className="payroll-th-filter">
+                            {filterable ? (
+                              <input
+                                type="text"
+                                className="payroll-filter-input"
+                                placeholder="Filtrar..."
+                                value={columnFilters[col.key] || ''}
+                                onChange={(e) =>
+                                  setColumnFilters((f) => ({ ...f, [col.key]: e.target.value }))
+                                }
+                                aria-label={`Filtrar columna ${col.header}`}
+                              />
+                            ) : null}
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
-                    {data.length === 0 ? (
+                    {filteredSorted.length === 0 ? (
                       <tr>
                         <td colSpan={columns.length} className="text-center p-6 text-secondary">
-                          No hay notificaciones
+                          {data.length === 0
+                            ? 'No hay notificaciones'
+                            : 'Sin coincidencias con los filtros actuales'}
                         </td>
                       </tr>
                     ) : (
-                      data.map((row) => (
+                      filteredSorted.map((row) => (
                         <tr key={row.idNotificacion}>
                           {columns.map((col) => (
                             <td key={col.key}>
@@ -448,6 +831,10 @@ const AlertasPayroll = () => {
             </div>
           </div>
         </>
+      )}
+
+      {previewing && (
+        <PreviewModal row={previewing} onClose={closePreview} />
       )}
 
       <Modal
@@ -488,6 +875,7 @@ const AlertasPayroll = () => {
               >
                 <option value="P">En Proceso</option>
                 <option value="R">Resuelto</option>
+                <option value="E">Error envío</option>
               </select>
             </div>
             <div className="form-group">
