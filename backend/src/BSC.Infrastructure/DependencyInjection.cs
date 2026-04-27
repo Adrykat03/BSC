@@ -6,6 +6,7 @@ using BSC.Infrastructure.Repositories;
 using BSC.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace BSC.Infrastructure;
 
@@ -40,6 +41,32 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<IJwtTokenService>(
             new JwtTokenService(jwtSecretKey, jwtIssuer, jwtAudience, jwtExpirationMinutes));
+
+        // Utilerias Payroll API (proxy de descarga de adjuntos)
+        var utileriasBase = Environment.GetEnvironmentVariable("UTILERIAS_API_BASE")
+            ?? configuration["UtileriasPayroll:BaseUrl"]
+            ?? "https://utileriaspayroll.azurewebsites.net/api/Documentos/";
+        var utileriasToken = Environment.GetEnvironmentVariable("UTILERIAS_TOKEN")
+            ?? configuration["UtileriasPayroll:Token"]
+            ?? string.Empty;
+
+        // BaseAddress de HttpClient debe terminar en "/" para que las URIs relativas concatenen bien.
+        if (!utileriasBase.EndsWith('/'))
+        {
+            utileriasBase += "/";
+        }
+
+        services.AddSingleton(new UtileriasPayrollOptions
+        {
+            BaseUrl = utileriasBase,
+            Token = utileriasToken,
+        });
+
+        services.AddHttpClient<IUtileriasPayrollClient, UtileriasPayrollClient>(client =>
+        {
+            client.BaseAddress = new Uri(utileriasBase);
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
 
         return services;
     }

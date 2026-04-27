@@ -36,6 +36,8 @@ services:
       JwtSettings__SecretKey: ${JWT_SECRET_KEY}
       JwtSettings__Issuer: ${JWT_ISSUER}
       JwtSettings__Audience: ${JWT_AUDIENCE}
+      UTILERIAS_API_BASE: ${UTILERIAS_API_BASE}
+      UTILERIAS_TOKEN: ${UTILERIAS_TOKEN}
     ports:
       - "5000:8080"
     volumes:
