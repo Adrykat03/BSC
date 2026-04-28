@@ -20,14 +20,28 @@ function triggerBrowserDownload(blob, fileName) {
 
 export const payrollService = {
   async getNotificaciones() {
-    const response = await fetch(
-      `${DAB_API_BASE}/NotificacionesConsolidadas?$orderby=fechaCreacion desc&$first=100`
-    );
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    const all = [];
+    let url = `${DAB_API_BASE}/NotificacionesConsolidadas?$orderby=fechaCreacion desc&$first=100`;
+    let safety = 100;
+    while (url && safety > 0) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      if (Array.isArray(data.value)) all.push(...data.value);
+      const next = data.nextLink || data['@odata.nextLink'] || null;
+      if (!next) {
+        url = null;
+      } else if (/^https?:\/\//i.test(next)) {
+        const u = new URL(next);
+        url = `${DAB_API_BASE}${u.pathname.replace(/^.*?(\/NotificacionesConsolidadas)/, '$1')}${u.search}`;
+      } else {
+        url = next.startsWith('/') ? next : `${DAB_API_BASE}/${next}`;
+      }
+      safety -= 1;
     }
-    const data = await response.json();
-    return (data.value || []).map((row) => ({
+    return all.map((row) => ({
       ...row,
       prioridad: row.Prioridad ?? row.prioridad ?? null,
       categoria: row.Categoria ?? row.categoria ?? null,

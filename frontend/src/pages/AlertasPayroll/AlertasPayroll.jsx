@@ -3,6 +3,11 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Download,
   Eye,
   Pencil,
@@ -12,17 +17,33 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import * as XLSX from '@e965/xlsx';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+  Title as ChartTitle,
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
 import Modal from '../../components/common/Modal';
 import SessionContext from '../../context/SessionContext';
 import { payrollService } from '../../services/payrollService';
 import './AlertasPayroll.css';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, ChartTooltip, ChartLegend, ChartTitle);
 
 const ESTADO_LABELS = {
   A: 'Activa',
   P: 'En Proceso',
   R: 'Resuelta',
   C: 'Cerrada',
-  E: 'Error envío',
+  E: 'Error',
 };
 
 const PRIORIDAD_LABELS = {
@@ -45,7 +66,71 @@ const ORIGIN_COLORS = [
   '#06b6d4', '#f97316', '#ec4899',
 ];
 
+const DESC_KEYS = ['con_novedad', 'sin_novedad', 'reporteria', 'error_proceso'];
+
+const DESC_LABELS = {
+  con_novedad: 'Con novedad',
+  sin_novedad: 'Sin novedad',
+  reporteria: 'Reportería',
+  error_proceso: 'Error Proceso',
+};
+
+const DESC_COLORS = {
+  con_novedad: '#ef4444',
+  sin_novedad: '#22c55e',
+  reporteria: '#3b82f6',
+  error_proceso: '#eab308',
+};
+
+function classifyDescripcion(desc) {
+  if (!desc) return null;
+  const k = String(desc).trim().toLowerCase();
+  if (k === 'con novedad') return 'con_novedad';
+  if (k === 'sin novedad') return 'sin_novedad';
+  if (k === 'reporteria' || k === 'reportería') return 'reporteria';
+  if (k === 'error proceso') return 'error_proceso';
+  return null;
+}
+
+function isCriticalRow(row) {
+  if (!row) return false;
+  if (String(row.prioridad || '').trim().toLowerCase() !== 'alta') return false;
+  if (!['A', 'P', 'E'].includes(row.estado)) return false;
+  const desc = classifyDescripcion(row.descripcion);
+  return desc === 'con_novedad' || desc === 'error_proceso';
+}
+
 const pad2 = (n) => String(n).padStart(2, '0');
+
+function isoDay(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function isoMonth(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+}
+
+function isoWeek(d) {
+  const target = new Date(d.valueOf());
+  const dayNr = (d.getDay() + 6) % 7;
+  target.setDate(target.getDate() - dayNr + 3);
+  const firstThursday = target.valueOf();
+  target.setMonth(0, 1);
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
+  }
+  const week = 1 + Math.ceil((firstThursday - target) / 604800000);
+  return `${target.getFullYear()}-W${pad2(week)}`;
+}
+
+function bucketOf(iso, mode) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  if (mode === 'mes') return isoMonth(d);
+  if (mode === 'semana') return isoWeek(d);
+  return isoDay(d);
+}
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -179,7 +264,7 @@ const DescriptionBadge = ({ descripcion }) => {
 /* ========================================
    Donut Chart (SVG)
    ======================================== */
-const DonutChart = ({ segments, centerLabel = 'Total' }) => {
+const DonutChart = ({ segments, centerLabel = 'Total', showPercent = false }) => {
   const total = segments.reduce((sum, s) => sum + s.value, 0);
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
@@ -221,13 +306,21 @@ const DonutChart = ({ segments, centerLabel = 'Total' }) => {
         </div>
       </div>
       <div className="payroll-donut__legend">
-        {segments.map((seg) => (
-          <div key={seg.label} className="payroll-donut__legend-item">
-            <span className="payroll-donut__legend-dot" style={{ background: seg.color }} />
-            <span>{seg.label}</span>
-            <span className="payroll-donut__legend-value">{seg.value}</span>
-          </div>
-        ))}
+        {segments.map((seg) => {
+          const pct = total > 0 ? Math.round((seg.value / total) * 1000) / 10 : 0;
+          return (
+            <div key={seg.label} className="payroll-donut__legend-item">
+              <span className="payroll-donut__legend-dot" style={{ background: seg.color }} />
+              <span>{seg.label}</span>
+              <span className="payroll-donut__legend-value">
+                {seg.value}
+                {showPercent && total > 0 && (
+                  <span className="payroll-donut__legend-pct"> · {pct}%</span>
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -472,6 +565,366 @@ const baseColumns = [
 ];
 
 /* ========================================
+   XLSX Export
+   ======================================== */
+function downloadAlertasXlsx(alertas, fileName) {
+  if (!alertas.length) {
+    Swal.fire({
+      title: 'Sin resultados',
+      text: 'No hay alertas que coincidan con la selección.',
+      icon: 'info',
+      timer: 1800,
+      showConfirmButton: false,
+    });
+    return;
+  }
+  const rows = alertas.map((a) => ({
+    'ID': a.idNotificacion ?? '',
+    'Fecha Creación': formatDate(a.fechaCreacion),
+    'Estado': ESTADO_LABELS[a.estado] || a.estado || '',
+    'Prioridad': PRIORIDAD_LABELS[normalizePriority(a.prioridad)] || a.prioridad || '',
+    'Categoría': a.categoria || '',
+    'Asunto': a.asunto || '',
+    'Descripción': a.descripcion || '',
+    'Notificados': parseDestinatarios(a.destinatarios).join(', '),
+    'Origen': a.origen || '',
+    'Fecha Resolución': a.fechaModificacion ? formatDate(a.fechaModificacion) : '',
+    'Usuario Resolución': a.usuarioResolucion || '',
+    'Notas Resolución': a.notasResolucion || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const colWidths = Object.keys(rows[0]).map((key) => {
+    const maxLen = Math.max(key.length, ...rows.map((r) => String(r[key] || '').length));
+    return { wch: Math.min(maxLen + 2, 60) };
+  });
+  ws['!cols'] = colWidths;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Alertas');
+  XLSX.writeFile(wb, fileName);
+}
+
+/* ========================================
+   Description Pie (mini doughnut con % al centro)
+   ======================================== */
+const DescriptionPie = ({ label, count, pct, color }) => {
+  const safePct = Math.max(0, Math.min(100, Number(pct) || 0));
+  const data = {
+    datasets: [{
+      data: [safePct, 100 - safePct],
+      backgroundColor: [color, '#E5E7EB'],
+      borderWidth: 0,
+      cutout: '70%',
+    }],
+  };
+  const options = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false },
+    },
+  };
+  const centerPlugin = {
+    id: 'descPieCenter',
+    afterDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      const cx = (chartArea.left + chartArea.right) / 2;
+      const cy = (chartArea.top + chartArea.bottom) / 2;
+      ctx.save();
+      ctx.font = '700 20px Inter, system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${safePct}%`, cx, cy);
+      ctx.restore();
+    },
+  };
+  return (
+    <div className="payroll-dash-pie">
+      <div className="payroll-dash-pie__chart">
+        <Doughnut data={data} options={options} plugins={[centerPlugin]} />
+      </div>
+      <div className="payroll-dash-pie__label">{label}</div>
+      <div className="payroll-dash-pie__count">
+        {count} {count === 1 ? 'alerta' : 'alertas'}
+      </div>
+    </div>
+  );
+};
+
+/* ========================================
+   Alertas Dashboard (Time-series)
+   ======================================== */
+const AlertasDashboard = ({ data }) => {
+  const [filterPrioridad, setFilterPrioridad] = useState('');
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterEstado, setFilterEstado] = useState('');
+  const [groupMode, setGroupMode] = useState('dia');
+
+  const prioridadOptions = useMemo(() => {
+    const set = new Set();
+    data.forEach((a) => {
+      const p = normalizePriority(a.prioridad);
+      if (p) set.add(p);
+    });
+    return Array.from(set).sort();
+  }, [data]);
+
+  const categoriaOptions = useMemo(() => {
+    const set = new Set();
+    data.forEach((a) => { if (a.categoria) set.add(a.categoria); });
+    return Array.from(set).sort();
+  }, [data]);
+
+  const estadoOptions = useMemo(() => {
+    const set = new Set();
+    data.forEach((a) => { if (a.estado) set.add(a.estado); });
+    return Array.from(set).sort();
+  }, [data]);
+
+  const filteredData = useMemo(() => {
+    return data.filter((a) => {
+      if (filterPrioridad && normalizePriority(a.prioridad) !== filterPrioridad) return false;
+      if (filterCategoria && a.categoria !== filterCategoria) return false;
+      if (filterEstado && a.estado !== filterEstado) return false;
+      return true;
+    });
+  }, [data, filterPrioridad, filterCategoria, filterEstado]);
+
+  const kpis = useMemo(() => {
+    const counts = { con_novedad: 0, sin_novedad: 0, reporteria: 0, error_proceso: 0 };
+    let classified = 0;
+    filteredData.forEach((a) => {
+      const k = classifyDescripcion(a.descripcion);
+      if (k) {
+        counts[k] += 1;
+        classified += 1;
+      }
+    });
+    const pct = (n) => classified > 0 ? Math.round((n / classified) * 1000) / 10 : 0;
+    return {
+      total: classified,
+      filtered: filteredData.length,
+      unclassified: filteredData.length - classified,
+      con_novedad: { count: counts.con_novedad, pct: pct(counts.con_novedad) },
+      sin_novedad: { count: counts.sin_novedad, pct: pct(counts.sin_novedad) },
+      reporteria: { count: counts.reporteria, pct: pct(counts.reporteria) },
+      error_proceso: { count: counts.error_proceso, pct: pct(counts.error_proceso) },
+    };
+  }, [filteredData]);
+
+  const chartData = useMemo(() => {
+    const buckets = new Map();
+    filteredData.forEach((a) => {
+      const k = classifyDescripcion(a.descripcion);
+      if (!k) return;
+      const bk = bucketOf(a.fechaCreacion, groupMode);
+      if (!bk) return;
+      if (!buckets.has(bk)) {
+        buckets.set(bk, { con_novedad: 0, sin_novedad: 0, reporteria: 0, error_proceso: 0 });
+      }
+      buckets.get(bk)[k] += 1;
+    });
+    const labels = Array.from(buckets.keys()).sort();
+    const datasets = DESC_KEYS.map((k) => ({
+      label: DESC_LABELS[k],
+      data: labels.map((lbl) => buckets.get(lbl)[k]),
+      backgroundColor: DESC_COLORS[k],
+      borderRadius: 4,
+      maxBarThickness: 40,
+      stack: 'alertas',
+      _descKey: k,
+    }));
+    return { labels, datasets };
+  }, [filteredData, groupMode]);
+
+  const handleBarClick = (event, elements) => {
+    if (!elements || elements.length === 0) return;
+    const el = elements[0];
+    const ds = chartData.datasets[el.datasetIndex];
+    const descKey = ds?._descKey;
+    const bucketKey = chartData.labels[el.index];
+    if (!descKey || !bucketKey) return;
+
+    const matched = filteredData.filter((a) => (
+      classifyDescripcion(a.descripcion) === descKey &&
+      bucketOf(a.fechaCreacion, groupMode) === bucketKey
+    ));
+
+    const safeBucket = bucketKey.replace(/[^\w-]/g, '_');
+    const safeDesc = DESC_LABELS[descKey].replace(/\s+/g, '');
+    downloadAlertasXlsx(matched, `Alertas_${safeDesc}_${safeBucket}.xlsx`);
+  };
+
+  const groupTitle = groupMode === 'mes' ? 'Mes' : groupMode === 'semana' ? 'Semana' : 'Día';
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    onClick: handleBarClick,
+    onHover: (e, els) => {
+      if (e?.native?.target) e.native.target.style.cursor = els.length ? 'pointer' : 'default';
+    },
+    interaction: { mode: 'nearest', intersect: true },
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: {
+        callbacks: {
+          afterBody: () => 'Click en la barra para descargar XLSX',
+        },
+      },
+    },
+    scales: {
+      x: { stacked: true, title: { display: true, text: groupTitle } },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        ticks: { precision: 0 },
+        title: { display: true, text: 'Alertas' },
+      },
+    },
+  };
+
+  const clearDashFilters = () => {
+    setFilterPrioridad('');
+    setFilterCategoria('');
+    setFilterEstado('');
+  };
+
+  const hasDashFilters = !!filterPrioridad || !!filterCategoria || !!filterEstado;
+
+  return (
+    <div className="payroll-dashboard-tab">
+      <div className="card mb-4">
+        <div className="card__body">
+          <div className="payroll-dash-filters">
+            <div className="payroll-dash-filter">
+              <label className="form-label" htmlFor="dash-prioridad">Prioridad</label>
+              <select
+                id="dash-prioridad"
+                className="form-control"
+                value={filterPrioridad}
+                onChange={(e) => setFilterPrioridad(e.target.value)}
+              >
+                <option value="">Todas</option>
+                {prioridadOptions.map((p) => (
+                  <option key={p} value={p}>{PRIORIDAD_LABELS[p] || p}</option>
+                ))}
+              </select>
+            </div>
+            <div className="payroll-dash-filter">
+              <label className="form-label" htmlFor="dash-categoria">Categoría</label>
+              <select
+                id="dash-categoria"
+                className="form-control"
+                value={filterCategoria}
+                onChange={(e) => setFilterCategoria(e.target.value)}
+              >
+                <option value="">Todas</option>
+                {categoriaOptions.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div className="payroll-dash-filter">
+              <label className="form-label" htmlFor="dash-estado">Estado</label>
+              <select
+                id="dash-estado"
+                className="form-control"
+                value={filterEstado}
+                onChange={(e) => setFilterEstado(e.target.value)}
+              >
+                <option value="">Todos</option>
+                {estadoOptions.map((s) => (
+                  <option key={s} value={s}>{ESTADO_LABELS[s] || s}</option>
+                ))}
+              </select>
+            </div>
+            <div className="payroll-dash-filter">
+              <label className="form-label">Agrupar por</label>
+              <div className="payroll-dash-segmented" role="group" aria-label="Agrupación temporal">
+                {[
+                  { k: 'dia', l: 'Día' },
+                  { k: 'semana', l: 'Semana' },
+                  { k: 'mes', l: 'Mes' },
+                ].map(({ k, l }) => (
+                  <button
+                    key={k}
+                    type="button"
+                    className={`payroll-dash-segmented__btn ${groupMode === k ? 'is-active' : ''}`}
+                    onClick={() => setGroupMode(k)}
+                    aria-pressed={groupMode === k}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="payroll-dash-filter payroll-dash-filter--actions">
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={clearDashFilters}
+                disabled={!hasDashFilters}
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="payroll-dash-summary">
+        <span>
+          <strong>{kpis.filtered}</strong> alertas filtradas
+        </span>
+        <span>
+          <strong>{kpis.total}</strong> clasificadas
+        </span>
+        {kpis.unclassified > 0 && (
+          <span className="payroll-dash-summary__warn">
+            {kpis.unclassified} sin clasificar
+          </span>
+        )}
+      </div>
+
+      <div className="payroll-dash-pies">
+        {DESC_KEYS.map((k) => (
+          <DescriptionPie
+            key={k}
+            label={DESC_LABELS[k]}
+            count={kpis[k].count}
+            pct={kpis[k].pct}
+            color={DESC_COLORS[k]}
+          />
+        ))}
+      </div>
+
+      <div className="card">
+        <div className="card__header payroll-dash-chart-header">
+          <h2 className="card__title">Alertas vs Tiempo</h2>
+          <span className="payroll-dash-hint">
+            Click en una barra para descargar el detalle en XLSX
+          </span>
+        </div>
+        <div className="card__body">
+          {chartData.labels.length === 0 ? (
+            <div className="text-center p-6 text-secondary">
+              No hay alertas que coincidan con los filtros.
+            </div>
+          ) : (
+            <div className="payroll-dash-chart">
+              <Bar data={chartData} options={options} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ========================================
    Main Dashboard Component
    ======================================== */
 const AlertasPayroll = () => {
@@ -490,6 +943,16 @@ const AlertasPayroll = () => {
   const [sort, setSort] = useState({ key: null, dir: null });
   const [globalFilter, setGlobalFilter] = useState('');
   const [columnFilters, setColumnFilters] = useState({});
+
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [catDescFilter, setCatDescFilter] = useState(() => new Set(DESC_KEYS));
+
+  const [filterDateFrom, setFilterDateFrom] = useState(null);
+  const [filterDateTo, setFilterDateTo] = useState(null);
+  const datePickerRef = useRef(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const loadData = () => {
     setLoading(true);
@@ -631,10 +1094,13 @@ const AlertasPayroll = () => {
   const clearFilters = () => {
     setGlobalFilter('');
     setColumnFilters({});
+    setFilterDateFrom(null);
+    setFilterDateTo(null);
   };
 
   const hasFilters = globalFilter.trim() !== ''
-    || Object.values(columnFilters).some((v) => v && v.trim() !== '');
+    || Object.values(columnFilters).some((v) => v && v.trim() !== '')
+    || !!filterDateFrom || !!filterDateTo;
 
   const filteredSorted = useMemo(() => {
     let rows = data;
@@ -660,6 +1126,19 @@ const AlertasPayroll = () => {
       );
     }
 
+    if (filterDateFrom || filterDateTo) {
+      const fromTs = filterDateFrom ? new Date(filterDateFrom).setHours(0, 0, 0, 0) : null;
+      const toTs = filterDateTo ? new Date(filterDateTo).setHours(23, 59, 59, 999) : null;
+      rows = rows.filter((row) => {
+        if (!row.fechaCreacion) return false;
+        const t = new Date(row.fechaCreacion).getTime();
+        if (isNaN(t)) return false;
+        if (fromTs !== null && t < fromTs) return false;
+        if (toTs !== null && t > toTs) return false;
+        return true;
+      });
+    }
+
     if (sort.key && sort.dir) {
       const col = columns.find((c) => c.key === sort.key);
       if (col) {
@@ -671,7 +1150,24 @@ const AlertasPayroll = () => {
     }
 
     return rows;
-  }, [data, globalFilter, columnFilters, sort, columns]);
+  }, [data, globalFilter, columnFilters, filterDateFrom, filterDateTo, sort, columns]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSorted.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedRows = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredSorted.slice(start, start + pageSize);
+  }, [filteredSorted, safePage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [globalFilter, columnFilters, filterDateFrom, filterDateTo, pageSize]);
+
+  const handleDownloadTabla = () => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadAlertasXlsx(filteredSorted, `Alertas_${stamp}.xlsx`);
+  };
 
   const stats = useMemo(() => ({
     total: data.length,
@@ -682,15 +1178,28 @@ const AlertasPayroll = () => {
     error: data.filter((n) => n.estado === 'E').length,
   }), [data]);
 
-  const origenItems = useMemo(() => {
+  const categoriaItems = useMemo(() => {
     const map = new Map();
-    data.forEach((n) => map.set(n.origen, (map.get(n.origen) || 0) + 1));
+    data.forEach((n) => {
+      const descKey = classifyDescripcion(n.descripcion);
+      if (!descKey || !catDescFilter.has(descKey)) return;
+      const cat = n.categoria || 'Sin categoría';
+      map.set(cat, (map.get(cat) || 0) + 1);
+    });
     return Array.from(map, ([label, value], i) => ({
       label,
       value,
       color: ORIGIN_COLORS[i % ORIGIN_COLORS.length],
-    }));
-  }, [data]);
+    })).sort((a, b) => b.value - a.value);
+  }, [data, catDescFilter]);
+
+  const toggleCatDesc = (key) => {
+    setCatDescFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   const donutSegments = [
     { label: 'Activas', value: stats.activas, color: COLORS.A },
@@ -699,6 +1208,22 @@ const AlertasPayroll = () => {
     { label: 'Cerradas', value: stats.cerradas, color: COLORS.C },
     { label: 'Error', value: stats.error, color: COLORS.E },
   ];
+
+  const pendientesSegments = useMemo(() => {
+    const pendKeys = ['con_novedad', 'reporteria', 'error_proceso'];
+    const counts = { con_novedad: 0, reporteria: 0, error_proceso: 0 };
+    data.forEach((n) => {
+      if (!['A', 'P', 'E'].includes(n.estado)) return;
+      const k = classifyDescripcion(n.descripcion);
+      if (!k || !pendKeys.includes(k)) return;
+      counts[k] += 1;
+    });
+    return pendKeys.map((k) => ({
+      label: DESC_LABELS[k],
+      value: counts[k],
+      color: DESC_COLORS[k],
+    }));
+  }, [data]);
 
   return (
     <div>
@@ -721,6 +1246,33 @@ const AlertasPayroll = () => {
       {loading ? (
         <div className="text-center p-6">Cargando notificaciones...</div>
       ) : (
+        <>
+          <div className="payroll-tabs" role="tablist" aria-label="Vistas de Alertas Payroll">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'dashboard'}
+              className={`payroll-tab ${activeTab === 'dashboard' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+            >
+              Dashboard
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'listado'}
+              className={`payroll-tab ${activeTab === 'listado' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('listado')}
+            >
+              Listado
+            </button>
+          </div>
+
+          {activeTab === 'dashboard' && (
+            <AlertasDashboard data={data} />
+          )}
+
+          {activeTab === 'listado' && (
         <>
           {/* KPI Cards */}
           <div className="payroll-kpi-row">
@@ -745,13 +1297,25 @@ const AlertasPayroll = () => {
               <span className="payroll-kpi-card__value" style={{ color: COLORS.C }}>{stats.cerradas}</span>
             </div>
             <div className="payroll-kpi-card">
-              <span className="payroll-kpi-card__label">Error Envío</span>
+              <span className="payroll-kpi-card__label">Error</span>
               <span className="payroll-kpi-card__value" style={{ color: COLORS.E }}>{stats.error}</span>
             </div>
           </div>
 
           {/* Charts */}
           <div className="payroll-charts-row">
+            <div className="card">
+              <div className="card__header">
+                <h2 className="card__title">Pendientes por Resolver</h2>
+              </div>
+              <div className="card__body">
+                <DonutChart
+                  segments={pendientesSegments}
+                  centerLabel="Pendientes"
+                  showPercent
+                />
+              </div>
+            </div>
             <div className="card">
               <div className="card__header">
                 <h2 className="card__title">Distribución por Estado</h2>
@@ -762,18 +1326,58 @@ const AlertasPayroll = () => {
             </div>
             <div className="card">
               <div className="card__header">
-                <h2 className="card__title">Alertas por Origen</h2>
+                <h2 className="card__title">Alertas por Categoría</h2>
               </div>
               <div className="card__body">
-                <HorizontalBar items={origenItems} />
+                <div className="payroll-cat-filters" role="group" aria-label="Filtrar por descripción">
+                  {DESC_KEYS.map((k) => {
+                    const active = catDescFilter.has(k);
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        className={`payroll-cat-chip ${active ? 'is-active' : ''}`}
+                        onClick={() => toggleCatDesc(k)}
+                        aria-pressed={active}
+                        style={active ? {
+                          backgroundColor: DESC_COLORS[k],
+                          borderColor: DESC_COLORS[k],
+                          color: '#ffffff',
+                        } : { borderColor: DESC_COLORS[k], color: DESC_COLORS[k] }}
+                      >
+                        {DESC_LABELS[k]}
+                      </button>
+                    );
+                  })}
+                  {(() => {
+                    const allActive = catDescFilter.size === DESC_KEYS.length;
+                    return (
+                      <button
+                        type="button"
+                        className="payroll-cat-chip payroll-cat-chip--reset"
+                        onClick={() => setCatDescFilter(allActive ? new Set() : new Set(DESC_KEYS))}
+                        aria-label={allActive ? 'Limpiar todos los filtros' : 'Seleccionar todos los filtros'}
+                      >
+                        {allActive ? 'Limpiar' : 'Todas'}
+                      </button>
+                    );
+                  })()}
+                </div>
+                {categoriaItems.length === 0 ? (
+                  <div className="text-center p-6 text-secondary">
+                    Sin coincidencias para los filtros seleccionados.
+                  </div>
+                ) : (
+                  <HorizontalBar items={categoriaItems} />
+                )}
               </div>
             </div>
           </div>
 
-          {/* Recent Notifications Table */}
+          {/* Alertas Table */}
           <div className="card">
             <div className="card__header">
-              <h2 className="card__title">Notificaciones Recientes</h2>
+              <h2 className="card__title">Alertas</h2>
             </div>
             <div className="card__body">
               <div className="payroll-toolbar">
@@ -788,14 +1392,84 @@ const AlertasPayroll = () => {
                     aria-label="Búsqueda global"
                   />
                 </div>
+
+                <div className="payroll-toolbar__date">
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--sm payroll-toolbar__date-btn"
+                    onClick={() => datePickerRef.current?.setOpen(true)}
+                    data-tooltip="Filtrar por fecha de creación"
+                    aria-label="Filtrar por fecha de creación"
+                  >
+                    <Calendar size={16} aria-hidden="true" />
+                    <span>
+                      {filterDateFrom && filterDateTo
+                        ? `${filterDateFrom.toLocaleDateString('es-ES')} – ${filterDateTo.toLocaleDateString('es-ES')}`
+                        : filterDateFrom
+                          ? `${filterDateFrom.toLocaleDateString('es-ES')} –`
+                          : 'Fecha'}
+                    </span>
+                    {(filterDateFrom || filterDateTo) && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="payroll-toolbar__date-clear"
+                        aria-label="Quitar filtro de fecha"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFilterDateFrom(null);
+                          setFilterDateTo(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setFilterDateFrom(null);
+                            setFilterDateTo(null);
+                          }
+                        }}
+                      >
+                        <X size={14} />
+                      </span>
+                    )}
+                  </button>
+                  <div className="payroll-toolbar__date-picker">
+                    <DatePicker
+                      ref={datePickerRef}
+                      selectsRange
+                      startDate={filterDateFrom}
+                      endDate={filterDateTo}
+                      onChange={(dates) => {
+                        const [start, end] = dates || [null, null];
+                        setFilterDateFrom(start);
+                        setFilterDateTo(end);
+                      }}
+                      dateFormat="dd/MM/yyyy"
+                      isClearable={false}
+                      customInput={<span style={{ display: 'none' }} />}
+                    />
+                  </div>
+                </div>
+
                 <button
                   type="button"
-                  className="btn btn--secondary payroll-toolbar__clear"
+                  className="btn btn--primary btn--sm"
+                  onClick={handleDownloadTabla}
+                  disabled={filteredSorted.length === 0}
+                  data-tooltip={hasFilters ? 'Descargar resultados filtrados' : 'Descargar todas las alertas'}
+                >
+                  <Download size={16} aria-hidden="true" /> Descargar
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--sm payroll-toolbar__clear"
                   onClick={clearFilters}
                   disabled={!hasFilters}
                 >
                   Limpiar filtros
                 </button>
+
                 <span className="payroll-toolbar__count" aria-live="polite">
                   {filteredSorted.length} de {data.length}
                 </span>
@@ -861,13 +1535,16 @@ const AlertasPayroll = () => {
                       <tr>
                         <td colSpan={columns.length} className="text-center p-6 text-secondary">
                           {data.length === 0
-                            ? 'No hay notificaciones'
+                            ? 'No hay alertas'
                             : 'Sin coincidencias con los filtros actuales'}
                         </td>
                       </tr>
                     ) : (
-                      filteredSorted.map((row) => (
-                        <tr key={row.idNotificacion}>
+                      paginatedRows.map((row) => (
+                        <tr
+                          key={row.idNotificacion}
+                          className={isCriticalRow(row) ? 'payroll-row--critical' : ''}
+                        >
                           {columns.map((col) => (
                             <td key={col.key}>
                               {col.render
@@ -881,8 +1558,72 @@ const AlertasPayroll = () => {
                   </tbody>
                 </table>
               </div>
+
+              <div className="payroll-pagination">
+                <div className="payroll-pagination__size">
+                  <label htmlFor="payroll-page-size">Filas por página:</label>
+                  <select
+                    id="payroll-page-size"
+                    className="form-control"
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                  >
+                    {[10, 20, 50, 100, 200].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="payroll-pagination__info">
+                  {filteredSorted.length === 0
+                    ? '0 resultados'
+                    : `${(safePage - 1) * pageSize + 1}–${(safePage - 1) * pageSize + paginatedRows.length} de ${filteredSorted.length}`}
+                </div>
+                <div className="payroll-pagination__nav" role="group" aria-label="Paginación">
+                  <button
+                    type="button"
+                    className="btn btn--icon btn--sm btn--ghost"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={safePage <= 1}
+                    aria-label="Primera página"
+                  >
+                    <ChevronsLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--icon btn--sm btn--ghost"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    aria-label="Página anterior"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="payroll-pagination__page">
+                    Página {safePage} de {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn--icon btn--sm btn--ghost"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    aria-label="Página siguiente"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--icon btn--sm btn--ghost"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={safePage >= totalPages}
+                    aria-label="Última página"
+                  >
+                    <ChevronsRight size={16} />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+        </>
+          )}
         </>
       )}
 
@@ -928,7 +1669,7 @@ const AlertasPayroll = () => {
               >
                 <option value="P">En Proceso</option>
                 <option value="R">Resuelto</option>
-                <option value="E">Error envío</option>
+                <option value="E">Error</option>
               </select>
             </div>
             <div className="form-group">

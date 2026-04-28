@@ -1,4 +1,189 @@
 /* ==========================================================================
+   Tabs (Dashboard / Listado)
+   ========================================================================== */
+.payroll-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border-main);
+  margin-bottom: var(--spacing-5);
+}
+
+.payroll-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: var(--spacing-3) var(--spacing-5);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.payroll-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.payroll-tab.is-active {
+  color: var(--color-primary, #2563EB);
+  border-bottom-color: var(--color-primary, #2563EB);
+}
+
+.payroll-tab:focus-visible {
+  outline: 2px solid var(--color-primary, #2563EB);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ==========================================================================
+   Dashboard tab — filters, KPIs, time-series chart
+   ========================================================================== */
+.payroll-dashboard-tab {
+  display: block;
+}
+
+.payroll-dash-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-4);
+  align-items: end;
+}
+
+.payroll-dash-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: 0;
+}
+
+.payroll-dash-filter--actions {
+  align-self: end;
+}
+
+.payroll-dash-segmented {
+  display: inline-flex;
+  background: var(--color-bg-main);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 2px;
+  width: 100%;
+}
+
+.payroll-dash-segmented__btn {
+  flex: 1;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.payroll-dash-segmented__btn:hover {
+  color: var(--color-text-primary);
+}
+
+.payroll-dash-segmented__btn.is-active {
+  background: var(--color-bg-paper);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  font-weight: var(--font-weight-semibold);
+}
+
+.payroll-dash-summary {
+  display: flex;
+  gap: var(--spacing-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.payroll-dash-summary strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.payroll-dash-summary__warn {
+  color: var(--color-warning-text, #92400E);
+}
+
+.payroll-dash-pies {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-5);
+}
+
+.payroll-dash-pie {
+  background: var(--color-bg-paper);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--spacing-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.payroll-dash-pie__chart {
+  width: 110px;
+  height: 110px;
+}
+
+.payroll-dash-pie__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  text-align: center;
+  margin-top: var(--spacing-1);
+}
+
+.payroll-dash-pie__count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.payroll-dash-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  flex-wrap: wrap;
+}
+
+.payroll-dash-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.payroll-dash-chart {
+  position: relative;
+  height: 420px;
+}
+
+@media (max-width: 1024px) {
+  .payroll-dash-pies {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .payroll-dash-pies {
+    grid-template-columns: 1fr;
+  }
+  .payroll-dash-chart {
+    height: 320px;
+  }
+}
+
+/* ==========================================================================
    Alertas Payroll Dashboard
    ========================================================================== */
 
@@ -37,7 +222,7 @@
 /* Charts row */
 .payroll-charts-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--spacing-6);
   margin-bottom: var(--spacing-6);
 }
@@ -108,6 +293,59 @@
   font-weight: var(--font-weight-semibold);
   min-width: 24px;
   text-align: right;
+}
+
+.payroll-donut__legend-pct {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-left: 2px;
+}
+
+/* Category filters (chips) */
+.payroll-cat-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-3);
+}
+
+.payroll-cat-chip {
+  appearance: none;
+  background: transparent;
+  border: 1.5px solid var(--color-border-main);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+  opacity: 0.55;
+}
+
+.payroll-cat-chip:hover {
+  opacity: 0.85;
+}
+
+.payroll-cat-chip.is-active {
+  opacity: 1;
+}
+
+.payroll-cat-chip:focus-visible {
+  outline: 2px solid var(--color-primary, #2563EB);
+  outline-offset: 2px;
+}
+
+.payroll-cat-chip--reset {
+  margin-left: auto;
+  border-color: var(--color-border-main);
+  color: var(--color-text-secondary);
+  opacity: 1;
+  font-weight: var(--font-weight-semibold);
+}
+
+.payroll-cat-chip--reset:hover {
+  background: var(--color-bg-main);
+  color: var(--color-text-primary);
 }
 
 /* Horizontal bar chart */
@@ -312,6 +550,101 @@
   color: var(--color-text-secondary);
 }
 
+/* Date filter button + popover */
+.payroll-toolbar__date {
+  position: relative;
+  display: inline-flex;
+}
+
+.payroll-toolbar__date-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.payroll-toolbar__date-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  opacity: 0.65;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.payroll-toolbar__date-clear:hover,
+.payroll-toolbar__date-clear:focus-visible {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+  outline: none;
+}
+
+.payroll-toolbar__date-picker {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+}
+
+/* Pagination footer */
+.payroll-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-3) 0 0 0;
+  flex-wrap: wrap;
+}
+
+.payroll-pagination__size {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.payroll-pagination__size .form-control {
+  height: 32px;
+  padding: 0 8px;
+  width: auto;
+  font-size: var(--font-size-sm);
+}
+
+.payroll-pagination__info {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.payroll-pagination__nav {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.payroll-pagination__page {
+  padding: 0 var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .payroll-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .payroll-pagination__nav {
+    margin-left: 0;
+    justify-content: center;
+  }
+}
+
 /* ==========================================================================
    Tabla: hereda padding/height/colores/bordes de .table (components.css).
    Aquí solo se añade lo específico: scroll vertical + sticky headers
@@ -401,6 +734,19 @@
 
 .payroll-table tbody tr:last-child td {
   border-bottom: 0;
+}
+
+/* Critical row: priority Alta + estado in {A,P,E} + descripcion in {Con Novedad, Error Proceso} */
+.payroll-sticky-table .table tbody tr.payroll-row--critical td {
+  background-color: rgba(239, 68, 68, 0.10);
+}
+
+.payroll-sticky-table .table tbody tr.payroll-row--critical:hover td {
+  background-color: rgba(239, 68, 68, 0.18);
+}
+
+.payroll-sticky-table .table tbody tr.payroll-row--critical td:first-child {
+  box-shadow: inset 3px 0 0 #ef4444;
 }
 
 /* ==========================================================================
@@ -562,9 +908,6 @@
 @media (max-width: 1024px) {
   .payroll-kpi-row {
     grid-template-columns: repeat(3, 1fr);
-  }
-  .payroll-charts-row {
-    grid-template-columns: 1fr;
   }
 }
 
