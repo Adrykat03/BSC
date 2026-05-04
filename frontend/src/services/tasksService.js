@@ -25,7 +25,7 @@ export const tasksService = {
     return response.data;
   },
 
-  async getAll(page = 1, pageSize = 20, search = '', status = '', dateFrom = '', dateTo = '', sortDueDate = '') {
+  async getAll(page = 1, pageSize = 20, search = '', status = '', dateFrom = '', dateTo = '', sortDueDate = '', extra = {}) {
     let url = `${ENDPOINT}?page=${page}&pageSize=${pageSize}`;
     if (search && search.trim()) {
       url += `&search=${encodeURIComponent(search.trim())}`;
@@ -41,6 +41,14 @@ export const tasksService = {
     }
     if (sortDueDate) {
       url += `&sortDueDate=${encodeURIComponent(sortDueDate)}`;
+    }
+    if (extra && typeof extra === 'object') {
+      const { titleFilter, assignedToFilter, leaderFilter, sortBy, sortDir } = extra;
+      if (titleFilter && titleFilter.trim()) url += `&titleFilter=${encodeURIComponent(titleFilter.trim())}`;
+      if (assignedToFilter && assignedToFilter.trim()) url += `&assignedToFilter=${encodeURIComponent(assignedToFilter.trim())}`;
+      if (leaderFilter && leaderFilter.trim()) url += `&leaderFilter=${encodeURIComponent(leaderFilter.trim())}`;
+      if (sortBy) url += `&sortBy=${encodeURIComponent(sortBy)}`;
+      if (sortDir) url += `&sortDir=${encodeURIComponent(sortDir)}`;
     }
     const response = await apiClient.get(url);
     return response.data ?? { items: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 };
@@ -81,6 +89,19 @@ export const tasksService = {
       comment,
     });
     return response;
+  },
+
+  async overrideRating(taskId, { newRating, reason }) {
+    const response = await apiClient.put(`${ENDPOINT}/${taskId}/rating-override`, {
+      newRating,
+      reason,
+    });
+    return response;
+  },
+
+  async getDistinctValues(field) {
+    const response = await apiClient.get(`${ENDPOINT}/distinct-values?field=${encodeURIComponent(field)}`);
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async assignTask(taskId, { assigneeId }) {

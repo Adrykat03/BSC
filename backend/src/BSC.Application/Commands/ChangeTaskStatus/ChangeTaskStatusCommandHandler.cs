@@ -87,8 +87,16 @@ public class ChangeTaskStatusCommandHandler : IRequestHandler<ChangeTaskStatusCo
         taskItem.UpdatedAt = DateTime.UtcNow;
         taskItem.UpdatedBy = request.ChangedByEmail;
 
-        // Recalcular calificacion automatica tras cada cambio de estado
-        taskItem.Rating = CalculateRating(taskItem);
+        // Recalcular calificacion automatica tras cada cambio de estado.
+        // Si el Gerente ya hizo un override manual, lo respetamos y no recalculamos.
+        if (taskItem.RatingOverride.HasValue)
+        {
+            taskItem.Rating = taskItem.RatingOverride.Value;
+        }
+        else
+        {
+            taskItem.Rating = CalculateRating(taskItem);
+        }
 
         await _taskItemRepository.UpdateAsync(taskItem);
 

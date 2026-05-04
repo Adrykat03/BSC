@@ -15,6 +15,26 @@
   width: 100%;
 }
 
+/* Header con sort + filtro inline (estilo Excel) */
+.tasks-th__inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.tasks-th__sort {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tasks-th__sort:hover {
+  color: var(--color-text-primary);
+}
+
 /* Toolbar responsive */
 @media (max-width: 639px) {
   .tasks-toolbar {

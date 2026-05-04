@@ -359,6 +359,7 @@ const TaskModal = ({
   onSaveOnly,
   onUploadEvidence,
   onChangeStatus,
+  onRatingOverride,
   onAssign,
   task,
   loading,
@@ -395,10 +396,17 @@ const TaskModal = ({
   const dragStart = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
   const [errors, setErrors] = useState({});
 
+  const [showRatingOverride, setShowRatingOverride] = useState(false);
+  const [overrideRatingValue, setOverrideRatingValue] = useState('');
+  const [overrideReason, setOverrideReason] = useState('');
+  const [savingRatingOverride, setSavingRatingOverride] = useState(false);
+
   const isEditing = Boolean(task);
   const isGerente = userRole === 'Gerente';
   const isLider = userRole === 'Lider';
   const isColaborador = userRole === 'Colaborador';
+  const canOverrideRating = isGerente && isEditing
+    && (task?.status === 'Completa - Validada' || task?.status === 'Completa');
 
 
   /* ── Determine modal title ── */
@@ -481,6 +489,10 @@ const TaskModal = ({
     setInsumoFiles([]);
     setEvidenceFiles([]);
     setErrors({});
+    setShowRatingOverride(false);
+    setOverrideRatingValue('');
+    setOverrideReason('');
+    setSavingRatingOverride(false);
     if (previewData?.url) window.URL.revokeObjectURL(previewData.url);
     setPreviewData(null);
   }, [task, isOpen]);
@@ -884,11 +896,153 @@ const TaskModal = ({
               />
             </div>
 
-            {/* ── Row: Calificacion automatica ── */}
-            {isEditing && task?.rating != null && (
+            {/* ── Row: Calificacion (con override por Gerente) ── */}
+            {isEditing && (task?.rating != null || canOverrideRating) && (
               <div style={{ marginBottom: '16px' }}>
-                <Label>Calificacion</Label>
-                <RatingBar value={task.rating} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <Label style={{ marginBottom: 0 }}>Calificacion</Label>
+                  {task?.ratingOverride != null && (
+                    <span
+                      title={task.ratingOverrideReason ? `Justificación: ${task.ratingOverrideReason}` : 'Modificada por Gerencia'}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '2px 8px',
+                        background: '#FEF3C7',
+                        color: '#92400E',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        borderRadius: '999px',
+                      }}
+                    >
+                      Modificada por Gerencia
+                    </span>
+                  )}
+                </div>
+                {task?.rating != null && <RatingBar value={task.rating} />}
+
+                {canOverrideRating && !showRatingOverride && (
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--sm"
+                    style={{ marginTop: '10px' }}
+                    onClick={() => {
+                      setOverrideRatingValue(task?.rating != null ? String(task.rating) : '');
+                      setOverrideReason('');
+                      setShowRatingOverride(true);
+                    }}
+                  >
+                    Modificar calificación
+                  </button>
+                )}
+
+                {canOverrideRating && showRatingOverride && (
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      padding: '14px 16px',
+                      background: '#F9FAFB',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                      <div style={{ flex: '0 0 140px' }}>
+                        <Label>Nueva calificación (0-100)</Label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={overrideRatingValue}
+                          onChange={(e) => setOverrideRatingValue(e.target.value)}
+                          disabled={savingRatingOverride}
+                          placeholder="0-100"
+                        />
+                      </div>
+                      <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+                        <Label>Justificación (mínimo 10 caracteres)</Label>
+                        <textarea
+                          className="form-control form-textarea"
+                          rows={3}
+                          maxLength={1000}
+                          value={overrideReason}
+                          onChange={(e) => setOverrideReason(e.target.value)}
+                          disabled={savingRatingOverride}
+                          placeholder="Explica por qué se modifica la calificación..."
+                          style={{ resize: 'vertical', minHeight: '70px' }}
+                        />
+                        <small style={{ display: 'block', textAlign: 'right', fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>
+                          {overrideReason.length} / 1000
+                        </small>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn btn--secondary btn--sm"
+                        onClick={() => {
+                          setShowRatingOverride(false);
+                          setOverrideRatingValue('');
+                          setOverrideReason('');
+                        }}
+                        disabled={savingRatingOverride}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn--primary btn--sm"
+                        disabled={
+                          savingRatingOverride ||
+                          overrideRatingValue === '' ||
+                          isNaN(Number(overrideRatingValue)) ||
+                          Number(overrideRatingValue) < 0 ||
+                          Number(overrideRatingValue) > 100 ||
+                          overrideReason.trim().length < 10
+                        }
+                        onClick={async () => {
+                          if (!onRatingOverride) return;
+                          try {
+                            setSavingRatingOverride(true);
+                            await onRatingOverride(task, {
+                              newRating: Number(overrideRatingValue),
+                              reason: overrideReason.trim(),
+                            });
+                            setShowRatingOverride(false);
+                            setOverrideRatingValue('');
+                            setOverrideReason('');
+                          } finally {
+                            setSavingRatingOverride(false);
+                          }
+                        }}
+                      >
+                        {savingRatingOverride ? 'Guardando...' : 'Guardar calificación'}
+                      </button>
+                    </div>
+                    {task?.ratingHistory && task.ratingHistory.length > 0 && (
+                      <details style={{ marginTop: '12px' }}>
+                        <summary style={{ cursor: 'pointer', fontSize: '12px', color: '#6B7280', fontWeight: 500 }}>
+                          Historial de modificaciones ({task.ratingHistory.length})
+                        </summary>
+                        <ul style={{ margin: '8px 0 0 0', padding: '0 0 0 16px', fontSize: '12px', color: '#374151' }}>
+                          {[...task.ratingHistory].reverse().map((h, i) => (
+                            <li key={i} style={{ marginBottom: '6px' }}>
+                              <strong>{h.fromRating != null ? `${h.fromRating}%` : '—'} → {h.toRating}%</strong>{' '}
+                              por {h.changedByName || h.changedByEmail}{' '}
+                              ({new Date(h.changedAt).toLocaleString('es-ES')})
+                              {h.reason && <div style={{ color: '#6B7280', fontStyle: 'italic' }}>{h.reason}</div>}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

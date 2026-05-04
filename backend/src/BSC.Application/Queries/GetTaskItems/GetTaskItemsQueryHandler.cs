@@ -36,14 +36,14 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
             {
                 case TaskStateTransitions.RolGerente:
                     // Gerente ve todas las tareas
-                    taskItems = await _taskItemRepository.GetAllAsync(page, pageSize, request.Search, request.Status, request.DateFrom, request.DateTo, request.SortDueDate);
-                    totalCount = await _taskItemRepository.GetTotalCountAsync(request.Search, request.Status, request.DateFrom, request.DateTo);
+                    taskItems = await _taskItemRepository.GetAllAsync(page, pageSize, request.Search, request.Status, request.DateFrom, request.DateTo, request.SortDueDate, request.TitleFilter, request.AssignedToFilter, request.LeaderFilter, request.SortBy, request.SortDir);
+                    totalCount = await _taskItemRepository.GetTotalCountAsync(request.Search, request.Status, request.DateFrom, request.DateTo, request.TitleFilter, request.AssignedToFilter, request.LeaderFilter);
                     break;
 
                 case TaskStateTransitions.RolAdministrador:
                     // Administrador ve todas las tareas
-                    taskItems = await _taskItemRepository.GetAllAsync(page, pageSize, request.Search, request.Status, request.DateFrom, request.DateTo, request.SortDueDate);
-                    totalCount = await _taskItemRepository.GetTotalCountAsync(request.Search, request.Status, request.DateFrom, request.DateTo);
+                    taskItems = await _taskItemRepository.GetAllAsync(page, pageSize, request.Search, request.Status, request.DateFrom, request.DateTo, request.SortDueDate, request.TitleFilter, request.AssignedToFilter, request.LeaderFilter, request.SortBy, request.SortDir);
+                    totalCount = await _taskItemRepository.GetTotalCountAsync(request.Search, request.Status, request.DateFrom, request.DateTo, request.TitleFilter, request.AssignedToFilter, request.LeaderFilter);
                     break;
 
                 case TaskStateTransitions.RolLider:
@@ -55,8 +55,8 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
                         TaskStatuses.CompletaPorValidar,
                         TaskStatuses.CompletaValidada
                     };
-                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, leaderStatuses, page, pageSize, request.Search, statusFilter: request.Status, dateFrom: request.DateFrom, dateTo: request.DateTo, sortDueDate: request.SortDueDate);
-                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail, leaderStatuses, request.Search, statusFilter: request.Status, dateFrom: request.DateFrom, dateTo: request.DateTo);
+                    taskItems = await _taskItemRepository.GetByLeaderEmailAsync(request.UserEmail, leaderStatuses, page, pageSize, request.Search, statusFilter: request.Status, dateFrom: request.DateFrom, dateTo: request.DateTo, sortDueDate: request.SortDueDate, titleFilter: request.TitleFilter, assignedToFilter: request.AssignedToFilter, leaderFilter: request.LeaderFilter, sortBy: request.SortBy, sortDir: request.SortDir);
+                    totalCount = await _taskItemRepository.GetCountByLeaderEmailAsync(request.UserEmail, leaderStatuses, request.Search, statusFilter: request.Status, dateFrom: request.DateFrom, dateTo: request.DateTo, titleFilter: request.TitleFilter, assignedToFilter: request.AssignedToFilter, leaderFilter: request.LeaderFilter);
                     break;
 
                 case TaskStateTransitions.RolColaborador:
@@ -67,8 +67,8 @@ public class GetTaskItemsQueryHandler : IRequestHandler<GetTaskItemsQuery, ApiRe
                         TaskStatuses.Reasignada,
                         TaskStatuses.CompletaPorValidar
                     };
-                    taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, collabStatuses, page, pageSize, request.Search, statusFilter: request.Status, dateFrom: request.DateFrom, dateTo: request.DateTo, sortDueDate: request.SortDueDate);
-                    totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, collabStatuses, request.Search, statusFilter: request.Status, dateFrom: request.DateFrom, dateTo: request.DateTo);
+                    taskItems = await _taskItemRepository.GetByAssignedEmailAsync(request.UserEmail, collabStatuses, page, pageSize, request.Search, statusFilter: request.Status, dateFrom: request.DateFrom, dateTo: request.DateTo, sortDueDate: request.SortDueDate, titleFilter: request.TitleFilter, assignedToFilter: request.AssignedToFilter, leaderFilter: request.LeaderFilter, sortBy: request.SortBy, sortDir: request.SortDir);
+                    totalCount = await _taskItemRepository.GetCountByAssignedEmailAsync(request.UserEmail, collabStatuses, request.Search, statusFilter: request.Status, dateFrom: request.DateFrom, dateTo: request.DateTo, titleFilter: request.TitleFilter, assignedToFilter: request.AssignedToFilter, leaderFilter: request.LeaderFilter);
                     break;
 
                 default:

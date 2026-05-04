@@ -41,6 +41,20 @@ public static class TaskItemMapper
             EvidenceText = taskItem.EvidenceText,
             Observations = taskItem.Observations,
             Rating = taskItem.Rating,
+            RatingOverride = taskItem.RatingOverride,
+            RatingOverrideReason = taskItem.RatingOverrideReason,
+            RatingOverrideBy = taskItem.RatingOverrideBy,
+            RatingOverrideAt = taskItem.RatingOverrideAt,
+            RatingHistory = taskItem.RatingHistory?.Select(rh => new RatingChangeDto
+            {
+                FromRating = rh.FromRating,
+                ToRating = rh.ToRating,
+                ChangedById = rh.ChangedById,
+                ChangedByName = rh.ChangedByName,
+                ChangedByEmail = rh.ChangedByEmail,
+                ChangedAt = rh.ChangedAt,
+                Reason = rh.Reason
+            }).ToList() ?? new List<RatingChangeDto>(),
             StatusHistory = taskItem.StatusHistory?.Select(sh => new StatusChangeDto
             {
                 FromStatus = sh.FromStatus,

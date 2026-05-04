@@ -17,5 +17,15 @@ public class GetTaskItemsQuery : IRequest<ApiResponse<PaginatedResult<TaskItemDt
     public string? Status { get; set; }
     public string? DateFrom { get; set; } // YYYY-MM-DD
     public string? DateTo { get; set; } // YYYY-MM-DD
-    public string? SortDueDate { get; set; } // "asc", "desc"
+    public string? SortDueDate { get; set; } // "asc", "desc" — legado
+
+    // Filtros por columna específica (case-insensitive contains).
+    public string? TitleFilter { get; set; }
+    public string? AssignedToFilter { get; set; }
+    public string? LeaderFilter { get; set; }
+
+    // Ordenamiento genérico.
+    // SortBy admite: title, assignedTo, leader, status, dueDate, estimatedTime, rating, createdAt.
+    public string? SortBy { get; set; }
+    public string? SortDir { get; set; } // "asc", "desc"
 }

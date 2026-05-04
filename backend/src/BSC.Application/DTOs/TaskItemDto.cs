@@ -35,8 +35,17 @@ public class TaskItemDto
     // Observaciones
     public string? Observations { get; set; }
 
-    // Calificacion (1-10)
+    // Calificacion efectiva (0-100). Refleja override manual si existe, si no el cálculo automático.
     public int? Rating { get; set; }
+
+    // Override manual del Gerente (null si no se ha modificado).
+    public int? RatingOverride { get; set; }
+    public string? RatingOverrideReason { get; set; }
+    public string? RatingOverrideBy { get; set; }
+    public DateTime? RatingOverrideAt { get; set; }
+
+    // Audit trail completo de modificaciones manuales (append-only).
+    public List<RatingChangeDto> RatingHistory { get; set; } = new();
 
     // Historial de estados
     public List<StatusChangeDto> StatusHistory { get; set; } = new();
@@ -44,6 +53,20 @@ public class TaskItemDto
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// DTO para una entrada del audit trail de calificaciones.
+/// </summary>
+public class RatingChangeDto
+{
+    public int? FromRating { get; set; }
+    public int ToRating { get; set; }
+    public string ChangedById { get; set; } = string.Empty;
+    public string ChangedByName { get; set; } = string.Empty;
+    public string ChangedByEmail { get; set; } = string.Empty;
+    public DateTime ChangedAt { get; set; }
+    public string Reason { get; set; } = string.Empty;
 }
 
 /// <summary>

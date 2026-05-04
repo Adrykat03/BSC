@@ -142,6 +142,13 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
     /// </summary>
     private static List<StatusAvgTimeItem> CalculateAvgTimeByStatus(List<TaskItem> tasks)
     {
+        // Estados terminales: el tiempo "en" estos estados crece indefinidamente y no aporta
+        // información analítica del flujo. Se excluyen del promedio.
+        var excludedStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            TaskStatuses.Completa,
+        };
+
         var statusDurations = new Dictionary<string, List<double>>();
 
         foreach (var task in tasks)
@@ -153,6 +160,9 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             for (int i = 0; i < history.Count; i++)
             {
                 var currentStatus = history[i].ToStatus;
+                if (excludedStatuses.Contains(currentStatus))
+                    continue;
+
                 DateTime start = history[i].ChangedAt;
                 DateTime end;
 

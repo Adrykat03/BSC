@@ -13,6 +13,7 @@ import { tasksService } from '../../services/tasksService';
 import { colaboradorService } from '../../services/colaboradorService';
 import SessionContext from '../../context/SessionContext';
 import TaskModal from './TaskModal';
+import ColumnFilterDropdown from './ColumnFilterDropdown';
 import './Tasks.css';
 
 const PAGE_SIZE = 20;
@@ -90,9 +91,14 @@ const Tasks = () => {
   // Search debounce ref
   const searchDebounceRef = useRef(null);
   const searchRef = useRef('');
-  const filterStatusRef = useRef('');
+  const filterStatusRef = useRef(''); // CSV: "Asignada,Reasignada"
   const filterDateFromRef = useRef(''); // YYYY-MM-DD string for API
   const filterDateToRef = useRef(''); // YYYY-MM-DD string for API
+  const filterTitleRef = useRef(''); // CSV con valores exactos seleccionados
+  const filterAssignedToRef = useRef('');
+  const filterLeaderRef = useRef('');
+  const sortByRef = useRef('');
+  const sortDirRef = useRef('');
 
   // History modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -100,11 +106,16 @@ const Tasks = () => {
 
   // Filters
   const [searchText, setSearchText] = useState('');
-  const [filterStatus, setFilterStatus] = useState(''); // '' = todas
+  const [filterStatus, setFilterStatus] = useState(''); // legado: '' = todas (toolbar superior)
   const [filterDateFrom, setFilterDateFrom] = useState(null);
   const [filterDateTo, setFilterDateTo] = useState(null);
-  const [sortDueDate, setSortDueDate] = useState(''); // '' = default, 'asc', 'desc'
-  const sortDueDateRef = useRef('');
+  // Filtros estilo Excel: Set<string> por columna con valores seleccionados.
+  const [colTitles, setColTitles] = useState(() => new Set());
+  const [colAssigned, setColAssigned] = useState(() => new Set());
+  const [colLeaders, setColLeaders] = useState(() => new Set());
+  const [colStatuses, setColStatuses] = useState(() => new Set());
+  const [sortBy, setSortBy] = useState('');
+  const [sortDir, setSortDir] = useState('');
 
   // Close inline modals with Escape
   useEffect(() => {
@@ -133,8 +144,23 @@ const Tasks = () => {
       const statusValue = statusVal !== undefined ? statusVal : filterStatusRef.current;
       const fromValue = dateFromVal !== undefined ? dateFromVal : filterDateFromRef.current;
       const toValue = dateToVal !== undefined ? dateToVal : filterDateToRef.current;
-      const sortValue = sortVal !== undefined ? sortVal : sortDueDateRef.current;
-      const data = await tasksService.getAll(currentPage, PAGE_SIZE, searchValue, statusValue, fromValue, toValue, sortValue);
+      // sortVal (legado: sortDueDate) ya no se usa; el sort vive en sortByRef/sortDirRef.
+      const data = await tasksService.getAll(
+        currentPage,
+        PAGE_SIZE,
+        searchValue,
+        statusValue,
+        fromValue,
+        toValue,
+        '',
+        {
+          titleFilter: filterTitleRef.current,
+          assignedToFilter: filterAssignedToRef.current,
+          leaderFilter: filterLeaderRef.current,
+          sortBy: sortByRef.current,
+          sortDir: sortDirRef.current,
+        },
+      );
       setTasks(data.items ?? []);
       setTotalPages(data.totalPages);
       setTotalCount(data.totalCount);
@@ -185,7 +211,7 @@ const Tasks = () => {
         await tasksService.bulkDelete(Array.from(selectedIds));
         toast.success(`${selectedIds.size} tarea${selectedIds.size > 1 ? 's' : ''} eliminada${selectedIds.size > 1 ? 's' : ''}`);
         setSelectedIds(new Set());
-        loadTasks(1, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, sortDueDateRef.current);
+        loadTasks(1, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, '');
       } catch (err) {
         toast.error('Error al eliminar: ' + (err.message || 'Error desconocido'));
       }
@@ -194,9 +220,68 @@ const Tasks = () => {
 
   const goToPage = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      loadTasks(newPage, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, sortDueDateRef.current);
+      loadTasks(newPage, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, '');
     }
   };
+
+  // Sort cíclico por columna: '' → asc → desc → ''
+  const cycleSort = (field) => {
+    let nextDir = 'asc';
+    let nextField = field;
+    if (sortByRef.current === field) {
+      if (sortDirRef.current === 'asc') nextDir = 'desc';
+      else if (sortDirRef.current === 'desc') {
+        nextDir = '';
+        nextField = '';
+      }
+    }
+    sortByRef.current = nextField;
+    sortDirRef.current = nextDir;
+    setSortBy(nextField);
+    setSortDir(nextDir);
+    loadTasks(1);
+  };
+
+  const sortIcon = (field) => {
+    if (sortBy !== field) return <ArrowUpDown size={14} style={{ verticalAlign: 'middle', opacity: 0.4 }} />;
+    if (sortDir === 'asc') return <ArrowUp size={14} style={{ verticalAlign: 'middle' }} />;
+    return <ArrowDown size={14} style={{ verticalAlign: 'middle' }} />;
+  };
+
+  const setRefFromSet = (refObj, set) => {
+    refObj.current = Array.from(set || []).join(',');
+  };
+
+  const onApplyColTitles = (set) => {
+    setColTitles(set);
+    setRefFromSet(filterTitleRef, set);
+    loadTasks(1);
+  };
+  const onApplyColAssigned = (set) => {
+    setColAssigned(set);
+    setRefFromSet(filterAssignedToRef, set);
+    loadTasks(1);
+  };
+  const onApplyColLeaders = (set) => {
+    setColLeaders(set);
+    setRefFromSet(filterLeaderRef, set);
+    loadTasks(1);
+  };
+  const onApplyColStatuses = (set) => {
+    setColStatuses(set);
+    setRefFromSet(filterStatusRef, set);
+    // Sincronizar el <select> del toolbar superior:
+    // un solo valor seleccionado → mostrar ese valor; cero o varios → "Todas".
+    if (set.size === 1) {
+      setFilterStatus(Array.from(set)[0]);
+    } else {
+      setFilterStatus('');
+    }
+    loadTasks(1);
+  };
+
+  // Service factories for distinct-values fetching (passed to ColumnFilterDropdown).
+  const distinctLoaderFor = (field) => () => tasksService.getDistinctValues(field);
 
   const getPageNumbers = () => {
     const pages = [];
@@ -823,7 +908,7 @@ const Tasks = () => {
               setSearchText(val);
               if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
               searchDebounceRef.current = setTimeout(() => {
-                loadTasks(1, val, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, sortDueDateRef.current);
+                loadTasks(1, val, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, '');
               }, 300);
             }}
             style={{ width: '100%' }}
@@ -837,8 +922,10 @@ const Tasks = () => {
           onChange={(e) => {
             const val = e.target.value;
             setFilterStatus(val);
-            filterStatusRef.current = val;
-            loadTasks(1, searchRef.current, val, filterDateFromRef.current, filterDateToRef.current, sortDueDateRef.current);
+            const nextSet = val ? new Set([val]) : new Set();
+            setColStatuses(nextSet);
+            setRefFromSet(filterStatusRef, nextSet);
+            loadTasks(1);
           }}
           style={{ width: '220px', minWidth: '150px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px', flex: '0 1 220px' }}
         >
@@ -866,7 +953,7 @@ const Tasks = () => {
                 setFilterDateTo(null);
                 filterDateFromRef.current = '';
                 filterDateToRef.current = '';
-                loadTasks(1, searchRef.current, filterStatusRef.current, '', '', sortDueDateRef.current);
+                loadTasks(1, searchRef.current, filterStatusRef.current, '', '', '');
               }} />
             )}
           </button>
@@ -884,7 +971,7 @@ const Tasks = () => {
                 filterDateFromRef.current = fmt(start);
                 filterDateToRef.current = fmt(end);
                 if (start && end) {
-                  loadTasks(1, searchRef.current, filterStatusRef.current, fmt(start), fmt(end), sortDueDateRef.current);
+                  loadTasks(1, searchRef.current, filterStatusRef.current, fmt(start), fmt(end), '');
                 }
               }}
               dateFormat="dd/MM/yyyy"
@@ -896,17 +983,28 @@ const Tasks = () => {
 
       <div className="card">
         <div className="card__body">
-          {filteredTasks.length === 0 && !loading ? (
-            <div className="empty-state">
-              <ClipboardList size={48} className="empty-state__icon" />
-              <h3 className="empty-state__title">No hay tareas</h3>
-              <p className="empty-state__description">
-                {(isGerente || isLider)
-                  ? 'Aun no se han creado tareas. Crea la primera haciendo clic en "Nueva Tarea".'
-                  : 'No tienes tareas asignadas por el momento.'}
-              </p>
-            </div>
-          ) : (
+          {(() => {
+            const hasActiveFilters = !!(
+              searchText || filterStatus || filterDateFrom || filterDateTo
+              || colTitles.size || colAssigned.size || colLeaders.size || colStatuses.size
+              || sortBy
+            );
+            const tableColCount = 1 /* titulo */ + 1 /* descripcion */
+              + ((isAdmin || isGerente || isLider) ? 1 : 0) /* asignado a */
+              + 1 /* lider */ + 1 /* estado */ + 1 /* entrega */
+              + 1 /* estimado */ + 1 /* calif */ + 1 /* acciones */
+              + (isAdmin ? 1 : 0); /* checkbox */
+            return filteredTasks.length === 0 && !loading && !hasActiveFilters ? (
+              <div className="empty-state">
+                <ClipboardList size={48} className="empty-state__icon" />
+                <h3 className="empty-state__title">No hay tareas</h3>
+                <p className="empty-state__description">
+                  {(isGerente || isLider)
+                    ? 'Aun no se han creado tareas. Crea la primera haciendo clic en "Nueva Tarea".'
+                    : 'No tienes tareas asignadas por el momento.'}
+                </p>
+              </div>
+            ) : (
             <>
               <div className="table-container">
                 <table className="table">
@@ -922,30 +1020,126 @@ const Tasks = () => {
                           />
                         </th>
                       )}
-                      <th>Titulo</th>
-                      {(isAdmin || isGerente || isLider) && <th>Asignado a</th>}
-                      <th className="table__col--secondary">Lider</th>
-                      <th>Estado</th>
+                      <th className="tasks-th">
+                        <div className="tasks-th__inner">
+                          <span
+                            className="tasks-th__sort"
+                            onClick={() => cycleSort('title')}
+                            data-tooltip="Ordenar por título"
+                          >
+                            Titulo {sortIcon('title')}
+                          </span>
+                          <ColumnFilterDropdown
+                            field="title"
+                            label="título"
+                            selected={colTitles}
+                            onApply={onApplyColTitles}
+                            loadOptions={distinctLoaderFor('title')}
+                          />
+                        </div>
+                      </th>
                       <th
                         className="table__col--secondary"
                         style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
-                        onClick={() => {
-                          const next = sortDueDate === '' ? 'asc' : sortDueDate === 'asc' ? 'desc' : '';
-                          setSortDueDate(next);
-                          sortDueDateRef.current = next;
-                          loadTasks(1, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, next);
-                        }}
-                        data-tooltip={sortDueDate === '' ? 'Ordenar por entrega' : sortDueDate === 'asc' ? 'Ascendente' : 'Descendente'}
+                        onClick={() => cycleSort('description')}
+                        data-tooltip="Ordenar por descripción"
                       >
-                        Entrega {sortDueDate === 'asc' ? <ArrowUp size={14} style={{ verticalAlign: 'middle' }} /> : sortDueDate === 'desc' ? <ArrowDown size={14} style={{ verticalAlign: 'middle' }} /> : <ArrowUpDown size={14} style={{ verticalAlign: 'middle', opacity: 0.4 }} />}
+                        Descripcion {sortIcon('description')}
                       </th>
-                      <th className="table__col--secondary" data-tooltip="Tiempo estimado (horas)">&#128339;</th>
-                      <th className="table__col--secondary">Calificacion</th>
+                      {(isAdmin || isGerente || isLider) && (
+                        <th className="tasks-th">
+                          <div className="tasks-th__inner">
+                            <span
+                              className="tasks-th__sort"
+                              onClick={() => cycleSort('assignedTo')}
+                              data-tooltip="Ordenar por colaborador"
+                            >
+                              Asignado a {sortIcon('assignedTo')}
+                            </span>
+                            <ColumnFilterDropdown
+                              field="assignedTo"
+                              label="colaborador"
+                              selected={colAssigned}
+                              onApply={onApplyColAssigned}
+                              loadOptions={distinctLoaderFor('assignedTo')}
+                            />
+                          </div>
+                        </th>
+                      )}
+                      <th className="tasks-th table__col--secondary">
+                        <div className="tasks-th__inner">
+                          <span
+                            className="tasks-th__sort"
+                            onClick={() => cycleSort('leader')}
+                            data-tooltip="Ordenar por líder"
+                          >
+                            Lider {sortIcon('leader')}
+                          </span>
+                          <ColumnFilterDropdown
+                            field="leader"
+                            label="líder"
+                            selected={colLeaders}
+                            onApply={onApplyColLeaders}
+                            loadOptions={distinctLoaderFor('leader')}
+                          />
+                        </div>
+                      </th>
+                      <th className="tasks-th">
+                        <div className="tasks-th__inner">
+                          <span
+                            className="tasks-th__sort"
+                            onClick={() => cycleSort('status')}
+                            data-tooltip="Ordenar por estado"
+                          >
+                            Estado {sortIcon('status')}
+                          </span>
+                          <ColumnFilterDropdown
+                            field="status"
+                            label="estado"
+                            selected={colStatuses}
+                            onApply={onApplyColStatuses}
+                            loadOptions={distinctLoaderFor('status')}
+                          />
+                        </div>
+                      </th>
+                      <th
+                        className="table__col--secondary"
+                        style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                        onClick={() => cycleSort('dueDate')}
+                        data-tooltip="Ordenar por entrega"
+                      >
+                        Entrega {sortIcon('dueDate')}
+                      </th>
+                      <th
+                        className="table__col--secondary"
+                        style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                        onClick={() => cycleSort('estimatedTime')}
+                        data-tooltip="Ordenar por tiempo estimado"
+                      >
+                        &#128339; {sortIcon('estimatedTime')}
+                      </th>
+                      <th
+                        className="table__col--secondary"
+                        style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                        onClick={() => cycleSort('rating')}
+                        data-tooltip="Ordenar por calificación"
+                      >
+                        Calificacion {sortIcon('rating')}
+                      </th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTasks
+                    {filteredTasks.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={tableColCount}
+                          style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)' }}
+                        >
+                          {loading ? 'Cargando...' : 'Sin coincidencias con los filtros aplicados.'}
+                        </td>
+                      </tr>
+                    ) : filteredTasks
                       .map((t) => ({ ...t, _urgency: getUrgency(t) }))
                       .map((task) => {
                       const transitions = getStatusTransitions(task.status, role);
@@ -974,6 +1168,13 @@ const Tasks = () => {
                             </td>
                           )}
                           <td className="font-semibold">{task.title}</td>
+                          <td
+                            className="text-secondary table__col--secondary"
+                            style={{ maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            title={task.description || ''}
+                          >
+                            {task.description || '—'}
+                          </td>
                           {(isAdmin || isGerente || isLider) && (
                             <td className="text-secondary">
                               {task.assignedToName || 'Sin asignar'}
@@ -1100,7 +1301,8 @@ const Tasks = () => {
                 </div>
               )}
             </>
-          )}
+          );
+          })()}
         </div>
       </div>
 
@@ -1128,6 +1330,22 @@ const Tasks = () => {
           setDetailModalOpen(false);
           setDetailTask(null);
           setModalOpen(false);
+        }}
+        onRatingOverride={async (t, { newRating, reason }) => {
+          try {
+            const result = await tasksService.overrideRating(t.id, { newRating, reason });
+            const updated = result?.data || result?.Data || null;
+            if (updated) {
+              if (detailModalOpen) setDetailTask(updated);
+              else if (selectedTask) setSelectedTask(updated);
+            }
+            toast.success('Calificación actualizada exitosamente');
+            await loadTasks(page);
+          } catch (err) {
+            const msg = err?.response?.data?.message || err?.message || 'Error al modificar la calificación';
+            toast.error(msg);
+            throw err;
+          }
         }}
         onAssign={async (t, assigneeId) => {
           try {

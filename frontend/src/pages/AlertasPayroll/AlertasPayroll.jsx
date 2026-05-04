@@ -10,7 +10,6 @@ import {
   ChevronsRight,
   Download,
   Eye,
-  Pencil,
   Search,
   X,
   ZoomIn,
@@ -31,7 +30,6 @@ import {
   Title as ChartTitle,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import Modal from '../../components/common/Modal';
 import SessionContext from '../../context/SessionContext';
 import { payrollService } from '../../services/payrollService';
 import './AlertasPayroll.css';
@@ -372,14 +370,89 @@ const ZOOM_MIN = 25;
 const ZOOM_MAX = 300;
 const ZOOM_STEP = 25;
 
-const PreviewModal = ({ row, onClose }) => {
+const AlertaModal = ({ row, usuarioSesion, saving, onClose, onSave }) => {
   const [zoom, setZoom] = useState(100);
+  const [editEstado, setEditEstado] = useState(
+    ['P', 'R', 'E'].includes(row?.estado) ? row.estado : 'P',
+  );
+  const [editNotas, setEditNotas] = useState(row?.notasResolucion || '');
+  const [adjuntoBusy, setAdjuntoBusy] = useState(false);
+  const [previewMode, setPreviewMode] = useState('correo');
+  const [adjuntoState, setAdjuntoState] = useState({
+    status: 'idle', url: null, mime: null, ext: null, error: null,
+  });
   const scrollRef = useRef(null);
   const closeBtnRef = useRef(null);
 
+  const tieneAdjunto = !!row?.rutaAdjunto;
+  const nombreAdjunto = row?.nombreAdjunto || row?.rutaAdjunto?.split('/').pop() || '';
+
+  const loadAdjunto = async () => {
+    if (!tieneAdjunto) return;
+    setAdjuntoState({ status: 'loading', url: null, mime: null, ext: null, error: null });
+    try {
+      const result = await payrollService.previewAdjunto({
+        rutaAdjunto: row.rutaAdjunto,
+        nombreAdjunto: row.nombreAdjunto,
+      });
+      if (!result.previewable) {
+        setAdjuntoState({ status: 'unsupported', url: null, mime: null, ext: result.ext, error: null });
+        return;
+      }
+      setAdjuntoState({ status: 'ready', url: result.url, mime: result.mime, ext: result.ext, error: null });
+    } catch (err) {
+      setAdjuntoState({
+        status: 'error', url: null, mime: null, ext: null,
+        error: err.message || 'Error al obtener el adjunto.',
+      });
+    }
+  };
+
+  const handlePreviewAdjunto = async () => {
+    if (!tieneAdjunto || adjuntoBusy || saving) return;
+    setPreviewMode('adjunto');
+    if (adjuntoState.status === 'idle') {
+      setAdjuntoBusy(true);
+      try { await loadAdjunto(); } finally { setAdjuntoBusy(false); }
+    }
+  };
+
+  const handleDescargarAdjunto = async () => {
+    if (!tieneAdjunto || adjuntoBusy) return;
+    try {
+      setAdjuntoBusy(true);
+      await payrollService.descargarAdjunto({
+        rutaAdjunto: row.rutaAdjunto,
+        nombreAdjunto: row.nombreAdjunto,
+      });
+    } catch (err) {
+      Swal.fire({
+        title: 'No se pudo descargar',
+        text: err.message || 'Ocurrió un error al descargar el adjunto.',
+        icon: 'error',
+      });
+    } finally {
+      setAdjuntoBusy(false);
+    }
+  };
+
   useEffect(() => {
     setZoom(100);
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    setEditEstado(['P', 'R', 'E'].includes(row?.estado) ? row.estado : 'P');
+    setEditNotas(row?.notasResolucion || '');
+    setPreviewMode('correo');
+    setAdjuntoState((prev) => {
+      if (prev.url) URL.revokeObjectURL(prev.url);
+      return { status: 'idle', url: null, mime: null, ext: null, error: null };
+    });
+  }, [row?.idNotificacion, row?.estado, row?.notasResolucion]);
+
+  useEffect(() => () => {
+    if (adjuntoState.url) URL.revokeObjectURL(adjuntoState.url);
+  }, [adjuntoState.url]);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape' && !saving) onClose(); };
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -388,7 +461,7 @@ const PreviewModal = ({ row, onClose }) => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [onClose]);
+  }, [onClose, saving]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -411,82 +484,283 @@ const PreviewModal = ({ row, onClose }) => {
   const fechaTitle = row?.fechaCreacion ? formatDate(row.fechaCreacion) : null;
   const title = fechaTitle ? `${baseTitle} — ${fechaTitle}` : baseTitle;
 
+  const handleSubmit = () => {
+    if (saving) return;
+    onSave({ estado: editEstado, notas: editNotas });
+  };
+
   return (
     <div
       className="preview-modal__overlay"
       role="presentation"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !saving) onClose();
+      }}
     >
-      <div className="preview-modal" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="preview-modal preview-modal--with-side" role="dialog" aria-modal="true" aria-label={title}>
         <div className="preview-modal__header">
           <span className="preview-modal__title" title={title}>{title}</span>
 
-          <div className="preview-modal__zoom" role="group" aria-label="Controles de zoom">
-            <button
-              type="button"
-              className="preview-modal__zoom-btn"
-              onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))}
-              disabled={zoom <= ZOOM_MIN}
-              aria-label="Alejar"
-              title="Alejar (Ctrl + rueda)"
-            >
-              <ZoomOut size={16} />
-            </button>
-            <button
-              type="button"
-              className="preview-modal__zoom-pct"
-              onClick={() => setZoom(100)}
-              aria-label={`Zoom ${zoom}%. Clic para restablecer al 100%`}
-              title="Restablecer al 100%"
-            >
-              {zoom}%
-            </button>
-            <button
-              type="button"
-              className="preview-modal__zoom-btn"
-              onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))}
-              disabled={zoom >= ZOOM_MAX}
-              aria-label="Acercar"
-              title="Acercar (Ctrl + rueda)"
-            >
-              <ZoomIn size={16} />
-            </button>
-          </div>
+          {previewMode === 'correo' && (
+            <div className="preview-modal__zoom" role="group" aria-label="Controles de zoom">
+              <button
+                type="button"
+                className="preview-modal__zoom-btn"
+                onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))}
+                disabled={zoom <= ZOOM_MIN}
+                aria-label="Alejar"
+                title="Alejar (Ctrl + rueda)"
+              >
+                <ZoomOut size={16} />
+              </button>
+              <button
+                type="button"
+                className="preview-modal__zoom-pct"
+                onClick={() => setZoom(100)}
+                aria-label={`Zoom ${zoom}%. Clic para restablecer al 100%`}
+                title="Restablecer al 100%"
+              >
+                {zoom}%
+              </button>
+              <button
+                type="button"
+                className="preview-modal__zoom-btn"
+                onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))}
+                disabled={zoom >= ZOOM_MAX}
+                aria-label="Acercar"
+                title="Acercar (Ctrl + rueda)"
+              >
+                <ZoomIn size={16} />
+              </button>
+            </div>
+          )}
 
           <button
             ref={closeBtnRef}
             type="button"
             className="preview-modal__close"
             onClick={onClose}
-            aria-label="Cerrar previsualización"
+            disabled={saving}
+            aria-label="Cerrar"
             title="Cerrar (Esc)"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div ref={scrollRef} className="preview-modal__scroll">
-          {doc ? (
-            <div
-              className="preview-modal__stage"
-              style={{ width: PREVIEW_BASE_W * scale, height: PREVIEW_BASE_H * scale }}
-            >
-              <iframe
-                title="Previsualización del correo"
-                className="preview-modal__iframe"
-                sandbox=""
-                srcDoc={doc}
-                style={{
-                  width: PREVIEW_BASE_W,
-                  height: PREVIEW_BASE_H,
-                  transform: `scale(${scale})`,
-                  transformOrigin: 'top left',
-                }}
-              />
+        <div className="preview-modal__body">
+          <div className="preview-modal__main">
+            <div className="preview-modal__tabs" role="tablist" aria-label="Vistas">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={previewMode === 'correo'}
+                className={`preview-modal__tab ${previewMode === 'correo' ? 'is-active' : ''}`}
+                onClick={() => setPreviewMode('correo')}
+              >
+                Correo
+              </button>
+              {tieneAdjunto && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={previewMode === 'adjunto'}
+                  className={`preview-modal__tab ${previewMode === 'adjunto' ? 'is-active' : ''}`}
+                  onClick={handlePreviewAdjunto}
+                  title={nombreAdjunto}
+                >
+                  Adjunto: {nombreAdjunto}
+                </button>
+              )}
             </div>
-          ) : (
-            <div className="preview-modal__empty">Sin previsualización disponible</div>
-          )}
+
+            {previewMode === 'correo' ? (
+              <div ref={scrollRef} className="preview-modal__scroll">
+                {doc ? (
+                  <div
+                    className="preview-modal__stage"
+                    style={{ width: PREVIEW_BASE_W * scale, height: PREVIEW_BASE_H * scale }}
+                  >
+                    <iframe
+                      title="Previsualización del correo"
+                      className="preview-modal__iframe"
+                      sandbox=""
+                      srcDoc={doc}
+                      style={{
+                        width: PREVIEW_BASE_W,
+                        height: PREVIEW_BASE_H,
+                        transform: `scale(${scale})`,
+                        transformOrigin: 'top left',
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="preview-modal__empty">Sin previsualización disponible</div>
+                )}
+              </div>
+            ) : (
+              <div className="preview-modal__attachment-view">
+                {adjuntoState.status === 'loading' && (
+                  <div className="preview-modal__empty">Cargando adjunto…</div>
+                )}
+                {adjuntoState.status === 'ready' && (
+                  <iframe
+                    key={adjuntoState.url}
+                    title={`Adjunto: ${nombreAdjunto}`}
+                    className="preview-modal__attachment-iframe"
+                    src={adjuntoState.url}
+                  />
+                )}
+                {adjuntoState.status === 'unsupported' && (
+                  <div className="preview-modal__empty preview-modal__empty--column">
+                    <div>
+                      Los archivos <strong>.{adjuntoState.ext || 'tipo desconocido'}</strong> no se pueden previsualizar en el navegador.
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--sm"
+                      onClick={handleDescargarAdjunto}
+                      disabled={adjuntoBusy}
+                    >
+                      <Download size={14} aria-hidden="true" /> Descargar adjunto
+                    </button>
+                  </div>
+                )}
+                {adjuntoState.status === 'error' && (
+                  <div className="preview-modal__empty preview-modal__empty--column">
+                    <div>No se pudo cargar el adjunto.</div>
+                    <small>{adjuntoState.error}</small>
+                    <button
+                      type="button"
+                      className="btn btn--secondary btn--sm"
+                      onClick={loadAdjunto}
+                    >
+                      Reintentar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <aside className="preview-modal__side" aria-label="Resolución de la alerta">
+            <div className="preview-modal__side-section">
+              <h3 className="preview-modal__side-title preview-modal__side-title--main">Resolución</h3>
+              <div className="preview-modal__side-meta">
+                <div><strong>Estado actual:</strong> {ESTADO_LABELS[row?.estado] || row?.estado || '—'}</div>
+                <div><strong>Prioridad:</strong> {PRIORIDAD_LABELS[normalizePriority(row?.prioridad)] || row?.prioridad || '—'}</div>
+                <div><strong>Categoría:</strong> {row?.categoria || '—'}</div>
+              </div>
+            </div>
+
+            <div className="preview-modal__side-section">
+              <h3 className="preview-modal__side-title">Adjunto</h3>
+              {tieneAdjunto ? (
+                <div className="preview-modal__attachment-row">
+                  <span className="preview-modal__attachment-name" title={nombreAdjunto}>
+                    {nombreAdjunto}
+                  </span>
+                  <div className="preview-modal__attachment-icons">
+                    <button
+                      type="button"
+                      className="btn btn--icon btn--sm btn--ghost"
+                      onClick={handlePreviewAdjunto}
+                      disabled={adjuntoBusy || saving}
+                      data-tooltip="Previsualizar adjunto"
+                      aria-label="Previsualizar adjunto"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--icon btn--sm btn--ghost"
+                      onClick={handleDescargarAdjunto}
+                      disabled={adjuntoBusy || saving}
+                      data-tooltip="Descargar adjunto"
+                      aria-label="Descargar adjunto"
+                    >
+                      <Download size={16} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="preview-modal__attachment-empty">Sin adjunto</div>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="alerta-modal-estado">Cambiar estado</label>
+              <select
+                id="alerta-modal-estado"
+                className="form-control"
+                value={editEstado}
+                onChange={(e) => setEditEstado(e.target.value)}
+                disabled={saving}
+              >
+                <option value="P">En Proceso</option>
+                <option value="R">Resuelto</option>
+                <option value="E">Error</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="alerta-modal-notas">Notas de resolución</label>
+              <textarea
+                id="alerta-modal-notas"
+                className="form-control preview-modal__notas"
+                rows={12}
+                maxLength={500}
+                value={editNotas}
+                onChange={(e) => setEditNotas(e.target.value.slice(0, 500))}
+                placeholder="Ingrese observaciones sobre la resolución..."
+                disabled={saving}
+              />
+              <small
+                className={`preview-modal__chars ${
+                  editNotas.length >= 500
+                    ? 'preview-modal__chars--full'
+                    : editNotas.length >= 450
+                      ? 'preview-modal__chars--near'
+                      : ''
+                }`}
+                aria-live="polite"
+              >
+                {editNotas.length} / 500 caracteres
+              </small>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Usuario resolución</label>
+              <input
+                type="text"
+                className="form-control"
+                value={usuarioSesion}
+                readOnly
+              />
+              <small className="payroll-edit-hint">
+                Se asigna automáticamente al guardar.
+              </small>
+            </div>
+
+            <div className="preview-modal__side-actions">
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={onClose}
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={handleSubmit}
+                disabled={saving}
+              >
+                {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -604,8 +878,32 @@ function downloadAlertasXlsx(alertas, fileName) {
 }
 
 /* ========================================
-   Description Pie (mini doughnut con % al centro)
+   Description Pie (doughnut con total al centro y % al costado)
    ======================================== */
+const descPieCenterPlugin = {
+  id: 'descPieCenter',
+  afterDraw(chart) {
+    const cfg = chart.options.plugins?.descPieCenter;
+    if (!cfg) return;
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    const cx = (chartArea.left + chartArea.right) / 2;
+    const cy = (chartArea.top + chartArea.bottom) / 2;
+    const count = Number(cfg.count ?? 0);
+    const labelText = count === 1 ? 'alerta' : 'alertas';
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 26px Inter, system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#111827';
+    ctx.fillText(String(count), cx, cy - 8);
+    ctx.font = '500 11px Inter, system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#6B7280';
+    ctx.fillText(labelText, cx, cy + 14);
+    ctx.restore();
+  },
+};
+
 const DescriptionPie = ({ label, count, pct, color }) => {
   const safePct = Math.max(0, Math.min(100, Number(pct) || 0));
   const data = {
@@ -613,41 +911,32 @@ const DescriptionPie = ({ label, count, pct, color }) => {
       data: [safePct, 100 - safePct],
       backgroundColor: [color, '#E5E7EB'],
       borderWidth: 0,
-      cutout: '70%',
+      cutout: '72%',
     }],
   };
   const options = {
     responsive: true,
     maintainAspectRatio: true,
+    animation: { duration: 0 },
     plugins: {
       legend: { display: false },
       tooltip: { enabled: false },
-    },
-  };
-  const centerPlugin = {
-    id: 'descPieCenter',
-    afterDraw(chart) {
-      const { ctx, chartArea } = chart;
-      if (!chartArea) return;
-      const cx = (chartArea.left + chartArea.right) / 2;
-      const cy = (chartArea.top + chartArea.bottom) / 2;
-      ctx.save();
-      ctx.font = '700 20px Inter, system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = color;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`${safePct}%`, cx, cy);
-      ctx.restore();
+      descPieCenter: { count },
     },
   };
   return (
-    <div className="payroll-dash-pie">
-      <div className="payroll-dash-pie__chart">
-        <Doughnut data={data} options={options} plugins={[centerPlugin]} />
-      </div>
+    <div className="payroll-dash-pie" style={{ borderTopColor: color }}>
       <div className="payroll-dash-pie__label">{label}</div>
-      <div className="payroll-dash-pie__count">
-        {count} {count === 1 ? 'alerta' : 'alertas'}
+      <div className="payroll-dash-pie__row">
+        <div className="payroll-dash-pie__chart">
+          <Doughnut data={data} options={options} plugins={[descPieCenterPlugin]} />
+        </div>
+        <div className="payroll-dash-pie__pct-side">
+          <span className="payroll-dash-pie__pct-value" style={{ color }}>
+            {safePct}%
+          </span>
+          <span className="payroll-dash-pie__pct-text">del total</span>
+        </div>
       </div>
     </div>
   );
@@ -660,7 +949,10 @@ const AlertasDashboard = ({ data }) => {
   const [filterPrioridad, setFilterPrioridad] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState(null);
+  const [filterDateTo, setFilterDateTo] = useState(null);
   const [groupMode, setGroupMode] = useState('dia');
+  const datePickerDashRef = useRef(null);
 
   const prioridadOptions = useMemo(() => {
     const set = new Set();
@@ -684,13 +976,22 @@ const AlertasDashboard = ({ data }) => {
   }, [data]);
 
   const filteredData = useMemo(() => {
+    const fromTs = filterDateFrom ? new Date(filterDateFrom).setHours(0, 0, 0, 0) : null;
+    const toTs = filterDateTo ? new Date(filterDateTo).setHours(23, 59, 59, 999) : null;
     return data.filter((a) => {
       if (filterPrioridad && normalizePriority(a.prioridad) !== filterPrioridad) return false;
       if (filterCategoria && a.categoria !== filterCategoria) return false;
       if (filterEstado && a.estado !== filterEstado) return false;
+      if (fromTs !== null || toTs !== null) {
+        if (!a.fechaCreacion) return false;
+        const t = new Date(a.fechaCreacion).getTime();
+        if (isNaN(t)) return false;
+        if (fromTs !== null && t < fromTs) return false;
+        if (toTs !== null && t > toTs) return false;
+      }
       return true;
     });
-  }, [data, filterPrioridad, filterCategoria, filterEstado]);
+  }, [data, filterPrioridad, filterCategoria, filterEstado, filterDateFrom, filterDateTo]);
 
   const kpis = useMemo(() => {
     const counts = { con_novedad: 0, sin_novedad: 0, reporteria: 0, error_proceso: 0 };
@@ -790,9 +1091,12 @@ const AlertasDashboard = ({ data }) => {
     setFilterPrioridad('');
     setFilterCategoria('');
     setFilterEstado('');
+    setFilterDateFrom(null);
+    setFilterDateTo(null);
   };
 
-  const hasDashFilters = !!filterPrioridad || !!filterCategoria || !!filterEstado;
+  const hasDashFilters = !!filterPrioridad || !!filterCategoria || !!filterEstado
+    || !!filterDateFrom || !!filterDateTo;
 
   return (
     <div className="payroll-dashboard-tab">
@@ -859,6 +1163,67 @@ const AlertasDashboard = ({ data }) => {
                     {l}
                   </button>
                 ))}
+              </div>
+            </div>
+            <div className="payroll-dash-filter">
+              <label className="form-label">Fecha</label>
+              <div className="payroll-toolbar__date payroll-dash-filter__date">
+                <button
+                  type="button"
+                  className="btn btn--secondary payroll-toolbar__date-btn payroll-dash-filter__date-btn"
+                  onClick={() => datePickerDashRef.current?.setOpen(true)}
+                  aria-label="Filtrar por fecha de creación"
+                >
+                  <Calendar size={16} aria-hidden="true" />
+                  <span>
+                    {filterDateFrom && filterDateTo
+                      ? `${filterDateFrom.toLocaleDateString('es-ES')} – ${filterDateTo.toLocaleDateString('es-ES')}`
+                      : filterDateFrom
+                        ? `${filterDateFrom.toLocaleDateString('es-ES')} –`
+                        : 'Fecha'}
+                  </span>
+                  {(filterDateFrom || filterDateTo) && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="payroll-toolbar__date-clear"
+                      aria-label="Quitar filtro de fecha"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFilterDateFrom(null);
+                        setFilterDateTo(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setFilterDateFrom(null);
+                          setFilterDateTo(null);
+                        }
+                      }}
+                    >
+                      <X size={14} />
+                    </span>
+                  )}
+                </button>
+                <div className="payroll-toolbar__date-picker">
+                  <DatePicker
+                    ref={datePickerDashRef}
+                    selectsRange
+                    startDate={filterDateFrom}
+                    endDate={filterDateTo}
+                    onChange={(dates) => {
+                      const [start, end] = dates || [null, null];
+                      setFilterDateFrom(start);
+                      setFilterDateTo(end);
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    isClearable={false}
+                    portalId="datepicker-portal"
+                    popperPlacement="bottom-start"
+                    customInput={<span style={{ display: 'none' }} />}
+                  />
+                </div>
               </div>
             </div>
             <div className="payroll-dash-filter payroll-dash-filter--actions">
@@ -933,12 +1298,8 @@ const AlertasPayroll = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [editing, setEditing] = useState(null);
-  const [editEstado, setEditEstado] = useState('P');
-  const [editNotas, setEditNotas] = useState('');
+  const [editingRow, setEditingRow] = useState(null);
   const [saving, setSaving] = useState(false);
-
-  const [previewing, setPreviewing] = useState(null);
 
   const [sort, setSort] = useState({ key: null, dir: null });
   const [globalFilter, setGlobalFilter] = useState('');
@@ -968,24 +1329,18 @@ const AlertasPayroll = () => {
 
   const usuarioSesion = user?.email || user?.name || user?.id || '';
 
-  const openEdit = (row) => {
-    setEditing(row);
-    setEditEstado(['P', 'R', 'E'].includes(row.estado) ? row.estado : 'P');
-    setEditNotas(row.notasResolucion || '');
-  };
+  const openAlerta = (row) => setEditingRow(row);
 
-  const closeEdit = () => {
+  const closeAlerta = () => {
     if (saving) return;
-    setEditing(null);
+    setEditingRow(null);
   };
 
-  const openPreview = (row) => setPreviewing(row);
-  const closePreview = () => setPreviewing(null);
-
-  const handleSave = async () => {
+  const handleSave = async ({ estado, notas }) => {
+    if (!editingRow) return;
     const result = await Swal.fire({
       title: '¿Guardar cambios?',
-      text: `Se actualizará la alerta #${editing.idNotificacion} con estado "${ESTADO_LABELS[editEstado]}".`,
+      text: `Se actualizará la alerta #${editingRow.idNotificacion} con estado "${ESTADO_LABELS[estado]}".`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Sí, guardar',
@@ -996,9 +1351,9 @@ const AlertasPayroll = () => {
 
     try {
       setSaving(true);
-      await payrollService.updateResolucion(editing.idNotificacion, {
-        estado: editEstado,
-        notasResolucion: editNotas,
+      await payrollService.updateResolucion(editingRow.idNotificacion, {
+        estado,
+        notasResolucion: notas,
         usuarioResolucion: usuarioSesion,
         fechaModificacion: nowLocalIso(),
       });
@@ -1009,7 +1364,7 @@ const AlertasPayroll = () => {
         timer: 1800,
         showConfirmButton: false,
       });
-      setEditing(null);
+      setEditingRow(null);
       loadData();
     } catch (err) {
       Swal.fire({
@@ -1022,63 +1377,25 @@ const AlertasPayroll = () => {
     }
   };
 
-  const handleDescargar = async (row) => {
-    try {
-      await payrollService.descargarAdjunto({
-        rutaAdjunto: row.rutaAdjunto,
-        nombreAdjunto: row.nombreAdjunto,
-      });
-    } catch (err) {
-      Swal.fire({
-        title: 'No se pudo descargar',
-        text: err.message || 'Ocurrió un error al descargar el adjunto.',
-        icon: 'error',
-      });
-    }
-  };
-
   const columns = useMemo(() => [
     {
       key: '__actions',
       header: 'Acciones',
       sortable: false,
       filterable: false,
-      render: (row) => {
-        const tieneAdjunto = !!row.rutaAdjunto;
-        const nombreAdjunto = row.nombreAdjunto || row.rutaAdjunto?.split('/').pop() || '';
-        return (
-          <div className="table__actions">
-            <button
-              type="button"
-              className="btn btn--icon btn--sm btn--ghost"
-              onClick={(e) => { e.stopPropagation(); openPreview(row); }}
-              data-tooltip="Ver previsualización"
-              aria-label={`Ver previsualización de ${row.asunto || `alerta ${row.idNotificacion}`}`}
-            >
-              <Eye size={16} />
-            </button>
-            <button
-              type="button"
-              className="btn btn--icon btn--sm btn--ghost"
-              onClick={(e) => { e.stopPropagation(); openEdit(row); }}
-              data-tooltip="Editar resolución"
-              aria-label="Editar resolución"
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              type="button"
-              className="btn btn--icon btn--sm btn--ghost"
-              onClick={(e) => { e.stopPropagation(); handleDescargar(row); }}
-              disabled={!tieneAdjunto}
-              data-tooltip={tieneAdjunto ? `Descargar ${nombreAdjunto}` : 'Sin adjunto'}
-              aria-label={tieneAdjunto ? `Descargar adjunto ${nombreAdjunto}` : 'Sin adjunto disponible'}
-            >
-              <Download size={16} />
-            </button>
-          </div>
-        );
-      },
+      render: (row) => (
+        <div className="table__actions">
+          <button
+            type="button"
+            className="btn btn--icon btn--sm btn--ghost"
+            onClick={(e) => { e.stopPropagation(); openAlerta(row); }}
+            data-tooltip="Ver y resolver alerta"
+            aria-label={`Ver y resolver alerta ${row.asunto || row.idNotificacion}`}
+          >
+            <Eye size={16} />
+          </button>
+        </div>
+      ),
     },
     ...baseColumns,
   ], []);
@@ -1102,8 +1419,22 @@ const AlertasPayroll = () => {
     || Object.values(columnFilters).some((v) => v && v.trim() !== '')
     || !!filterDateFrom || !!filterDateTo;
 
+  const dateFilteredData = useMemo(() => {
+    if (!filterDateFrom && !filterDateTo) return data;
+    const fromTs = filterDateFrom ? new Date(filterDateFrom).setHours(0, 0, 0, 0) : null;
+    const toTs = filterDateTo ? new Date(filterDateTo).setHours(23, 59, 59, 999) : null;
+    return data.filter((row) => {
+      if (!row.fechaCreacion) return false;
+      const t = new Date(row.fechaCreacion).getTime();
+      if (isNaN(t)) return false;
+      if (fromTs !== null && t < fromTs) return false;
+      if (toTs !== null && t > toTs) return false;
+      return true;
+    });
+  }, [data, filterDateFrom, filterDateTo]);
+
   const filteredSorted = useMemo(() => {
-    let rows = data;
+    let rows = dateFilteredData;
 
     const g = globalFilter.trim().toLowerCase();
     if (g) {
@@ -1126,19 +1457,6 @@ const AlertasPayroll = () => {
       );
     }
 
-    if (filterDateFrom || filterDateTo) {
-      const fromTs = filterDateFrom ? new Date(filterDateFrom).setHours(0, 0, 0, 0) : null;
-      const toTs = filterDateTo ? new Date(filterDateTo).setHours(23, 59, 59, 999) : null;
-      rows = rows.filter((row) => {
-        if (!row.fechaCreacion) return false;
-        const t = new Date(row.fechaCreacion).getTime();
-        if (isNaN(t)) return false;
-        if (fromTs !== null && t < fromTs) return false;
-        if (toTs !== null && t > toTs) return false;
-        return true;
-      });
-    }
-
     if (sort.key && sort.dir) {
       const col = columns.find((c) => c.key === sort.key);
       if (col) {
@@ -1150,7 +1468,7 @@ const AlertasPayroll = () => {
     }
 
     return rows;
-  }, [data, globalFilter, columnFilters, filterDateFrom, filterDateTo, sort, columns]);
+  }, [dateFilteredData, globalFilter, columnFilters, sort, columns]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -1170,17 +1488,17 @@ const AlertasPayroll = () => {
   };
 
   const stats = useMemo(() => ({
-    total: data.length,
-    activas: data.filter((n) => n.estado === 'A').length,
-    enProceso: data.filter((n) => n.estado === 'P').length,
-    resueltas: data.filter((n) => n.estado === 'R').length,
-    cerradas: data.filter((n) => n.estado === 'C').length,
-    error: data.filter((n) => n.estado === 'E').length,
-  }), [data]);
+    total: dateFilteredData.length,
+    activas: dateFilteredData.filter((n) => n.estado === 'A').length,
+    enProceso: dateFilteredData.filter((n) => n.estado === 'P').length,
+    resueltas: dateFilteredData.filter((n) => n.estado === 'R').length,
+    cerradas: dateFilteredData.filter((n) => n.estado === 'C').length,
+    error: dateFilteredData.filter((n) => n.estado === 'E').length,
+  }), [dateFilteredData]);
 
   const categoriaItems = useMemo(() => {
     const map = new Map();
-    data.forEach((n) => {
+    dateFilteredData.forEach((n) => {
       const descKey = classifyDescripcion(n.descripcion);
       if (!descKey || !catDescFilter.has(descKey)) return;
       const cat = n.categoria || 'Sin categoría';
@@ -1191,7 +1509,7 @@ const AlertasPayroll = () => {
       value,
       color: ORIGIN_COLORS[i % ORIGIN_COLORS.length],
     })).sort((a, b) => b.value - a.value);
-  }, [data, catDescFilter]);
+  }, [dateFilteredData, catDescFilter]);
 
   const toggleCatDesc = (key) => {
     setCatDescFilter((prev) => {
@@ -1212,7 +1530,7 @@ const AlertasPayroll = () => {
   const pendientesSegments = useMemo(() => {
     const pendKeys = ['con_novedad', 'reporteria', 'error_proceso'];
     const counts = { con_novedad: 0, reporteria: 0, error_proceso: 0 };
-    data.forEach((n) => {
+    dateFilteredData.forEach((n) => {
       if (!['A', 'P', 'E'].includes(n.estado)) return;
       const k = classifyDescripcion(n.descripcion);
       if (!k || !pendKeys.includes(k)) return;
@@ -1223,7 +1541,7 @@ const AlertasPayroll = () => {
       value: counts[k],
       color: DESC_COLORS[k],
     }));
-  }, [data]);
+  }, [dateFilteredData]);
 
   return (
     <div>
@@ -1446,6 +1764,8 @@ const AlertasPayroll = () => {
                       }}
                       dateFormat="dd/MM/yyyy"
                       isClearable={false}
+                      portalId="datepicker-portal"
+                      popperPlacement="bottom-start"
                       customInput={<span style={{ display: 'none' }} />}
                     />
                   </div>
@@ -1627,78 +1947,15 @@ const AlertasPayroll = () => {
         </>
       )}
 
-      {previewing && (
-        <PreviewModal row={previewing} onClose={closePreview} />
+      {editingRow && (
+        <AlertaModal
+          row={editingRow}
+          usuarioSesion={usuarioSesion}
+          saving={saving}
+          onClose={closeAlerta}
+          onSave={handleSave}
+        />
       )}
-
-      <Modal
-        isOpen={!!editing}
-        onClose={closeEdit}
-        title={editing ? editing.asunto || `Alerta #${editing.idNotificacion}` : ''}
-        footer={
-          <>
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={closeEdit}
-              disabled={saving}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
-          </>
-        }
-      >
-        {editing && (
-          <div className="payroll-edit-form">
-            <div className="form-group">
-              <label className="form-label" htmlFor="payroll-edit-estado">Estado</label>
-              <select
-                id="payroll-edit-estado"
-                className="form-control"
-                value={editEstado}
-                onChange={(e) => setEditEstado(e.target.value)}
-                disabled={saving}
-              >
-                <option value="P">En Proceso</option>
-                <option value="R">Resuelto</option>
-                <option value="E">Error</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="payroll-edit-notas">Notas Resolución</label>
-              <textarea
-                id="payroll-edit-notas"
-                className="form-control"
-                rows={4}
-                value={editNotas}
-                onChange={(e) => setEditNotas(e.target.value)}
-                placeholder="Ingrese observaciones sobre la resolución..."
-                disabled={saving}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Usuario Resolución</label>
-              <input
-                type="text"
-                className="form-control"
-                value={usuarioSesion}
-                readOnly
-              />
-              <small className="payroll-edit-hint">
-                Se asigna automáticamente al usuario de la sesión al guardar.
-              </small>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };

@@ -5,6 +5,7 @@ using BSC.Application.Commands.ChangeTaskStatus;
 using BSC.Application.Commands.CreateTaskItem;
 using BSC.Application.Commands.CreateTaskItemsBulk;
 using BSC.Application.Commands.DeleteTaskItem;
+using BSC.Application.Commands.OverrideTaskRating;
 using BSC.Application.Commands.RemoveFileAttachment;
 using BSC.Application.Commands.RevertTaskStatus;
 using BSC.Application.Commands.UpdateTaskItem;
@@ -288,7 +289,12 @@ public class TasksController : ControllerBase
         [FromQuery] string? status = null,
         [FromQuery] string? dateFrom = null,
         [FromQuery] string? dateTo = null,
-        [FromQuery] string? sortDueDate = null)
+        [FromQuery] string? sortDueDate = null,
+        [FromQuery] string? titleFilter = null,
+        [FromQuery] string? assignedToFilter = null,
+        [FromQuery] string? leaderFilter = null,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] string? sortDir = null)
     {
         var query = new GetTaskItemsQuery
         {
@@ -300,10 +306,67 @@ public class TasksController : ControllerBase
             Status = status,
             DateFrom = dateFrom,
             DateTo = dateTo,
-            SortDueDate = sortDueDate
+            SortDueDate = sortDueDate,
+            TitleFilter = titleFilter,
+            AssignedToFilter = assignedToFilter,
+            LeaderFilter = leaderFilter,
+            SortBy = sortBy,
+            SortDir = sortDir,
         };
         var result = await _mediator.Send(query);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Retorna los valores únicos de la columna solicitada, restringidos por el ámbito visible al rol del usuario.
+    /// field admite: "title" | "assignedTo" | "leader" | "status".
+    /// </summary>
+    [HttpGet("distinct-values")]
+    [ProducesResponseType(typeof(ApiResponse<List<string>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDistinctValues([FromQuery] string field)
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "title", "assignedTo", "leader", "status" };
+        if (string.IsNullOrWhiteSpace(field) || !allowed.Contains(field))
+        {
+            return BadRequest(ApiResponse<object>.Fail("El parámetro 'field' es inválido."));
+        }
+
+        var role = GetUserRole();
+        var email = GetUserEmail();
+
+        string scope;
+        List<string>? statuses = null;
+        switch (role)
+        {
+            case TaskStateTransitions.RolGerente:
+            case TaskStateTransitions.RolAdministrador:
+                scope = "all";
+                break;
+            case TaskStateTransitions.RolLider:
+                scope = "leader";
+                statuses = new List<string>
+                {
+                    TaskStatuses.Asignada,
+                    TaskStatuses.Reasignada,
+                    TaskStatuses.CompletaPorValidar,
+                    TaskStatuses.CompletaValidada
+                };
+                break;
+            case TaskStateTransitions.RolColaborador:
+                scope = "assignee";
+                statuses = new List<string>
+                {
+                    TaskStatuses.Asignada,
+                    TaskStatuses.Reasignada,
+                    TaskStatuses.CompletaPorValidar
+                };
+                break;
+            default:
+                return Ok(ApiResponse<List<string>>.Ok(new List<string>()));
+        }
+
+        var values = await _taskItemRepository.GetDistinctFieldValuesAsync(field, scope, email, statuses);
+        return Ok(ApiResponse<List<string>>.Ok(values));
     }
 
     /// <summary>
@@ -418,6 +481,33 @@ public class TasksController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ChangeStatus(string id, [FromBody] ChangeTaskStatusCommand command)
+    {
+        command.TaskId = id;
+        command.ChangedByEmail = GetUserEmail();
+        command.ChangedByRole = GetUserRole();
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+        {
+            if (result.Message.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))
+                return NotFound(result);
+
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Modifica manualmente la calificación de una tarea. Solo el Gerente puede ejecutarlo
+    /// y solo sobre tareas en estado "Completa - Validada" o "Completa".
+    /// La justificación es obligatoria y se guarda en el audit trail (RatingHistory).
+    /// </summary>
+    [HttpPut("{id}/rating-override")]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<TaskItemDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> OverrideRating(string id, [FromBody] OverrideTaskRatingCommand command)
     {
         command.TaskId = id;
         command.ChangedByEmail = GetUserEmail();

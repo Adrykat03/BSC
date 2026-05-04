@@ -310,3 +310,50 @@
     padding: var(--spacing-1) var(--spacing-2);
   }
 }
+
+/* ==========================================================================
+   Collapsible Cards
+   ========================================================================== */
+.collapsible-card .collapsible-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.collapsible-card .collapsible-card__header:hover {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.collapsible-card .collapsible-card__header:focus-visible {
+  outline: 2px solid var(--color-primary, #2563EB);
+  outline-offset: -2px;
+}
+
+.collapsible-card__title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.collapsible-card__chevron {
+  flex-shrink: 0;
+  margin-left: var(--spacing-3);
+  color: var(--color-text-secondary);
+  transition: transform 200ms ease;
+}
+
+.collapsible-card__chevron.is-expanded {
+  transform: rotate(180deg);
+  color: var(--color-primary, #2563EB);
+}
+
+.collapsible-card.is-collapsed .card__header {
+  border-bottom: 0;
+}

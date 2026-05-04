@@ -37,7 +37,15 @@ public class TaskItemRepository : ITaskItemRepository
 
     private static FilterDefinition<TaskItem> ApplyStatusFilter(FilterDefinition<TaskItem> filter, string? status)
     {
-        if (!string.IsNullOrWhiteSpace(status))
+        if (string.IsNullOrWhiteSpace(status)) return filter;
+        // Soporta CSV: "Asignada,Reasignada" → In(...). Un solo valor también pasa por In.
+        if (status.Contains(','))
+        {
+            var values = status.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct().ToList();
+            if (values.Count > 0)
+                filter &= Builders<TaskItem>.Filter.In(t => t.Status, values);
+        }
+        else
         {
             filter &= Builders<TaskItem>.Filter.Eq(t => t.Status, status);
         }
@@ -63,35 +71,87 @@ public class TaskItemRepository : ITaskItemRepository
         return filter;
     }
 
-    private IFindFluent<TaskItem, TaskItem> ApplySorting(IFindFluent<TaskItem, TaskItem> query, string? sortDueDate)
+    private static List<string>? ParseCsvValues(string? csv)
     {
+        if (string.IsNullOrWhiteSpace(csv)) return null;
+        var values = csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Distinct()
+                        .ToList();
+        return values.Count == 0 ? null : values;
+    }
+
+    private static FilterDefinition<TaskItem> ApplyColumnFilters(FilterDefinition<TaskItem> filter, string? titleFilter, string? assignedToFilter, string? leaderFilter)
+    {
+        var titles = ParseCsvValues(titleFilter);
+        if (titles != null)
+        {
+            filter &= Builders<TaskItem>.Filter.In(t => t.Title, titles);
+        }
+        var assigned = ParseCsvValues(assignedToFilter);
+        if (assigned != null)
+        {
+            filter &= Builders<TaskItem>.Filter.In(t => t.AssignedToName, assigned);
+        }
+        var leaders = ParseCsvValues(leaderFilter);
+        if (leaders != null)
+        {
+            filter &= Builders<TaskItem>.Filter.In(t => t.AssignedLeaderName, leaders);
+        }
+        return filter;
+    }
+
+    private IFindFluent<TaskItem, TaskItem> ApplySorting(IFindFluent<TaskItem, TaskItem> query, string? sortDueDate, string? sortBy = null, string? sortDir = null)
+    {
+        // Sort genérico por sortBy + sortDir tiene prioridad sobre el legado sortDueDate.
+        if (!string.IsNullOrWhiteSpace(sortBy))
+        {
+            var asc = !string.Equals(sortDir, "desc", StringComparison.OrdinalIgnoreCase);
+            return sortBy switch
+            {
+                "title" => asc ? query.SortBy(t => t.Title) : query.SortByDescending(t => t.Title),
+                "description" => asc ? query.SortBy(t => t.Description) : query.SortByDescending(t => t.Description),
+                "assignedTo" => asc ? query.SortBy(t => t.AssignedToName) : query.SortByDescending(t => t.AssignedToName),
+                "leader" => asc ? query.SortBy(t => t.AssignedLeaderName) : query.SortByDescending(t => t.AssignedLeaderName),
+                "status" => asc ? query.SortBy(t => t.Status) : query.SortByDescending(t => t.Status),
+                "dueDate" => asc ? query.SortBy(t => t.DueDate) : query.SortByDescending(t => t.DueDate),
+                "estimatedTime" => asc ? query.SortBy(t => t.EstimatedTime) : query.SortByDescending(t => t.EstimatedTime),
+                "rating" => asc ? query.SortBy(t => t.Rating) : query.SortByDescending(t => t.Rating),
+                "createdAt" => asc ? query.SortBy(t => t.CreatedAt) : query.SortByDescending(t => t.CreatedAt),
+                _ => query.SortByDescending(t => t.CreatedAt),
+            };
+        }
+
+        // Compatibilidad con el viejo sortDueDate.
         if (sortDueDate == "asc")
             return query.SortBy(t => t.DueDate);
         if (sortDueDate == "desc")
             return query.SortByDescending(t => t.DueDate);
-        return query.SortBy(t => t.CreatedAt);
+
+        return query.SortByDescending(t => t.CreatedAt);
     }
 
-    public async Task<List<TaskItem>> GetAllAsync(int page, int pageSize, string? search = null, string? status = null, string? dateFrom = null, string? dateTo = null, string? sortDueDate = null)
+    public async Task<List<TaskItem>> GetAllAsync(int page, int pageSize, string? search = null, string? status = null, string? dateFrom = null, string? dateTo = null, string? sortDueDate = null, string? titleFilter = null, string? assignedToFilter = null, string? leaderFilter = null, string? sortBy = null, string? sortDir = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, status);
         filter = ApplyDateFilter(filter, dateFrom, dateTo);
+        filter = ApplyColumnFilters(filter, titleFilter, assignedToFilter, leaderFilter);
         var skip = (page - 1) * pageSize;
 
-        return await ApplySorting(_collection.Find(filter), sortDueDate)
+        return await ApplySorting(_collection.Find(filter), sortDueDate, sortBy, sortDir)
             .Skip(skip)
             .Limit(pageSize)
             .ToListAsync();
     }
 
-    public async Task<int> GetTotalCountAsync(string? search = null, string? status = null, string? dateFrom = null, string? dateTo = null)
+    public async Task<int> GetTotalCountAsync(string? search = null, string? status = null, string? dateFrom = null, string? dateTo = null, string? titleFilter = null, string? assignedToFilter = null, string? leaderFilter = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, status);
         filter = ApplyDateFilter(filter, dateFrom, dateTo);
+        filter = ApplyColumnFilters(filter, titleFilter, assignedToFilter, leaderFilter);
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
@@ -115,7 +175,7 @@ public class TaskItemRepository : ITaskItemRepository
         return alwaysFilter;
     }
 
-    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null, string? sortDueDate = null)
+    public async Task<List<TaskItem>> GetByLeaderEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null, string? sortDueDate = null, string? titleFilter = null, string? assignedToFilter = null, string? leaderFilter = null, string? sortBy = null, string? sortDir = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
@@ -123,16 +183,17 @@ public class TaskItemRepository : ITaskItemRepository
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, statusFilter);
         filter = ApplyDateFilter(filter, dateFrom, dateTo);
+        filter = ApplyColumnFilters(filter, titleFilter, assignedToFilter, leaderFilter);
 
         var skip = (page - 1) * pageSize;
 
-        return await ApplySorting(_collection.Find(filter), sortDueDate)
+        return await ApplySorting(_collection.Find(filter), sortDueDate, sortBy, sortDir)
             .Skip(skip)
             .Limit(pageSize)
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByLeaderEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null)
+    public async Task<int> GetCountByLeaderEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null, string? titleFilter = null, string? assignedToFilter = null, string? leaderFilter = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, email)
@@ -140,11 +201,12 @@ public class TaskItemRepository : ITaskItemRepository
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, statusFilter);
         filter = ApplyDateFilter(filter, dateFrom, dateTo);
+        filter = ApplyColumnFilters(filter, titleFilter, assignedToFilter, leaderFilter);
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
-    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null, string? sortDueDate = null)
+    public async Task<List<TaskItem>> GetByAssignedEmailAsync(string email, List<string> statuses, int page, int pageSize, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null, string? sortDueDate = null, string? titleFilter = null, string? assignedToFilter = null, string? leaderFilter = null, string? sortBy = null, string? sortDir = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
@@ -152,16 +214,17 @@ public class TaskItemRepository : ITaskItemRepository
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, statusFilter);
         filter = ApplyDateFilter(filter, dateFrom, dateTo);
+        filter = ApplyColumnFilters(filter, titleFilter, assignedToFilter, leaderFilter);
 
         var skip = (page - 1) * pageSize;
 
-        return await ApplySorting(_collection.Find(filter), sortDueDate)
+        return await ApplySorting(_collection.Find(filter), sortDueDate, sortBy, sortDir)
             .Skip(skip)
             .Limit(pageSize)
             .ToListAsync();
     }
 
-    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null)
+    public async Task<int> GetCountByAssignedEmailAsync(string email, List<string> statuses, string? search = null, List<string>? conditionalStatuses = null, DateTime? visibleBeforeDeadline = null, string? statusFilter = null, string? dateFrom = null, string? dateTo = null, string? titleFilter = null, string? assignedToFilter = null, string? leaderFilter = null)
     {
         var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false)
                    & Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, email)
@@ -169,6 +232,7 @@ public class TaskItemRepository : ITaskItemRepository
         filter = ApplySearchFilter(filter, search);
         filter = ApplyStatusFilter(filter, statusFilter);
         filter = ApplyDateFilter(filter, dateFrom, dateTo);
+        filter = ApplyColumnFilters(filter, titleFilter, assignedToFilter, leaderFilter);
 
         return (int)await _collection.CountDocumentsAsync(filter);
     }
@@ -302,5 +366,38 @@ public class TaskItemRepository : ITaskItemRepository
             .Find(filter)
             .SortByDescending(t => t.CreatedAt)
             .ToListAsync();
+    }
+
+    public async Task<List<string>> GetDistinctFieldValuesAsync(string field, string scope, string? scopeEmail, List<string>? statuses)
+    {
+        var filter = Builders<TaskItem>.Filter.Eq(t => t.IsDeleted, false);
+        if (string.Equals(scope, "leader", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(scopeEmail))
+        {
+            filter &= Builders<TaskItem>.Filter.Eq(t => t.AssignedLeaderEmail, scopeEmail);
+        }
+        else if (string.Equals(scope, "assignee", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(scopeEmail))
+        {
+            filter &= Builders<TaskItem>.Filter.Eq(t => t.AssignedToEmail, scopeEmail);
+        }
+        if (statuses != null && statuses.Count > 0)
+        {
+            filter &= Builders<TaskItem>.Filter.In(t => t.Status, statuses);
+        }
+
+        FieldDefinition<TaskItem, string?> mongoField = field switch
+        {
+            "title" => "title",
+            "assignedTo" => "assignedToName",
+            "leader" => "assignedLeaderName",
+            "status" => "status",
+            _ => "title",
+        };
+
+        var values = await _collection.Distinct(mongoField, filter).ToListAsync();
+        return values
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Select(v => v!)
+            .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

@@ -73,9 +73,31 @@ public class TaskItem
     [BsonElement("observations")]
     public string? Observations { get; set; }
 
-    // Calificacion automatica (porcentaje 0-100)
+    // Calificacion (porcentaje 0-100). Es el valor efectivo:
+    // - Si RatingOverride está seteado, se sincroniza con éste.
+    // - Si no, refleja el cálculo automático de CalculateRating(taskItem).
     [BsonElement("rating")]
     public int? Rating { get; set; }
+
+    // Override manual del Gerente (0-100). Si tiene valor, prevalece sobre el cálculo automático
+    // y los recálculos por cambio de estado lo respetan.
+    [BsonElement("ratingOverride")]
+    public int? RatingOverride { get; set; }
+
+    // Justificación de la última modificación manual.
+    [BsonElement("ratingOverrideReason")]
+    public string? RatingOverrideReason { get; set; }
+
+    // Email del Gerente que hizo la última modificación.
+    [BsonElement("ratingOverrideBy")]
+    public string? RatingOverrideBy { get; set; }
+
+    [BsonElement("ratingOverrideAt")]
+    public DateTime? RatingOverrideAt { get; set; }
+
+    // Audit trail completo de modificaciones manuales (append-only).
+    [BsonElement("ratingHistory")]
+    public List<RatingChange> RatingHistory { get; set; } = new();
 
     // Campos de auditoria
     [BsonElement("createdAt")]

@@ -13,7 +13,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
-import { Zap, Trophy, Calendar, Filter, Download } from 'lucide-react';
+import { Zap, Trophy, Calendar, Filter, Download, ChevronDown } from 'lucide-react';
 import * as XLSX from '@e965/xlsx';
 import { apiClient } from '../../services/api';
 import { tasksService } from '../../services/tasksService';
@@ -87,6 +87,35 @@ const formatDateTimeDDMMYYYY = (dateStr) => {
   const hh = String(d.getHours()).padStart(2, '0');
   const min = String(d.getMinutes()).padStart(2, '0');
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+};
+
+/**
+ * Card colapsable: header clickeable que muestra/oculta el cuerpo.
+ * Por defecto colapsado; el usuario expande con click.
+ */
+const CollapsibleCard = ({ title, subtitle, defaultExpanded = false, className = '', children }) => {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  return (
+    <div className={`card collapsible-card ${expanded ? 'is-expanded' : 'is-collapsed'} ${className}`}>
+      <button
+        type="button"
+        className="card__header collapsible-card__header"
+        onClick={() => setExpanded((e) => !e)}
+        aria-expanded={expanded}
+      >
+        <div className="collapsible-card__title-wrap">
+          <h2 className="card__title">{title}</h2>
+          {subtitle && <p className="card__subtitle">{subtitle}</p>}
+        </div>
+        <ChevronDown
+          size={20}
+          className={`collapsible-card__chevron ${expanded ? 'is-expanded' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      {expanded && <div className="card__body">{children}</div>}
+    </div>
+  );
 };
 
 const Home = () => {
@@ -198,6 +227,12 @@ const Home = () => {
       }
       const result = await apiClient.get(endpoint);
       setDashboard(result.data);
+      // Pre-seleccionar TODOS los colaboradores en el timeline para que se desplieguen
+      // todos al cargar; el usuario puede seguir quitando con la X.
+      const tl = result?.data?.completionTimeline;
+      if (Array.isArray(tl)) {
+        setSelectedCollaborators(tl.map((c) => c.name));
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -319,88 +354,74 @@ const Home = () => {
 
           {/* Heatmap with tabs - oculto para Colaborador */}
           {!isColaborador && (
-            <div className="card mb-6">
-              <div className="card__header">
-                <h2 className="card__title">Carga de trabajo por colaborador</h2>
-                <p className="card__subtitle">Intensidad basada en cantidad de tareas asignadas</p>
-              </div>
-              <div className="card__body">
-                <HeatMapTabs
-                  activeData={dashboard.collaboratorHeatmapActive}
-                  historicData={dashboard.collaboratorHeatmap}
-                />
-              </div>
-            </div>
+            <CollapsibleCard
+              className="mb-6"
+              title="Carga de trabajo por colaborador"
+              subtitle="Intensidad basada en cantidad de tareas asignadas"
+            >
+              <HeatMapTabs
+                activeData={dashboard.collaboratorHeatmapActive}
+                historicData={dashboard.collaboratorHeatmap}
+              />
+            </CollapsibleCard>
           )}
 
           {/* Charts row: Avg Time + Doughnut */}
           <div className="dashboard-grid mb-6">
-            <div className="card">
-              <div className="card__header">
-                <h2 className="card__title">Tiempo promedio por estado</h2>
-                <p className="card__subtitle">Horas promedio en cada estado</p>
+            <CollapsibleCard
+              title="Tiempo promedio por estado"
+              subtitle="Horas promedio en cada estado (excluye estado Completa)"
+            >
+              <div className="chart-container" style={{ height: '320px' }}>
+                <AvgTimeByStatusChart data={dashboard.avgTimeByStatus} />
               </div>
-              <div className="card__body">
-                <div className="chart-container" style={{ height: '320px' }}>
-                  <AvgTimeByStatusChart data={dashboard.avgTimeByStatus} />
-                </div>
-              </div>
-            </div>
+            </CollapsibleCard>
 
-            <div className="card">
-              <div className="card__header">
-                <h2 className="card__title">Distribucion de tareas por estado</h2>
-                <p className="card__subtitle">Total de tareas segun su estado actual</p>
+            <CollapsibleCard
+              title="Distribucion de tareas por estado"
+              subtitle="Total de tareas segun su estado actual"
+            >
+              <div className="chart-container" style={{ height: '320px' }}>
+                <TasksByStatusDoughnut data={dashboard.tasksByStatus} />
               </div>
-              <div className="card__body">
-                <div className="chart-container" style={{ height: '320px' }}>
-                  <TasksByStatusDoughnut data={dashboard.tasksByStatus} />
-                </div>
-              </div>
-            </div>
+            </CollapsibleCard>
           </div>
 
           {/* Full width: Tasks by collaborator and status */}
-          <div className="card mb-6">
-            <div className="card__header">
-              <h2 className="card__title">Tareas por colaborador y estado</h2>
-              <p className="card__subtitle">Desglose de tareas asignadas a cada colaborador</p>
+          <CollapsibleCard
+            className="mb-6"
+            title="Tareas por colaborador y estado"
+            subtitle="Desglose de tareas asignadas a cada colaborador"
+          >
+            <div className="chart-container" style={{ height: Math.max(300, (dashboard.tasksByCollaboratorAndStatus?.length || 1) * 40 + 80) + 'px' }}>
+              <TasksByCollaboratorChart data={dashboard.tasksByCollaboratorAndStatus} historicReassigned={dashboard.historicReassignedByCollaborator} lateTasks={dashboard.lateTasksByCollaborator} dateFrom={dateFrom} dateTo={dateTo} />
             </div>
-            <div className="card__body">
-              <div className="chart-container" style={{ height: Math.max(300, (dashboard.tasksByCollaboratorAndStatus?.length || 1) * 40 + 80) + 'px' }}>
-                <TasksByCollaboratorChart data={dashboard.tasksByCollaboratorAndStatus} historicReassigned={dashboard.historicReassignedByCollaborator} lateTasks={dashboard.lateTasksByCollaborator} dateFrom={dateFrom} dateTo={dateTo} />
-              </div>
-            </div>
-          </div>
+          </CollapsibleCard>
 
           {/* Full width: Avg Rating by Collaborator */}
           {dashboard.avgRatingByCollaborator && dashboard.avgRatingByCollaborator.length > 0 && (
-            <div className="card mb-6">
-              <div className="card__header">
-                <h2 className="card__title">Calificacion promedio por colaborador</h2>
-                <p className="card__subtitle">Promedio basado en entrega a tiempo y reprocesos</p>
+            <CollapsibleCard
+              className="mb-6"
+              title="Calificacion promedio por colaborador"
+              subtitle="Promedio basado en entrega a tiempo y reprocesos"
+            >
+              <div className="chart-container" style={{ height: Math.max(200, (dashboard.avgRatingByCollaborator.length) * 40 + 60) + 'px' }}>
+                <AvgRatingChart data={dashboard.avgRatingByCollaborator} />
               </div>
-              <div className="card__body">
-                <div className="chart-container" style={{ height: Math.max(200, (dashboard.avgRatingByCollaborator.length) * 40 + 60) + 'px' }}>
-                  <AvgRatingChart data={dashboard.avgRatingByCollaborator} />
-                </div>
-              </div>
-            </div>
+            </CollapsibleCard>
           )}
 
           {/* Full width: BSC Avg Rating by Collaborator */}
           {dashboard.bscAvgRatingByCollaborator && dashboard.bscAvgRatingByCollaborator.length > 0 && (
-            <div className="card mb-6">
-              <div className="card__header">
-                <h2 className="card__title">Calificacion promedio BSC por colaborador</h2>
-                <p className="card__subtitle">Promedio basado en tareas BSC (Proceso mensual liquidaciones)</p>
+            <CollapsibleCard
+              className="mb-6"
+              title="Calificacion promedio BSC por colaborador"
+              subtitle="Promedio basado en tareas BSC (Proceso mensual liquidaciones)"
+            >
+              <div className="chart-container" style={{ height: Math.max(200, (dashboard.bscAvgRatingByCollaborator.length) * 40 + 60) + 'px' }}>
+                <AvgRatingChart data={dashboard.bscAvgRatingByCollaborator} />
               </div>
-              <div className="card__body">
-                <div className="chart-container" style={{ height: Math.max(200, (dashboard.bscAvgRatingByCollaborator.length) * 40 + 60) + 'px' }}>
-                  <AvgRatingChart data={dashboard.bscAvgRatingByCollaborator} />
-                </div>
-              </div>
-            </div>
+            </CollapsibleCard>
           )}
 
           {/* Full width: Completion timeline comparison */}
@@ -1180,66 +1201,82 @@ const CompletionTimelineCard = ({ completionTimeline, selectedCollaborators, set
   };
 
   return (
-    <div className="card mb-6">
-      <div className="card__header">
-        <h2 className="card__title">Comparativa de tareas completadas en el tiempo</h2>
-        <p className="card__subtitle">Seleccione colaboradores para comparar su progreso de completacion</p>
-      </div>
-      <div className="card__body">
-        <div className="timeline-selector">
-          <select
-            className="form-input"
-            value={selectedValue}
-            onChange={(e) => setSelectedValue(e.target.value)}
-          >
-            <option value="">-- Seleccionar colaborador --</option>
-            {availableCollaborators.map((c) => (
-              <option key={c.name} value={c.name}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <button
-            className="btn btn--primary btn--sm"
-            onClick={handleAdd}
-            disabled={!selectedValue}
-          >
-            Agregar
-          </button>
-        </div>
-
+    <CollapsibleCard
+      className="mb-6"
+      title="Comparativa de tareas completadas en el tiempo"
+      subtitle="Todos los colaboradores se muestran por defecto; quita los que no quieras comparar"
+    >
+      <div className="timeline-selector">
+        <select
+          className="form-input"
+          value={selectedValue}
+          onChange={(e) => setSelectedValue(e.target.value)}
+        >
+          <option value="">-- Re-agregar colaborador --</option>
+          {availableCollaborators.map((c) => (
+            <option key={c.name} value={c.name}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <button
+          className="btn btn--primary btn--sm"
+          onClick={handleAdd}
+          disabled={!selectedValue}
+        >
+          Agregar
+        </button>
         {selectedCollaborators.length > 0 && (
-          <div className="timeline-tags">
-            {selectedCollaborators.map((name, index) => (
-              <span
-                key={name}
-                className="timeline-tag"
-                style={{ borderLeftColor: TIMELINE_COLORS[index % TIMELINE_COLORS.length] }}
-              >
-                {name}
-                <button
-                  className="timeline-tag__remove"
-                  onClick={() => handleRemove(name)}
-                  title={`Quitar ${name}`}
-                >
-                  &times;
-                </button>
-              </span>
-            ))}
-          </div>
+          <button
+            className="btn btn--secondary btn--sm"
+            onClick={() => setSelectedCollaborators([])}
+            title="Quitar todos los colaboradores del gráfico"
+          >
+            Limpiar todos
+          </button>
         )}
-
-        {selectedCollaborators.length === 0 ? (
-          <div className="text-center text-secondary p-6">
-            Seleccione al menos un colaborador para ver el grafico
-          </div>
-        ) : (
-          <div className="chart-container" style={{ height: '360px' }}>
-            <Line data={buildChartData()} options={chartOptions} />
-          </div>
+        {selectedCollaborators.length < completionTimeline.length && (
+          <button
+            className="btn btn--secondary btn--sm"
+            onClick={() => setSelectedCollaborators(completionTimeline.map((c) => c.name))}
+            title="Mostrar todos los colaboradores"
+          >
+            Mostrar todos
+          </button>
         )}
       </div>
-    </div>
+
+      {selectedCollaborators.length > 0 && (
+        <div className="timeline-tags">
+          {selectedCollaborators.map((name, index) => (
+            <span
+              key={name}
+              className="timeline-tag"
+              style={{ borderLeftColor: TIMELINE_COLORS[index % TIMELINE_COLORS.length] }}
+            >
+              {name}
+              <button
+                className="timeline-tag__remove"
+                onClick={() => handleRemove(name)}
+                title={`Quitar ${name}`}
+              >
+                &times;
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {selectedCollaborators.length === 0 ? (
+        <div className="text-center text-secondary p-6">
+          Seleccione al menos un colaborador para ver el grafico
+        </div>
+      ) : (
+        <div className="chart-container" style={{ height: '360px' }}>
+          <Line data={buildChartData()} options={chartOptions} />
+        </div>
+      )}
+    </CollapsibleCard>
   );
 };
 
