@@ -65,10 +65,30 @@ services:
       - ./config/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - bsc_backend
+      - bsc_dab
+      - bsc_fileserver
     networks:
       bsc_net:
         ipv4_address: 19.168.78.12
 
+  # ============================================
+  # Data API Builder - REST sobre SQL Server (Avisos.notificacionesConsolidadas)
+  # ============================================
+  # Lee la connection string desde dab/.env (variable SQL_CONN), no se commitea.
+  # Ver dab/.env.example para el formato.
+  bsc_dab:
+    image: mcr.microsoft.com/azure-databases/data-api-builder:latest
+    container_name: bsc_dab
+    restart: unless-stopped
+    env_file:
+      - ./dab/.env
+    volumes:
+      - ./dab/dab-config.json:/App/dab-config.json:ro
+    ports:
+      - "5555:5000"
+    networks:
+      bsc_net:
+        ipv4_address: 19.168.78.14
 
   # ============================================
   # File Server - Apache httpd sirviendo ./files
