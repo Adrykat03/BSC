@@ -93,14 +93,20 @@ const formatDateTimeDDMMYYYY = (dateStr) => {
  * Card colapsable: header clickeable que muestra/oculta el cuerpo.
  * Por defecto colapsado; el usuario expande con click.
  */
-const CollapsibleCard = ({ title, subtitle, defaultExpanded = false, className = '', children }) => {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+const CollapsibleCard = ({ title, subtitle, defaultExpanded = false, expanded: controlledExpanded, onToggle, className = '', children }) => {
+  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
+  const isControlled = controlledExpanded !== undefined;
+  const expanded = isControlled ? controlledExpanded : internalExpanded;
+  const handleToggle = () => {
+    if (onToggle) onToggle();
+    if (!isControlled) setInternalExpanded((e) => !e);
+  };
   return (
     <div className={`card collapsible-card ${expanded ? 'is-expanded' : 'is-collapsed'} ${className}`}>
       <button
         type="button"
         className="card__header collapsible-card__header"
-        onClick={() => setExpanded((e) => !e)}
+        onClick={handleToggle}
         aria-expanded={expanded}
       >
         <div className="collapsible-card__title-wrap">
@@ -130,6 +136,8 @@ const Home = () => {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [monthlyStars, setMonthlyStars] = useState(null);
   const [bscMonthlyStars, setBscMonthlyStars] = useState(null);
+  const [statusChartsExpanded, setStatusChartsExpanded] = useState(false);
+  const toggleStatusCharts = () => setStatusChartsExpanded((e) => !e);
 
   const isGerente = user?.role === 'Gerente';
   const isColaborador = user?.role === 'Colaborador';
@@ -366,11 +374,13 @@ const Home = () => {
             </CollapsibleCard>
           )}
 
-          {/* Charts row: Avg Time + Doughnut */}
+          {/* Charts row: Avg Time + Doughnut — ambos colapsan/expanden juntos */}
           <div className="dashboard-grid mb-6">
             <CollapsibleCard
               title="Tiempo promedio por estado"
-              subtitle="Horas promedio en cada estado (excluye estado Completa)"
+              subtitle="Horas promedio en cada estado (excluye Asignada y Completa)"
+              expanded={statusChartsExpanded}
+              onToggle={toggleStatusCharts}
             >
               <div className="chart-container" style={{ height: '320px' }}>
                 <AvgTimeByStatusChart data={dashboard.avgTimeByStatus} />
@@ -380,6 +390,8 @@ const Home = () => {
             <CollapsibleCard
               title="Distribucion de tareas por estado"
               subtitle="Total de tareas segun su estado actual"
+              expanded={statusChartsExpanded}
+              onToggle={toggleStatusCharts}
             >
               <div className="chart-container" style={{ height: '320px' }}>
                 <TasksByStatusDoughnut data={dashboard.tasksByStatus} />
@@ -655,7 +667,15 @@ const AvgTimeByStatusChart = ({ data }) => {
     return <div className="text-center text-secondary p-4">No hay datos disponibles</div>;
   }
 
-  const sorted = sortByStatusOrder(data);
+  // Excluir 'Asignada' y 'Completa': los tiempos no son representativos
+  // (Asignada permanece hasta que el colaborador la trabaja; Completa es estado final).
+  const filtered = data.filter((d) => d.status !== 'Asignada' && d.status !== 'Completa');
+
+  if (filtered.length === 0) {
+    return <div className="text-center text-secondary p-4">No hay datos disponibles</div>;
+  }
+
+  const sorted = sortByStatusOrder(filtered);
 
   const chartData = {
     labels: sorted.map((d) => d.status),
@@ -1163,6 +1183,7 @@ const CompletionTimelineCard = ({ completionTimeline, selectedCollaborators, set
       tooltip: {
         mode: 'index',
         intersect: false,
+        itemSort: (a, b) => b.parsed.y - a.parsed.y,
       },
     },
     scales: {
