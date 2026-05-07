@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import {
   Plus, Pencil, Trash2, ClipboardList, ChevronLeft, ChevronRight,
   Eye, Search, History, Undo2, Download, FileSpreadsheet, Upload,
-  ArrowUpDown, ArrowUp, ArrowDown, Calendar, X,
+  ArrowUpDown, ArrowUp, ArrowDown, Calendar, X, Check,
 } from 'lucide-react';
 import * as XLSX from '@e965/xlsx';
 import Swal from 'sweetalert2';
@@ -16,7 +16,8 @@ import TaskModal from './TaskModal';
 import ColumnFilterDropdown from './ColumnFilterDropdown';
 import './Tasks.css';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200];
+const DEFAULT_PAGE_SIZE = 20;
 
 const STATUS_BADGE_MAP = {
   'Creada': 'badge badge--inactive',
@@ -59,6 +60,9 @@ const Tasks = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const pageSizeRef = useRef(DEFAULT_PAGE_SIZE);
 
   // Assign modal state
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -147,7 +151,7 @@ const Tasks = () => {
       // sortVal (legado: sortDueDate) ya no se usa; el sort vive en sortByRef/sortDirRef.
       const data = await tasksService.getAll(
         currentPage,
-        PAGE_SIZE,
+        pageSizeRef.current,
         searchValue,
         statusValue,
         fromValue,
@@ -191,6 +195,67 @@ const Tasks = () => {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(filteredTasks.map((t) => t.id)));
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedIds.size === 0) return;
+
+    const approvable = tasks.filter(
+      (t) => selectedIds.has(t.id) && t.status === 'Completa - Validada'
+    );
+
+    if (approvable.length === 0) {
+      toast.error('Ninguna tarea seleccionada esta en "Completa - Validada"');
+      return;
+    }
+
+    const skipped = selectedIds.size - approvable.length;
+    const skippedNote = skipped > 0
+      ? `\n\nSe omitiran ${skipped} tarea${skipped > 1 ? 's' : ''} que no estan en "Completa - Validada".`
+      : '';
+
+    const result = await Swal.fire({
+      title: 'Aprobar tareas',
+      text: `Se cerraran definitivamente ${approvable.length} tarea${approvable.length > 1 ? 's' : ''} (estado "Completa").${skippedNote}`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#16A34A',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Si, aprobar',
+      cancelButtonText: 'Cancelar',
+    });
+
+    if (!result.isConfirmed) return;
+
+    const approveToast = toast.loading('Aprobando tareas...');
+    try {
+      const results = await Promise.allSettled(
+        approvable.map((t) =>
+          tasksService.changeStatus(t.id, {
+            newStatus: 'Completa',
+            comment: 'Aprobacion masiva por Gerente',
+          })
+        )
+      );
+
+      const ok = results.filter((r) => r.status === 'fulfilled').length;
+      const fail = results.length - ok;
+
+      toast.dismiss(approveToast);
+      if (fail === 0) {
+        toast.success(`${ok} tarea${ok > 1 ? 's' : ''} aprobada${ok > 1 ? 's' : ''}`);
+      } else if (ok === 0) {
+        toast.error(`No se pudo aprobar ninguna (${fail} fallida${fail > 1 ? 's' : ''})`);
+      } else {
+        toast.success(`${ok} aprobada${ok > 1 ? 's' : ''}, ${fail} fallida${fail > 1 ? 's' : ''}`);
+      }
+
+      setSelectedIds(new Set());
+      loadTasks(page, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, '');
+    } catch (err) {
+      toast.dismiss(approveToast);
+      toast.error('Error al aprobar: ' + (err.message || 'Error desconocido'));
     }
   };
 
@@ -434,17 +499,21 @@ const Tasks = () => {
 
   // ---- Change Status ----
   const handleChangeStatus = async (task, newStatus) => {
-    const result = await Swal.fire({
-      title: 'Cambiar estado',
-      text: `¿Cambiar estado de "${task.title}" a "${newStatus}"?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#E31837',
-      cancelButtonColor: '#6B7280',
-      confirmButtonText: 'Si, cambiar',
-      cancelButtonText: 'Cancelar',
-    });
-    if (!result.isConfirmed) return;
+    // Gerente: cambio directo sin Swal (la accion ya implica la confirmacion del click).
+    // Otros roles: confirmacion previa via Swal.
+    if (!isGerente) {
+      const result = await Swal.fire({
+        title: 'Cambiar estado',
+        text: `¿Cambiar estado de "${task.title}" a "${newStatus}"?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#E31837',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Si, cambiar',
+        cancelButtonText: 'Cancelar',
+      });
+      if (!result.isConfirmed) return;
+    }
 
     try {
       await tasksService.changeStatus(task.id, {
@@ -568,8 +637,10 @@ const Tasks = () => {
       ' ' + d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // ---- Export XLSX ----
-  const handleExportXlsx = () => {
+  // ---- Export XLSX (todas las tareas que cumplen los filtros, no solo la pagina actual) ----
+  const handleExportXlsx = async () => {
+    if (isExporting) return;
+
     const getLastCollaboratorUpdate = (task) => {
       if (!task.statusHistory || !task.assignedToEmail) return '';
       const collabEntries = task.statusHistory
@@ -579,31 +650,78 @@ const Tasks = () => {
       return new Date(collabEntries[0].changedAt).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    const rows = filteredTasks.map((t) => ({
-      'Titulo': t.title || '',
-      'Descripcion': t.description || '',
-      'Estado': t.status || '',
-      'Lider asignado': t.assignedLeaderName || '',
-      'Colaborador asignado': t.assignedToName || '',
-      'Fecha de entrega': t.dueDate ? new Date(t.dueDate).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
-      'Tiempo estimado (h)': t.estimatedTime ?? '',
-      'Tiempo real (h)': t.actualTime ?? '',
-      'Observaciones': t.observations || '',
-      'Calificacion': t.rating != null ? `${t.rating}%` : 'Pendiente',
-      'Fecha de creacion': t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
-      'Ultima actualizacion Colaborador': getLastCollaboratorUpdate(t),
-    }));
+    const FETCH_PAGE_SIZE = 100; // backend caps pageSize at 100
+    const allItems = [];
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-    // Auto-size columns
-    const colWidths = Object.keys(rows[0] || {}).map((key) => ({
-      wch: Math.max(key.length, ...rows.map((r) => String(r[key]).length)) + 2,
-    }));
-    ws['!cols'] = colWidths;
+    setIsExporting(true);
+    const exportToast = toast.loading('Preparando descarga...');
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Tareas');
-    XLSX.writeFile(wb, `Tareas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    try {
+      let currentPage = 1;
+      let totalPagesLocal = 1;
+
+      do {
+        const data = await tasksService.getAll(
+          currentPage,
+          FETCH_PAGE_SIZE,
+          searchRef.current,
+          filterStatusRef.current,
+          filterDateFromRef.current,
+          filterDateToRef.current,
+          '',
+          {
+            titleFilter: filterTitleRef.current,
+            assignedToFilter: filterAssignedToRef.current,
+            leaderFilter: filterLeaderRef.current,
+            sortBy: sortByRef.current,
+            sortDir: sortDirRef.current,
+          },
+        );
+        const items = data.items ?? [];
+        allItems.push(...items);
+        totalPagesLocal = data.totalPages || 1;
+        currentPage += 1;
+      } while (currentPage <= totalPagesLocal);
+
+      if (allItems.length === 0) {
+        toast.dismiss(exportToast);
+        toast('No hay tareas que coincidan con los filtros');
+        return;
+      }
+
+      const rows = allItems.map((t) => ({
+        'Titulo': t.title || '',
+        'Descripcion': t.description || '',
+        'Estado': t.status || '',
+        'Lider asignado': t.assignedLeaderName || '',
+        'Colaborador asignado': t.assignedToName || '',
+        'Fecha de entrega': t.dueDate ? new Date(t.dueDate).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
+        'Tiempo estimado (h)': t.estimatedTime ?? '',
+        'Tiempo real (h)': t.actualTime ?? '',
+        'Observaciones': t.observations || '',
+        'Calificacion': t.rating != null ? `${t.rating}%` : 'Pendiente',
+        'Fecha de creacion': t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+        'Ultima actualizacion Colaborador': getLastCollaboratorUpdate(t),
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const colWidths = Object.keys(rows[0] || {}).map((key) => ({
+        wch: Math.max(key.length, ...rows.map((r) => String(r[key]).length)) + 2,
+      }));
+      ws['!cols'] = colWidths;
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Tareas');
+      XLSX.writeFile(wb, `Tareas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+      toast.dismiss(exportToast);
+      toast.success(`Descargadas ${rows.length} tarea${rows.length === 1 ? '' : 's'}`);
+    } catch (err) {
+      toast.dismiss(exportToast);
+      toast.error(`Error al descargar: ${err.message}`);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // ---- Download template XLSX ----
@@ -823,8 +941,14 @@ const Tasks = () => {
 
   const filteredTasks = tasks;
 
-  const startItem = (page - 1) * PAGE_SIZE + 1;
-  const endItem = Math.min(page * PAGE_SIZE, totalCount);
+  const startItem = (page - 1) * pageSize + 1;
+  const endItem = Math.min(page * pageSize, totalCount);
+
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(newSize);
+    pageSizeRef.current = newSize;
+    loadTasks(1, searchRef.current, filterStatusRef.current, filterDateFromRef.current, filterDateToRef.current, '');
+  };
 
   return (
     <div>
@@ -848,6 +972,17 @@ const Tasks = () => {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '4px' }}>
+            {isGerente && selectedIds.size > 0 && (
+              <button
+                className="btn btn--sm"
+                style={{ backgroundColor: '#16A34A', color: '#fff', border: 'none' }}
+                onClick={handleBulkApprove}
+                data-tooltip={`Aprobar ${selectedIds.size} tarea${selectedIds.size > 1 ? 's' : ''} (solo "Completa - Validada")`}
+              >
+                <Check size={16} />
+                Aprobar ({selectedIds.size})
+              </button>
+            )}
             {isAdmin && selectedIds.size > 0 && (
               <button
                 className="btn btn--sm"
@@ -862,8 +997,8 @@ const Tasks = () => {
             <button
               className="btn btn--secondary btn--sm btn--icon"
               onClick={handleExportXlsx}
-              disabled={filteredTasks.length === 0}
-              data-tooltip="Descargar tareas"
+              disabled={totalCount === 0 || isExporting}
+              data-tooltip={isExporting ? 'Descargando...' : 'Descargar tareas (todas las que cumplen los filtros)'}
             >
               <Download size={16} />
             </button>
@@ -993,7 +1128,7 @@ const Tasks = () => {
               + ((isAdmin || isGerente || isLider) ? 1 : 0) /* asignado a */
               + 1 /* lider */ + 1 /* estado */ + 1 /* entrega */
               + 1 /* estimado */ + 1 /* calif */ + 1 /* acciones */
-              + (isAdmin ? 1 : 0); /* checkbox */
+              + ((isAdmin || isGerente) ? 1 : 0); /* checkbox */
             return filteredTasks.length === 0 && !loading && !hasActiveFilters ? (
               <div className="empty-state">
                 <ClipboardList size={48} className="empty-state__icon" />
@@ -1010,7 +1145,7 @@ const Tasks = () => {
                 <table className="table">
                   <thead>
                     <tr>
-                      {isAdmin && (
+                      {(isAdmin || isGerente) && (
                         <th style={{ width: '40px', textAlign: 'center' }}>
                           <input
                             type="checkbox"
@@ -1157,7 +1292,7 @@ const Tasks = () => {
                             transition: 'outline 150ms',
                           }}
                         >
-                          {isAdmin && (
+                          {(isAdmin || isGerente) && (
                             <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
@@ -1271,7 +1406,18 @@ const Tasks = () => {
               {totalPages > 0 && (
                 <div className="pagination">
                   <div className="pagination__info">
-                    Mostrando {startItem}-{endItem} de {totalCount} tareas
+                    <label htmlFor="tasks-page-size">Filas por página:</label>
+                    <select
+                      id="tasks-page-size"
+                      className="pagination__select"
+                      value={pageSize}
+                      onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    >
+                      {PAGE_SIZE_OPTIONS.map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                    <span>{startItem}–{endItem} de {totalCount}</span>
                   </div>
                   <div className="pagination__pages">
                     <button
