@@ -48,6 +48,8 @@ const Sidebar = ({ isMobile, onCloseSidebar, collapsed = false, onToggleCollapse
               <NavLink
                 to="/"
                 end
+                aria-label="Dashboard"
+                data-tooltip="Dashboard"
                 className={({ isActive }) =>
                   `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                 }
@@ -65,6 +67,8 @@ const Sidebar = ({ isMobile, onCloseSidebar, collapsed = false, onToggleCollapse
               <li className="sidebar__nav-item">
                 <NavLink
                   to="/roles"
+                  aria-label="Roles"
+                  data-tooltip="Roles"
                   className={({ isActive }) =>
                     `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                   }
@@ -77,6 +81,8 @@ const Sidebar = ({ isMobile, onCloseSidebar, collapsed = false, onToggleCollapse
               <li className="sidebar__nav-item">
                 <NavLink
                   to="/colaboradores"
+                  aria-label="Colaboradores"
+                  data-tooltip="Colaboradores"
                   className={({ isActive }) =>
                     `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                   }
@@ -89,6 +95,8 @@ const Sidebar = ({ isMobile, onCloseSidebar, collapsed = false, onToggleCollapse
               <li className="sidebar__nav-item">
                 <NavLink
                   to="/tasks"
+                  aria-label="Tareas"
+                  data-tooltip="Tareas"
                   className={({ isActive }) =>
                     `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                   }
@@ -108,6 +116,8 @@ const Sidebar = ({ isMobile, onCloseSidebar, collapsed = false, onToggleCollapse
               <li className="sidebar__nav-item">
                 <NavLink
                   to="/tasks"
+                  aria-label="Tareas"
+                  data-tooltip="Tareas"
                   className={({ isActive }) =>
                     `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                   }
@@ -124,6 +134,8 @@ const Sidebar = ({ isMobile, onCloseSidebar, collapsed = false, onToggleCollapse
           <li className="sidebar__nav-item">
             <NavLink
               to="/alertas-payroll"
+              aria-label="Alertas Payroll"
+              data-tooltip="Alertas Payroll"
               className={({ isActive }) =>
                 `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
               }

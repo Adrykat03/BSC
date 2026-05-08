@@ -225,6 +225,58 @@ body {
   margin: var(--spacing-3) auto var(--spacing-2);
 }
 
+/* Tooltip flotante al hover sobre iconos del sidebar colapsado */
+.layout__sidebar--collapsed {
+  overflow: visible;
+}
+
+.layout__sidebar--collapsed .sidebar__nav-link {
+  position: relative;
+}
+
+.layout__sidebar--collapsed .sidebar__nav-link::after {
+  content: attr(data-tooltip);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: auto;
+  height: auto;
+  min-height: 32px;
+  background-color: #1f2937;
+  color: #ffffff;
+  padding: 0 14px;
+  margin: 0;
+  border: 0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: normal;
+  text-align: center;
+  text-decoration: none;
+  text-indent: 0;
+  text-transform: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+.layout__sidebar--collapsed .sidebar__nav-link:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* ========================================
    HEADER
    ======================================== */
