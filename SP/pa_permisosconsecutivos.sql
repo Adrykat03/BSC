@@ -415,8 +415,8 @@ td {
 
 						--/*		ENVIO DE CORREO GENERAL		*/
 						-- INSERT notificación consolidada
-						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-						VALUES ('A', 'Ausencias', 'pa_permisosconsecutivos', @asunto, @HTML, @destinatarios, @fi, @ff);
+						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+						VALUES ('A', 'PrmDiaLib', 'pa_permisosconsecutivos', @asunto, @HTML, @destinatarios, @fi, @ff, 'Con novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
 						EXEC msdb.dbo.sp_send_dbmail 
 						@profile_name='Informacion_Nomina',
 						@recipients= @destinatarios, 		
@@ -522,8 +522,8 @@ td {
 												---- SET @archivo = N'PermisosDiasLibres.csv';
 
 												-- INSERT notificación consolidada
-												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-												VALUES ('A', 'Ausencias', 'pa_permisosconsecutivos', @asunto, @HTML, @w, @ANALISTA, @fi, @ff);
+												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+												VALUES ('A', 'PrmDiaLib', 'pa_permisosconsecutivos', @asunto, @HTML, @w, @ANALISTA, @fi, @ff, 'Con novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
 												EXEC msdb.dbo.sp_send_dbmail 
 												@profile_name='Informacion_Nomina',
 												 @recipients = @ANALISTA,
@@ -569,8 +569,8 @@ td {
 							+N' </body>' 
 
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-							VALUES ('A', 'Ausencias', 'pa_permisosconsecutivos', @asunto, @HTML, @w, @destinatarios, @fi, @ff);
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('C', 'PrmDiaLib', 'pa_permisosconsecutivos', @asunto, @HTML, @w, @destinatarios, @fi, @ff, 'Sin novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
 							EXEC msdb.dbo.sp_send_dbmail 
 							@profile_name='Informacion_Nomina',
 						 	@recipients= @destinatarios, 
@@ -589,8 +589,8 @@ td {
 							+N' </body>' 
 
 						-- INSERT notificación consolidada
-						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-						VALUES ('A', 'Ausencias', 'pa_permisosconsecutivos', @asunto, @HTML, @w, 'pasante.nominadosec@kfc.com.ec', @fi, @ff);
+						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+						VALUES ('C', 'PrmDiaLib', 'pa_permisosconsecutivos', @asunto, @HTML, @w, 'pasante.nominadosec@kfc.com.ec', @fi, @ff, 'Sin novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
 						EXEC msdb.dbo.sp_send_dbmail 
 							@profile_name='Informacion_Nomina',
 							-- @recipients= 'pasante.nominadosec@kfc.com.ec', 	

@@ -251,8 +251,8 @@ SELECT @CONT = COUNT(1) FROM @Jorn_error_usadas
 		
 
 												-- INSERT notificación consolidada
-												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-												VALUES ('A', 'Horarios', 'pa_JornadaMalCreada', @asunto, @HTML, @CONT, @Dirigido, @fecha_ini, @fecha_fin);
+												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+												VALUES ('A', 'AL_Jornadas', 'pa_JornadaMalCreada', @asunto, @HTML, @CONT, @Dirigido, @fecha_ini, @fecha_fin, 'Con novedad', 'Media', 'PRT - HORARIOS Y MARCACIONES', NULL);
 												EXEC msdb.dbo.Sp_send_dbmail
 												@profile_name = 'Informacion_Nomina',
 												@Subject = @asunto,
@@ -267,8 +267,8 @@ SELECT @CONT = COUNT(1) FROM @Jorn_error_usadas
 		SELECT @body = REPLACE (@body, '@fecha_hora', CONVERT(varchar, @Aux_fecha_hora,9) ) 
 
 										-- INSERT notificación consolidada
-										INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-										VALUES ('A', 'Horarios', 'pa_JornadaMalCreada', @asunto, @body, @CONT, @Dirigido, @fecha_ini, @fecha_fin);
+										INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+										VALUES ('C', 'AL_Jornadas', 'pa_JornadaMalCreada', @asunto, @body, @CONT, @Dirigido, @fecha_ini, @fecha_fin, 'Sin novedad', 'Media', 'PRT - HORARIOS Y MARCACIONES', NULL);
 										EXEC msdb.dbo.Sp_send_dbmail
 										@profile_name = 'Informacion_Nomina',
 										@Subject = @asunto,

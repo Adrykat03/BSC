@@ -304,8 +304,8 @@ BEGIN
 								if @html is not null
 								begin
 									 -- INSERT notificación consolidada
-									 INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-									 VALUES ('A', 'Bajas', 'pa_Errores_Bajas', 'Notificación de Pre-Bajas con error', @html, @tiene, @destinatarios, @fi, @ff);
+									 INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+									 VALUES ('A', 'MailPrebAviso', 'pa_Errores_Bajas', 'Notificación de Pre-Bajas con error', @html, @tiene, @destinatarios, @fi, @ff, 'Con novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
 									 exec msdb.dbo.Sp_send_dbmail
 									 @profile_name = 'Informacion_Nomina',  
 									 @Subject = 'Notificación de Pre-Bajas con error',
@@ -337,8 +337,8 @@ BEGIN
 						if @html is not null
 						begin
 						-- INSERT notificación consolidada
-						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-						VALUES ('A', 'Bajas', 'pa_Errores_Bajas', 'Notificación de Pre-Bajas con error', @html, @tiene, @destinatarios, @fi, @ff);
+						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+						VALUES ('C', 'MailPrebAviso', 'pa_Errores_Bajas', 'Notificación de Pre-Bajas con error', @html, @tiene, @destinatarios, @fi, @ff, 'Sin novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
 						exec msdb.dbo.Sp_send_dbmail
 							@profile_name = 'Informacion_Nomina', 
 							@Subject = 'Notificación de Pre-Bajas con error',

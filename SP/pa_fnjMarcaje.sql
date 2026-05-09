@@ -177,8 +177,8 @@ BEGIN
 	END
 	SELECT @html
 	-- INSERT notificación consolidada
-	INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-	VALUES ('A', 'Marcajes', 'pa_fnjMarcaje', @asunto, @HTML, @destinatarios, @fi, @ff);
+	INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+	VALUES ('A', 'AL_FNJ_LLAT', 'pa_fnjMarcaje', @asunto, @HTML, @destinatarios, @fi, @ff, 'Con novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
 	EXEC msdb.dbo.Sp_send_dbmail
 	@profile_name = 'Informacion_Nomina',
 	@Subject = @asunto,
@@ -283,8 +283,8 @@ BEGIN
 				N'<br/><br />'+
 				N' </body>'
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-			VALUES ('A', 'Marcajes', 'pa_fnjMarcaje', @asunto, @html, @w, @ANALISTA, @fi, @ff);
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('A', 'AL_FNJ_LLAT', 'pa_fnjMarcaje', @asunto, @html, @w, @ANALISTA, @fi, @ff, 'Con novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
 			EXEC msdb.dbo.Sp_send_dbmail
 			@profile_name = 'Informacion_Nomina',
 			@Subject = @asunto,

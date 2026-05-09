@@ -669,8 +669,8 @@ BEGIN
         SELECT @HTML = CONCAT(@HTML, N'<br/><br />'+N' </body>');
 
         -- INSERT notificación consolidada
-        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-        VALUES ('A', 'Transferencias', 'pa_Transferencias', @asunto, @HTML, @destinatarios, @fecha_ini, @fecha_fin);
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('A', 'AL_Transf', 'pa_Transferencias', @asunto, @HTML, @destinatarios, @fecha_ini, @fecha_fin, 'Con novedad', 'Media', 'PRT - HORARIOS Y MARCACIONES', NULL);
         EXEC msdb.dbo.Sp_send_dbmail
             @profile_name = 'Informacion_Nomina',
             @Subject      = @asunto,
@@ -712,8 +712,8 @@ BEGIN
             BEGIN
                 /* Reutiliza el HTML ya armado arriba (mismo que tu SP). */
                 -- INSERT notificación consolidada
-                INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-                VALUES ('A', 'Transferencias', 'pa_Transferencias', @asunto, @HTML, @w, @destinatarios, @fecha_ini, @fecha_fin);
+                INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+                VALUES ('A', 'AL_Transf', 'pa_Transferencias', @asunto, @HTML, @w, @destinatarios, @fecha_ini, @fecha_fin, 'Con novedad', 'Media', 'PRT - HORARIOS Y MARCACIONES', NULL);
                 EXEC msdb.dbo.Sp_send_dbmail
                     @profile_name = 'Informacion_Nomina',
                     @Subject      = @asunto,
@@ -744,8 +744,8 @@ BEGIN
         IF @html IS NOT NULL
         BEGIN
             -- INSERT notificación consolidada
-            INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-            VALUES ('A', 'Transferencias', 'pa_Transferencias', @asunto, @html, @w, @destinatarios, @fecha_ini, @fecha_fin);
+            INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+            VALUES ('C', 'AL_Transf', 'pa_Transferencias', @asunto, @html, @w, @destinatarios, @fecha_ini, @fecha_fin, 'Sin novedad', 'Media', 'PRT - HORARIOS Y MARCACIONES', NULL);
             EXEC msdb.dbo.Sp_send_dbmail
                 @profile_name = 'Informacion_Nomina',
                 @Subject      = @asunto,
