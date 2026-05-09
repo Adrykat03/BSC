@@ -32,14 +32,14 @@ BEGIN
 						WHERE Error = 'SI' AND ciclo_laboral > '20132014'
 						FOR XML PATH('tr'), TYPE) AS varchar(max)))
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-		VALUES ('A', 'Vacaciones', 'pa_erroresVacacionesSinDetalle', @asunto, @HTML, @destinatarios);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('A', 'AL_VacSinDet', 'pa_erroresVacacionesSinDetalle', @asunto, @HTML, @destinatarios, 'Con novedad', 'Baja', 'VACACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,
 		@recipients = @destinatarios,
 		@body_format= 'html',
-		@body = @HTML									
+		@body = @HTML
 	END
 	ELSE
 	BEGIN
@@ -78,8 +78,8 @@ BEGIN
 							N'<H3><font color="SteelBlue">No se encontraron trabajadores con vacaciones con saldos sin información en programación.</H3>'
 					
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-		VALUES ('A', 'Vacaciones', 'pa_erroresVacacionesSinDetalle', @asunto, @HTML, @destinatarios);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('C', 'AL_VacSinDet', 'pa_erroresVacacionesSinDetalle', @asunto, @HTML, @destinatarios, 'Sin novedad', 'Baja', 'VACACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,

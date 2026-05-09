@@ -93,14 +93,14 @@ BEGIN
 						FROM #tmp_valida_vacacionsol
 						FOR XML PATH('tr'), TYPE) AS varchar(max)))
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio)
-		VALUES ('A', 'Vacaciones', 'pa_erroresSolVacvsSolVacPre', @asunto, @HTML, @destinatarios, @fi);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('A', 'AL_VacSolProPre', 'pa_erroresSolVacvsSolVacPre', @asunto, @HTML, @destinatarios, @fi, 'Con novedad', 'Media', 'VACACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,
 		@recipients = @destinatarios,
 		@body_format= 'html',
-		@body = @HTML									
+		@body = @HTML
 	END
 	ELSE
 	BEGIN
@@ -142,8 +142,8 @@ BEGIN
 							
 					
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio)
-		VALUES ('A', 'Vacaciones', 'pa_erroresSolVacvsSolVacPre', @asunto, @HTML, @destinatarios, @fi);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('C', 'AL_VacSolProPre', 'pa_erroresSolVacvsSolVacPre', @asunto, @HTML, @destinatarios, @fi, 'Sin novedad', 'Media', 'VACACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,

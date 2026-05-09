@@ -432,8 +432,8 @@ SET DATEFORMAT dmy;
 					 
 			BEGIN TRY
 				-- INSERT notificación consolidada
-				INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-				VALUES ('A', 'Vacaciones', 'pa_errorVacacionesGeneral', @asunto, @HTML, @destinatarios, @fi, @ff);
+				INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+				VALUES ('A', 'AL_Vac_Gral', 'pa_errorVacacionesGeneral', @asunto, @HTML, @destinatarios, @fi, @ff, 'Con novedad', 'Baja', 'VACACIONES', NULL);
 				EXEC msdb.dbo.Sp_send_dbmail
 
 				@profile_name = 'Informacion_Nomina',
@@ -490,8 +490,8 @@ SET DATEFORMAT dmy;
 					N'<H4><font color="SteelBlue">No se encontraron trabajadores con error en las vacaciones.</H4>'+
 					N'<br/><br/>'
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-			VALUES ('A', 'Vacaciones', 'pa_errorVacacionesGeneral', @asunto, @HTML, @destinatarios, @fi, @ff);
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('C', 'AL_Vac_Gral', 'pa_errorVacacionesGeneral', @asunto, @HTML, @destinatarios, @fi, @ff, 'Sin novedad', 'Baja', 'VACACIONES', NULL);
 			EXEC msdb.dbo.Sp_send_dbmail
 
 			@profile_name = 'Informacion_Nomina',
