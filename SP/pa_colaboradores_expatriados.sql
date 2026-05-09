@@ -326,8 +326,8 @@ BEGIN
 
 						/*		ENVIO DE CORREO GENERAL		*/
 						-- INSERT notificación consolidada
-						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-						VALUES ('A', 'Trabajadores', 'pa_colaboradores_expatriados', @asunto, @HTML, @destinatarios);
+						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
+						VALUES ('A', 'AlrExpAct', 'pa_colaboradores_expatriados', @asunto, @HTML, @destinatarios, 'Con novedad', 'Alta', 'NOMINA', NULL);
 						EXEC msdb.dbo.sp_send_dbmail 
 							@profile_name='Informacion_Nomina',
 							@recipients= @destinatarios, 		
@@ -414,8 +414,8 @@ BEGIN
 
 							/*		ENVIO DE CORREO GENERAL		*/
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-							VALUES ('A', 'Trabajadores', 'pa_colaboradores_expatriados', @asunto, @HTML, @destinatarios);
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('A', 'AlrExpAct', 'pa_colaboradores_expatriados', @asunto, @HTML, @destinatarios, 'Con novedad', 'Alta', 'NOMINA', NULL);
 							EXEC msdb.dbo.sp_send_dbmail 
 								@profile_name='Informacion_Nomina',
 								@recipients= @destinatarios, 		
@@ -440,8 +440,8 @@ BEGIN
 								+N' </body>' 
 			
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-							VALUES ('A', 'Trabajadores', 'pa_colaboradores_expatriados', @asunto, @HTML, @destinatarios);
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('A', 'AlrExpAct', 'pa_colaboradores_expatriados', @asunto, @HTML, @destinatarios, 'Con novedad', 'Alta', 'NOMINA', NULL);
 							EXEC msdb.dbo.sp_send_dbmail 
 								@profile_name='Informacion_Nomina',
 							 	@recipients= @destinatarios, 
