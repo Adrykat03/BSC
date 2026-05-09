@@ -105,8 +105,8 @@ BEGIN
         N' <p  style="font-family: Calibri; color:black; font-size: 14px; font-style: normal; font-variant: normal; font-weight: 400; "> Estimado(a) ,' + @nombre + '</p>' + N' <hr/>' + isnull(@tableHTML5, '') + ' ' + N'<br/>' + N'<p style="font-family:Calibri">Atentamente,</p> ' + N'<p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p> ' + N'<div><p><a href="https://nomina.kfc.com.ec/KFCReporteador/vacaciones/AvisosVacaciones.aspx?A1=18" target="_blank">Ver Informe</a></p><br><label>Atentamente,</label><br><br><label><strong>Departamento de Nómina</strong></label></div> <p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p></body>';
 
     -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J1 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia);
+    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
+    VALUES ('A', 'Avisos_LTJMNC', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J1 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia, 'Con novedad', 'Alta', 'JERARQUIAS', NULL);
     EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
         , @Subject = 'Listado de personas (CAR) con J1 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))'
         , @recipients = @Dirigido
@@ -195,8 +195,8 @@ BEGIN
         N' <p  style="font-family: Calibri; color:black; font-size: 14px; font-style: normal; font-variant: normal; font-weight: 400; "> Estimado(a) ,' + @nombre + '</p>' + N' <hr/>' + isnull(@tableHTML5, '') + ' ' + N'<br/>' + N'<p style="font-family:Calibri">Atentamente,</p> ' + N'<p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p> ' + N'<div><p><a href="https://nomina.kfc.com.ec/KFCReporteador/vacaciones/AvisosVacaciones.aspx?A1=19" target="_blank">Ver Informe</a></p><br><label>Atentamente,</label><br><br><label><strong>Departamento de Nómina</strong></label></div> <p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p></body>';
 
     -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J2 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia);
+    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
+    VALUES ('A', 'Avisos_LTJN2', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J2 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia, 'Con novedad', 'Alta', 'JERARQUIAS', NULL);
     EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
         , @Subject = 'Listado de personas (CAR) con J2 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))'
         , @recipients = @Dirigido
