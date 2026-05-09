@@ -170,14 +170,14 @@ BEGIN
 
 			/*		ENVIO DE CORREO			*/
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-			VALUES ('A', 'Cargas Familiares', 'pa_cargasFamiliaresEstadoCivilConyugue', @asunto, @HTML, @destinatarios, @fi, @ff);
-			EXEC msdb.dbo.sp_send_dbmail 
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('A', 'Mail_CFCEDACOUH', 'pa_cargasFamiliaresEstadoCivilConyugue', @asunto, @HTML, @destinatarios, @fi, @ff, 'Con novedad', 'Alta', 'CARGAS FAMILIARES', NULL);
+			EXEC msdb.dbo.sp_send_dbmail
 				@profile_name='Informacion_Nomina',
-				@recipients= @destinatarios, 
+				@recipients= @destinatarios,
 			 	@subject = @asunto,
-				@body = @HTML, 
-				@body_format = 'HTML' ; 
+				@body = @HTML,
+				@body_format = 'HTML' ;
 
 		END TRY
 		BEGIN CATCH
@@ -195,8 +195,8 @@ BEGIN
 
 			/*		ENVIO DE CORREO			*/
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-			VALUES ('A', 'Cargas Familiares', 'pa_cargasFamiliaresEstadoCivilConyugue', @asunto, @HTML, @destinatarios, @fi, @ff);
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('C', 'Mail_CFCEDACOUH', 'pa_cargasFamiliaresEstadoCivilConyugue', @asunto, @HTML, @destinatarios, @fi, @ff, 'Sin novedad', 'Alta', 'CARGAS FAMILIARES', NULL);
 			EXEC msdb.dbo.sp_send_dbmail 
 				@profile_name='Informacion_Nomina',
 				@recipients= @destinatarios, 		

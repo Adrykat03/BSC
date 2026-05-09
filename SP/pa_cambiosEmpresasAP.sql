@@ -92,8 +92,8 @@ Declare @mesNombre varchar(20)
   
   
  -- INSERT notificación consolidada
- INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, destinatariosCc)
- VALUES ('A', 'Cambios', 'pa_cambiosEmpresasAP', @asunto, @html, @correo, @correoSoporte);
+ INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
+ VALUES ('A', 'Mail_APCE', 'pa_cambiosEmpresasAP', @asunto, @html, @correo, @correoSoporte, 'Reporteria', 'Media', 'ACCIONES DE PERSONAL', NULL);
  exec msdb.dbo.Sp_send_dbmail    
      @profile_name = 'Informacion_Nomina',      
      @Subject = @asunto,    
@@ -103,8 +103,8 @@ Declare @mesNombre varchar(20)
      @body = @html       
     
   -- INSERT notificación consolidada
-  INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-  VALUES ('A', 'Cambios', 'pa_cambiosEmpresasAP', @asunto, @html, @correoSoporte);
+  INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
+  VALUES ('A', 'Mail_APCE', 'pa_cambiosEmpresasAP', @asunto, @html, @correoSoporte, 'Reporteria', 'Media', 'ACCIONES DE PERSONAL', NULL);
   exec msdb.dbo.Sp_send_dbmail    
      @profile_name = 'Informacion_Nomina',      
      @Subject = @asunto,    
