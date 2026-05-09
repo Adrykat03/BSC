@@ -145,8 +145,8 @@ BEGIN
 					N' </body>'
 									
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-		VALUES ('A', 'Transferencias', 'pa_transferencias_vencidas', @asunto, @html, @destinatarios, @fi, @ff);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('A', 'AL_Tran_Venc', 'pa_transferencias_vencidas', @asunto, @html, @destinatarios, @fi, @ff, 'Con novedad', 'Media', 'AFECTACION TRABAJADORES DIARIOS', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,
@@ -248,8 +248,8 @@ BEGIN
 					N'<br/><br />'+
 					N' </body>'
 					-- INSERT notificación consolidada
-					INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-					VALUES ('A', 'Transferencias', 'pa_transferencias_vencidas', @asunto, @html, @w, @ANALISTA, @fi, @ff);
+					INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+					VALUES ('A', 'AL_Tran_Venc', 'pa_transferencias_vencidas', @asunto, @html, @w, @ANALISTA, @fi, @ff, 'Con novedad', 'Media', 'AFECTACION TRABAJADORES DIARIOS', NULL);
 					EXEC msdb.dbo.Sp_send_dbmail
 					@profile_name = 'Informacion_Nomina',
 					@Subject = @asunto,

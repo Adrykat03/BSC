@@ -65,8 +65,8 @@ BEGIN
 	BEGIN TRAN @TransactionName;  
 	BEGIN TRY
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-		VALUES ('A', 'Cambios', 'pa_Cambio_cco', @asunto, @body, @Dirigido, @fecha_ini, @fecha_fin);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('A', 'AL_Cambio', 'pa_Cambio_cco', @asunto, @body, @Dirigido, @fecha_ini, @fecha_fin, 'Reporteria', 'Media', 'AFECTACION TRABAJADORES DIARIOS', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,

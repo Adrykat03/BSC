@@ -66,8 +66,8 @@ BEGIN
 		SELECT @body = REPLACE (@body, '@fbaja', ISNULL(CONVERT(varchar(22), @fecha_baja, 105),'No tiene fecha de baja'))
 		BEGIN TRY
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-			VALUES ('A', 'Cambios', 'pa_Cambio_RelacionLaboral', @asunto, @body, @Dirigido, @fecha_ini, @fecha_fin);
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('A', 'AL_Cam_rel_lab', 'pa_Cambio_RelacionLaboral', @asunto, @body, @Dirigido, @fecha_ini, @fecha_fin, 'Con novedad', 'Baja', 'AFECTACION TRABAJADORES DIARIOS', NULL);
 			EXEC msdb.dbo.Sp_send_dbmail
 			@profile_name = 'Informacion_Nomina',
 			@Subject = @asunto,
