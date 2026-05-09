@@ -382,8 +382,8 @@ IF( SELECT COUNT(Codigo) FROM [Adam_Consolidados].[dbo].[TB_Trabajadores_Mes]  W
 						declare @html varchar(max)= @htmlE + ' ' +@html1 + ' ' + @html2 + ' ' + @html3 + ' ' + @html4
 						begin
 								-- INSERT notificación consolidada
-								INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios)
-								VALUES ('A', 'Trabajadores', 'pa_TrabajadoresValidacion', @asunto, @html, @tiene4, @destinatarios);
+								INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, descripcion, prioridad, categoria, mensajeError)
+								VALUES ('A', 'AvisosTrabMonto', 'pa_TrabajadoresValidacion', @asunto, @html, @tiene4, @destinatarios, 'Con novedad', 'Media', 'JIMMY', NULL);
 								exec msdb.dbo.Sp_send_dbmail
 								@profile_name = 'Informacion_Nomina',  
 								@Subject = @asunto,
@@ -407,8 +407,8 @@ IF( SELECT COUNT(Codigo) FROM [Adam_Consolidados].[dbo].[TB_Trabajadores_Mes]  W
 							if @html1 is not null 
 							begin
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios)
-							VALUES ('A', 'Trabajadores', 'pa_TrabajadoresValidacion', @asunto, @html1, @tiene4, @destinatarios);
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('C', 'AvisosTrabMonto', 'pa_TrabajadoresValidacion', @asunto, @html1, @tiene4, @destinatarios, 'Sin novedad', 'Media', 'JIMMY', NULL);
 							exec msdb.dbo.Sp_send_dbmail
 								@profile_name = 'Informacion_Nomina', 
 								@Subject = @asunto,
