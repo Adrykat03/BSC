@@ -153,8 +153,8 @@ BEGIN
 										SELECT @HTML = @htmlE + ' ' +@htmlGeneral 
 										BEGIN
 												-- INSERT notificación consolidada
-												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-												VALUES ('A', 'Trabajadores', 'pa_diferencias_usuarios_documentId', @asunto, @HTML, @destinatarios, @fi, @ff);
+												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+												VALUES ('A', 'DifUserDocId', 'pa_diferencias_usuarios_documentId', @asunto, @HTML, @destinatarios, @fi, @ff, 'Con novedad', 'Media', 'BIOMETRICO', NULL);
 												EXEC msdb.dbo.sp_send_dbmail 
 													@profile_name='Informacion_Nomina',
 												 	@recipients= @destinatarios, 
@@ -180,8 +180,8 @@ BEGIN
 							+N' </body>' 
 
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-							VALUES ('A', 'Trabajadores', 'pa_diferencias_usuarios_documentId', @asunto, @HTML, @destinatarios, @fi, @ff);
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('C', 'DifUserDocId', 'pa_diferencias_usuarios_documentId', @asunto, @HTML, @destinatarios, @fi, @ff, 'Sin novedad', 'Media', 'BIOMETRICO', NULL);
 							EXEC msdb.dbo.sp_send_dbmail 
 							@profile_name='Informacion_Nomina',
 						 	@recipients= @destinatarios, 

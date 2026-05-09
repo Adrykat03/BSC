@@ -149,8 +149,8 @@ BEGIN
 								SELECT @HTML = @htmlE + ' ' +@htmlGeneral 
 								BEGIN
 										-- INSERT notificación consolidada
-										INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-										VALUES ('A', 'Biométricos', 'pa_enrolado_mas_un_cco', @asunto, @HTML, 'pasante.nominadosec@kfc.com.ec', @fi, @ff);
+										INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+										VALUES ('A', 'EnrMasUnCCO', 'pa_enrolado_mas_un_cco', @asunto, @HTML, 'pasante.nominadosec@kfc.com.ec', @fi, @ff, 'Con novedad', 'Media', 'BIOMETRICO', NULL);
 										EXEC msdb.dbo.sp_send_dbmail 
 											@profile_name='Informacion_Nomina',
 											--@recipients= 'pasante.nominadosec@kfc.com.ec', 	
@@ -177,8 +177,8 @@ BEGIN
 					+N' </body>' 
 
 					-- INSERT notificación consolidada
-					INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-					VALUES ('A', 'Biométricos', 'pa_enrolado_mas_un_cco', @asunto, @HTML, 'pasante.nominadosec@kfc.com.ec', @fi, @ff);
+					INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+					VALUES ('C', 'EnrMasUnCCO', 'pa_enrolado_mas_un_cco', @asunto, @HTML, 'pasante.nominadosec@kfc.com.ec', @fi, @ff, 'Sin novedad', 'Media', 'BIOMETRICO', NULL);
 					EXEC msdb.dbo.sp_send_dbmail 
 					@profile_name='Informacion_Nomina',
 					--@recipients= 'pasante.nominadosec@kfc.com.ec', 	
