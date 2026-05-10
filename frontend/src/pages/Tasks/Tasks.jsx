@@ -14,6 +14,7 @@ import { colaboradorService } from '../../services/colaboradorService';
 import SessionContext from '../../context/SessionContext';
 import TaskModal from './TaskModal';
 import ColumnFilterDropdown from './ColumnFilterDropdown';
+import MonthMultiSelect from './MonthMultiSelect';
 import './Tasks.css';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200];
@@ -46,10 +47,41 @@ const getStatusTransitions = (currentStatus, role) => {
   return [];
 };
 
+/** Convierte 'YYYY-MM' al rango {from: 'YYYY-MM-01', to: 'YYYY-MM-DD'} del último día. */
+const monthBoundsToDates = (yyyymm) => {
+  if (!yyyymm) return { from: '', to: '' };
+  const [y, m] = yyyymm.split('-').map(Number);
+  const first = new Date(y, m - 1, 1);
+  const last = new Date(y, m, 0);
+  const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return { from: fmt(first), to: fmt(last) };
+};
+
+const getCurrentMonth = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+/** Dado un Set<string> de meses (1..12) y un año, devuelve el rango {from, to} desde el primer
+ * mes seleccionado hasta el último (los meses intermedios quedan dentro del rango). */
+const monthsAndYearToBounds = (monthsSet, year) => {
+  if (!year || !monthsSet || monthsSet.size === 0) return { from: '', to: '' };
+  const months = Array.from(monthsSet).map(Number).sort((a, b) => a - b);
+  const minMonth = months[0];
+  const maxMonth = months[months.length - 1];
+  const fromBounds = monthBoundsToDates(`${year}-${String(minMonth).padStart(2, '0')}`);
+  const toBounds = monthBoundsToDates(`${year}-${String(maxMonth).padStart(2, '0')}`);
+  return { from: fromBounds.from, to: toBounds.to };
+};
+
 const Tasks = () => {
   const { user } = useContext(SessionContext);
   const role = user?.role || '';
   const email = user?.email || '';
+
+  // Filtro mes/año: por defecto el mes actual.
+  const initialMonth = getCurrentMonth();
+  const initialBounds = monthBoundsToDates(initialMonth);
 
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,8 +128,8 @@ const Tasks = () => {
   const searchDebounceRef = useRef(null);
   const searchRef = useRef('');
   const filterStatusRef = useRef(''); // CSV: "Asignada,Reasignada"
-  const filterDateFromRef = useRef(''); // YYYY-MM-DD string for API
-  const filterDateToRef = useRef(''); // YYYY-MM-DD string for API
+  const filterDateFromRef = useRef(initialBounds.from); // YYYY-MM-DD string for API
+  const filterDateToRef = useRef(initialBounds.to); // YYYY-MM-DD string for API
   const filterTitleRef = useRef(''); // CSV con valores exactos seleccionados
   const filterAssignedToRef = useRef('');
   const filterLeaderRef = useRef('');
@@ -111,8 +143,14 @@ const Tasks = () => {
   // Filters
   const [searchText, setSearchText] = useState('');
   const [filterStatus, setFilterStatus] = useState(''); // legado: '' = todas (toolbar superior)
+  // filterDateFrom/To = solo display del DatePicker (rango personalizado). NO se setea por Mes/Año.
   const [filterDateFrom, setFilterDateFrom] = useState(null);
   const [filterDateTo, setFilterDateTo] = useState(null);
+  // Filtro mes/año (default = mes y año actuales). Mes acepta selección múltiple.
+  const initialMonthNum = String(new Date().getMonth() + 1); // '1'..'12'
+  const initialYear = String(new Date().getFullYear());
+  const [filterMonths, setFilterMonths] = useState(() => new Set([initialMonthNum]));
+  const [filterYear, setFilterYear] = useState(initialYear);
   // Filtros estilo Excel: Set<string> por columna con valores seleccionados.
   const [colTitles, setColTitles] = useState(() => new Set());
   const [colAssigned, setColAssigned] = useState(() => new Set());
@@ -1070,12 +1108,57 @@ const Tasks = () => {
           ))}
         </select>
 
+        {/* Filtro Mes (selección múltiple) */}
+        <MonthMultiSelect
+          selected={filterMonths}
+          onApply={(set) => {
+            setFilterMonths(set);
+            const { from, to } = monthsAndYearToBounds(set, filterYear);
+            filterDateFromRef.current = from;
+            filterDateToRef.current = to;
+            // Limpiar visualmente el filtro Fecha (el rango del DatePicker queda como "Fecha")
+            setFilterDateFrom(null);
+            setFilterDateTo(null);
+            loadTasks(1, searchRef.current, filterStatusRef.current, from, to, '');
+          }}
+          tooltip="Filtrar por mes (uno o varios meses)"
+        />
+
+        <select
+          className="form-control form-select"
+          value={filterYear}
+          onChange={(e) => {
+            const y = e.target.value;
+            setFilterYear(y);
+            const { from, to } = monthsAndYearToBounds(filterMonths, y);
+            filterDateFromRef.current = from;
+            filterDateToRef.current = to;
+            // Limpiar visualmente el filtro Fecha
+            setFilterDateFrom(null);
+            setFilterDateTo(null);
+            loadTasks(1, searchRef.current, filterStatusRef.current, from, to, '');
+          }}
+          style={{ width: '110px', height: '36px', padding: '0 32px 0 12px', fontSize: '13px' }}
+          data-tooltip="Filtrar por año (fecha de entrega)"
+        >
+          <option value="">Año: Todos</option>
+          {(() => {
+            const currentYear = new Date().getFullYear();
+            const years = [];
+            for (let y = currentYear - 3; y <= currentYear + 2; y++) years.push(y);
+            return years.map((y) => (
+              <option key={y} value={String(y)}>{y}</option>
+            ));
+          })()}
+        </select>
+
+        {/* Filtro Fecha (rango personalizado) — toma prioridad sobre Mes/Año */}
         <div style={{ position: 'relative', display: 'inline-block' }}>
           <button
             className="btn btn--secondary btn--sm"
             onClick={() => datePickerRef.current?.setOpen(true)}
             style={{ height: '36px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
-            data-tooltip="Filtrar por fecha de entrega"
+            data-tooltip="Filtrar por rango de fechas de entrega (sobrescribe Mes/Año)"
           >
             <Calendar size={16} />
             {filterDateFrom && filterDateTo
@@ -1086,9 +1169,11 @@ const Tasks = () => {
                 e.stopPropagation();
                 setFilterDateFrom(null);
                 setFilterDateTo(null);
-                filterDateFromRef.current = '';
-                filterDateToRef.current = '';
-                loadTasks(1, searchRef.current, filterStatusRef.current, '', '', '');
+                // Si hay Mes/Año seleccionado, restaurar esos bounds; si no, sin filtro.
+                const { from, to } = monthsAndYearToBounds(filterMonths, filterYear);
+                filterDateFromRef.current = from;
+                filterDateToRef.current = to;
+                loadTasks(1, searchRef.current, filterStatusRef.current, from, to, '');
               }} />
             )}
           </button>
@@ -1102,10 +1187,13 @@ const Tasks = () => {
                 const [start, end] = dates;
                 setFilterDateFrom(start);
                 setFilterDateTo(end);
-                const fmt = (d) => d ? d.toISOString().slice(0, 10) : '';
+                const fmt = (d) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
                 filterDateFromRef.current = fmt(start);
                 filterDateToRef.current = fmt(end);
                 if (start && end) {
+                  // El rango personalizado tiene prioridad: limpiar visualmente Mes/Año
+                  setFilterMonths(new Set());
+                  setFilterYear('');
                   loadTasks(1, searchRef.current, filterStatusRef.current, fmt(start), fmt(end), '');
                 }
               }}
@@ -1121,6 +1209,7 @@ const Tasks = () => {
           {(() => {
             const hasActiveFilters = !!(
               searchText || filterStatus || filterDateFrom || filterDateTo
+              || filterMonths.size || filterYear
               || colTitles.size || colAssigned.size || colLeaders.size || colStatuses.size
               || sortBy
             );
