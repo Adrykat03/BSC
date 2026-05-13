@@ -184,7 +184,7 @@ BEGIN
     --                     and estatus = 1'
     -- INSERT notificación consolidada
     INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
-    VALUES ('A', 'Avisos_Varios', 'pa_cargosgtesjefoprTiendasMal', 'Listado de CCO con jefe 2 cuyo cargo es diferente al parámetro “cargo_gteTienda”) ', @cuerpo, @w, @dirigido, @copia, 'Con novedad', 'Alta', 'JERARQUIAS', NULL);
+    VALUES ('A', 'Avisos_Varios', 'pa_cargosgtesjefoprTiendasMal', 'Listado de CCO con jefe 2 cuyo cargo es diferente al parámetro “cargo_gteTienda”) ', @cuerpo, @w, @dirigido, @copia, 'Con novedad', 'Baja', 'JERARQUIAS', NULL);
     EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
         , @Subject = 'Listado de CCO con jefe 2 cuyo cargo es diferente al parámetro “cargo_gteTienda”) '
         , @recipients = @dirigido
