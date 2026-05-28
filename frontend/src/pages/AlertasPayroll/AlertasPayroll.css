@@ -264,6 +264,16 @@
   line-height: var(--line-height-tight);
 }
 
+/* KPI value color por estado — espejo de los colores del donut/leyenda.
+   Reemplaza los inline styles `style={{ color: COLORS.X }}`.
+   Si en el futuro el design system define `--color-status-{estado}-value`,
+   migrar a esas variables. */
+.payroll-kpi-card__value--activa     { color: #22c55e; }
+.payroll-kpi-card__value--en-proceso { color: #a855f7; }
+.payroll-kpi-card__value--resuelta   { color: #3b82f6; }
+.payroll-kpi-card__value--cerrada    { color: #eab308; }
+.payroll-kpi-card__value--error      { color: #ef4444; }
+
 /* Charts row */
 .payroll-charts-row {
   display: grid;
@@ -1282,4 +1292,194 @@
     padding: 0 4px;
     font-size: var(--font-size-xs);
   }
+}
+
+/* ========================================
+   Historial de cambios (sección dentro del modal de Alerta)
+   ======================================== */
+.payroll-historial {
+  display: flex;
+  flex-direction: column;
+}
+
+.payroll-historial__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.payroll-historial__empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-style: italic;
+  padding: var(--spacing-3) 0;
+  text-align: center;
+}
+
+/* Loading state del historial: spinner + texto, alineado al estilo del modal.
+   El design system no incluye un spinner reutilizable, así que se define
+   localmente como animación específica de la feature (ver §5 PM). */
+.payroll-historial__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.payroll-historial__spinner {
+  animation: payroll-spin 900ms linear infinite;
+  color: var(--color-primary, #2563EB);
+}
+
+@keyframes payroll-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Banner amarillo para historialPersistido=false dentro del modal.
+   Reusa la clase .alert + .alert--warning del design system (no se redefine
+   color/borde); aquí solo se ajusta el espaciado dentro del aside. */
+.payroll-historial__banner {
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+}
+
+.payroll-historial__error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-status-error, #b91c1c);
+}
+
+.payroll-historial__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.payroll-historial__item {
+  position: relative;
+  display: flex;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  opacity: 0.85;
+}
+
+.payroll-historial__item:last-child {
+  border-bottom: 0;
+}
+
+.payroll-historial__item--latest {
+  opacity: 1;
+}
+
+.payroll-historial__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--color-border-main);
+}
+
+.payroll-historial__item--latest .payroll-historial__dot {
+  background: var(--color-primary, #2563EB);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+.payroll-historial__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.payroll-historial__change {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.payroll-historial__arrow {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.payroll-historial__no-change {
+  font-size: var(--font-size-xs);
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.payroll-historial__meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  word-break: break-word;
+}
+
+.payroll-historial__meta strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.payroll-historial__comment {
+  margin-top: 4px;
+  padding: 6px 8px;
+  font-size: var(--font-size-xs);
+  font-style: italic;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-main);
+  border-left: 2px solid var(--color-border-main);
+  border-radius: var(--radius-sm);
+  word-break: break-word;
+}
+
+/* ==========================================================================
+   Historial Popup (acceso directo desde la columna Acciones)
+   --------------------------------------------------------------------------
+   Pequeño wrapper sobre el componente Modal genérico (.modal/.modal__*).
+   Reusa todas las clases payroll-historial__* existentes (loading, error,
+   empty, list, item, dot, content, change, meta, comment) para no duplicar
+   estilos visuales. Sólo se definen aquí los selectores específicos del
+   popup (header con ícono + id, body y variante de altura de la lista).
+   ========================================================================== */
+.payroll-historial-popup__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.payroll-historial-popup__id {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  padding: 2px 8px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-bg-main);
+  border: 1px solid var(--color-border-light);
+}
+
+.payroll-historial-popup__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* En el popup hay más espacio vertical disponible que en el aside del
+   modal grande, así que damos un poco más de altura antes de scrollear.
+   La lista hereda todo el resto del estilo de .payroll-historial__list. */
+.payroll-historial__list--popup {
+  max-height: 60vh;
 }

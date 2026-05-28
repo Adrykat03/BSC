@@ -1,5 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
@@ -8,8 +9,10 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Clock,
   Download,
   Eye,
+  Loader2,
   Search,
   X,
   ZoomIn,
@@ -32,6 +35,8 @@ import {
 import { Bar, Doughnut } from 'react-chartjs-2';
 import SessionContext from '../../context/SessionContext';
 import { payrollService } from '../../services/payrollService';
+import { alertasService } from '../../services/alertasService';
+import Modal from '../../components/common/Modal';
 import './AlertasPayroll.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, ChartTooltip, ChartLegend, ChartTitle);
@@ -135,12 +140,6 @@ function formatDate(iso) {
   const d = new Date(iso);
   return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()} ` +
     `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-
-function nowLocalIso() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` +
-    `T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
 
 function truncate(text, max) {
@@ -362,6 +361,116 @@ const SortIndicator = ({ dir }) => {
 };
 
 /* ========================================
+   Historial Popup (acceso directo desde grilla)
+   --------------------------------------------------------------
+   Modal pequeño, centrado, que muestra SOLO el historial de una
+   alerta. Reutiliza el componente Modal genérico del design
+   system (.modal/.modal__*) y las clases payroll-historial__*
+   ya existentes para el render de cada entrada — no se duplican
+   estilos ni lógica visual.
+   ======================================== */
+const HistorialPopup = ({
+  open,
+  idNotificacion,
+  items,
+  loading,
+  error,
+  onClose,
+  onReload,
+}) => {
+  const title = (
+    <span className="payroll-historial-popup__title">
+      <Clock size={16} aria-hidden="true" />
+      <span>Historial de cambios</span>
+      {idNotificacion != null && (
+        <span className="payroll-historial-popup__id">#{idNotificacion}</span>
+      )}
+    </span>
+  );
+
+  return (
+    <Modal isOpen={open} onClose={onClose} title={title}>
+      <div className="payroll-historial-popup__body">
+        {loading ? (
+          <div
+            className="payroll-historial__loading"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2
+              size={16}
+              aria-hidden="true"
+              className="payroll-historial__spinner"
+            />
+            <span>Cargando historial…</span>
+          </div>
+        ) : error ? (
+          <div className="payroll-historial__error" role="alert">
+            <span>No se pudo cargar el historial.</span>
+            <button
+              type="button"
+              className="btn btn--secondary btn--sm"
+              onClick={onReload}
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : !items || items.length === 0 ? (
+          <div className="payroll-historial__empty">
+            Sin historial de cambios todavía.
+          </div>
+        ) : (
+          <ul className="payroll-historial__list payroll-historial__list--popup">
+            {items.map((entry, idx) => {
+              const sinCambio = entry.estadoAnterior === entry.estadoNuevo;
+              const fecha = entry.fecha ? new Date(entry.fecha) : null;
+              const fechaTxt = fecha && !isNaN(fecha.getTime())
+                ? `${pad2(fecha.getDate())}/${pad2(fecha.getMonth() + 1)}/${fecha.getFullYear()} ` +
+                  `${pad2(fecha.getHours())}:${pad2(fecha.getMinutes())}`
+                : '—';
+              return (
+                <li
+                  key={entry.id || `${entry.fecha}-${idx}`}
+                  className={`payroll-historial__item${idx === 0 ? ' payroll-historial__item--latest' : ''}`}
+                >
+                  <div className="payroll-historial__dot" aria-hidden="true" />
+                  <div className="payroll-historial__content">
+                    <div className="payroll-historial__change">
+                      {sinCambio ? (
+                        <span className="payroll-historial__no-change">
+                          Editado (sin cambio de estado)
+                        </span>
+                      ) : (
+                        <>
+                          <StatusBadge status={entry.estadoAnterior} />
+                          <span className="payroll-historial__arrow">→</span>
+                          <StatusBadge status={entry.estadoNuevo} />
+                        </>
+                      )}
+                    </div>
+                    <div className="payroll-historial__meta">
+                      <strong>{entry.usuarioEmail || '—'}</strong>
+                      {entry.usuarioRol ? ` (${entry.usuarioRol})` : ''}
+                      {' · '}
+                      <span>{fechaTxt}</span>
+                    </div>
+                    {entry.comentario && (
+                      <div className="payroll-historial__comment">
+                        {entry.comentario}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </Modal>
+  );
+};
+
+/* ========================================
    Preview Modal (iframe + zoom)
    ======================================== */
 const PREVIEW_BASE_W = 800;
@@ -370,7 +479,19 @@ const ZOOM_MIN = 25;
 const ZOOM_MAX = 300;
 const ZOOM_STEP = 25;
 
-const AlertaModal = ({ row, usuarioSesion, saving, onClose, onSave }) => {
+const AlertaModal = ({
+  row,
+  usuarioSesion,
+  saving,
+  onClose,
+  onSave,
+  historial,
+  historialLoading,
+  historialError,
+  onReloadHistorial,
+  historialDelayedWarning,
+  onDismissHistorialWarning,
+}) => {
   const [zoom, setZoom] = useState(100);
   const [editEstado, setEditEstado] = useState(
     ['P', 'R', 'E'].includes(row?.estado) ? row.estado : 'P',
@@ -644,6 +765,29 @@ const AlertaModal = ({ row, usuarioSesion, saving, onClose, onSave }) => {
           </div>
 
           <aside className="preview-modal__side" aria-label="Resolución de la alerta">
+            {historialDelayedWarning && (
+              <div className="alert alert--warning payroll-historial__banner" role="status">
+                <AlertTriangle size={18} className="alert__icon" aria-hidden="true" />
+                <div className="alert__content">
+                  <div className="alert__title">Cambio guardado</div>
+                  <div className="alert__message">
+                    El cambio se guardó, pero el historial puede demorar en aparecer.
+                  </div>
+                </div>
+                {onDismissHistorialWarning && (
+                  <button
+                    type="button"
+                    className="btn btn--icon btn--sm btn--ghost"
+                    onClick={onDismissHistorialWarning}
+                    aria-label="Cerrar aviso"
+                    title="Cerrar"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="preview-modal__side-section">
               <h3 className="preview-modal__side-title preview-modal__side-title--main">Resolución</h3>
               <div className="preview-modal__side-meta">
@@ -740,6 +884,86 @@ const AlertaModal = ({ row, usuarioSesion, saving, onClose, onSave }) => {
               <small className="payroll-edit-hint">
                 Se asigna automáticamente al guardar.
               </small>
+            </div>
+
+            <div className="preview-modal__side-section payroll-historial">
+              <h3 className="preview-modal__side-title payroll-historial__title">
+                <Clock size={14} aria-hidden="true" /> Historial de cambios
+              </h3>
+              {historialLoading ? (
+                <div
+                  className="payroll-historial__loading"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2
+                    size={16}
+                    aria-hidden="true"
+                    className="payroll-historial__spinner"
+                  />
+                  <span>Cargando historial…</span>
+                </div>
+              ) : historialError ? (
+                <div className="payroll-historial__error" role="alert">
+                  <span>No se pudo cargar el historial.</span>
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--sm"
+                    onClick={onReloadHistorial}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              ) : !historial || historial.length === 0 ? (
+                <div className="payroll-historial__empty">
+                  Sin historial de cambios todavía.
+                </div>
+              ) : (
+                <ul className="payroll-historial__list">
+                  {historial.map((entry, idx) => {
+                    const sinCambio = entry.estadoAnterior === entry.estadoNuevo;
+                    const fecha = entry.fecha ? new Date(entry.fecha) : null;
+                    const fechaTxt = fecha && !isNaN(fecha.getTime())
+                      ? `${pad2(fecha.getDate())}/${pad2(fecha.getMonth() + 1)}/${fecha.getFullYear()} ` +
+                        `${pad2(fecha.getHours())}:${pad2(fecha.getMinutes())}`
+                      : '—';
+                    return (
+                      <li
+                        key={entry.id || `${entry.fecha}-${idx}`}
+                        className={`payroll-historial__item${idx === 0 ? ' payroll-historial__item--latest' : ''}`}
+                      >
+                        <div className="payroll-historial__dot" aria-hidden="true" />
+                        <div className="payroll-historial__content">
+                          <div className="payroll-historial__change">
+                            {sinCambio ? (
+                              <span className="payroll-historial__no-change">
+                                Editado (sin cambio de estado)
+                              </span>
+                            ) : (
+                              <>
+                                <StatusBadge status={entry.estadoAnterior} />
+                                <span className="payroll-historial__arrow">→</span>
+                                <StatusBadge status={entry.estadoNuevo} />
+                              </>
+                            )}
+                          </div>
+                          <div className="payroll-historial__meta">
+                            <strong>{entry.usuarioEmail || '—'}</strong>
+                            {entry.usuarioRol ? ` (${entry.usuarioRol})` : ''}
+                            {' · '}
+                            <span>{fechaTxt}</span>
+                          </div>
+                          {entry.comentario && (
+                            <div className="payroll-historial__comment">
+                              {entry.comentario}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
 
             <div className="preview-modal__side-actions">
@@ -1300,6 +1524,22 @@ const AlertasPayroll = () => {
 
   const [editingRow, setEditingRow] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [historial, setHistorial] = useState([]);
+  const [historialLoading, setHistorialLoading] = useState(false);
+  const [historialError, setHistorialError] = useState(null);
+  // Banner amarillo dentro del modal cuando DAB OK pero Mongo falla
+  // (response.historialPersistido === false). Es informativo, no bloquea.
+  const [historialDelayedWarning, setHistorialDelayedWarning] = useState(false);
+
+  // Popup de historial accesible desde la columna Acciones (no es el
+  // modal grande de la alerta; sólo muestra el historial).
+  const [historialPopup, setHistorialPopup] = useState({
+    open: false,
+    idNotificacion: null,
+    items: [],
+    loading: false,
+    error: null,
+  });
 
   const [sort, setSort] = useState({ key: null, dir: null });
   const [globalFilter, setGlobalFilter] = useState('');
@@ -1328,12 +1568,102 @@ const AlertasPayroll = () => {
   }, []);
 
   const usuarioSesion = user?.email || user?.name || user?.id || '';
+  // usuarioRol ya no se envia al backend (lo extrae del JWT) — se mantenia solo para
+  // el body antiguo de cambiarEstado.
 
-  const openAlerta = (row) => setEditingRow(row);
+  const loadHistorial = async (idNotificacion) => {
+    if (!idNotificacion) return;
+    setHistorialLoading(true);
+    setHistorialError(null);
+    try {
+      const response = await alertasService.getHistorial(idNotificacion);
+      const items = Array.isArray(response?.items) ? response.items : [];
+      // Orden DESC por fecha (más reciente arriba)
+      items.sort((a, b) => {
+        const ta = a?.fecha ? new Date(a.fecha).getTime() : 0;
+        const tb = b?.fecha ? new Date(b.fecha).getTime() : 0;
+        return tb - ta;
+      });
+      setHistorial(items);
+    } catch (err) {
+      setHistorialError(err.message || 'Error al cargar historial');
+      setHistorial([]);
+    } finally {
+      setHistorialLoading(false);
+    }
+  };
+
+  const openAlerta = (row) => {
+    setEditingRow(row);
+    setHistorial([]);
+    setHistorialError(null);
+    setHistorialDelayedWarning(false);
+    loadHistorial(row?.idNotificacion);
+  };
+
+  // Carga el historial dentro del estado del popup (independiente del
+  // historial del modal grande para que ambos puedan abrirse sin
+  // pisarse entre sí).
+  const loadHistorialPopup = async (idNotificacion) => {
+    if (!idNotificacion) return;
+    setHistorialPopup((prev) => ({
+      ...prev,
+      loading: true,
+      error: null,
+    }));
+    try {
+      const response = await alertasService.getHistorial(idNotificacion);
+      const items = Array.isArray(response?.items) ? response.items : [];
+      items.sort((a, b) => {
+        const ta = a?.fecha ? new Date(a.fecha).getTime() : 0;
+        const tb = b?.fecha ? new Date(b.fecha).getTime() : 0;
+        return tb - ta;
+      });
+      setHistorialPopup((prev) => ({
+        ...prev,
+        items,
+        loading: false,
+        error: null,
+      }));
+    } catch (err) {
+      setHistorialPopup((prev) => ({
+        ...prev,
+        items: [],
+        loading: false,
+        error: err.message || 'Error al cargar historial',
+      }));
+    }
+  };
+
+  const openHistorialPopup = (row) => {
+    const id = row?.idNotificacion;
+    if (!id) return;
+    setHistorialPopup({
+      open: true,
+      idNotificacion: id,
+      items: [],
+      loading: true,
+      error: null,
+    });
+    loadHistorialPopup(id);
+  };
+
+  const closeHistorialPopup = () => {
+    setHistorialPopup({
+      open: false,
+      idNotificacion: null,
+      items: [],
+      loading: false,
+      error: null,
+    });
+  };
 
   const closeAlerta = () => {
     if (saving) return;
     setEditingRow(null);
+    setHistorial([]);
+    setHistorialError(null);
+    setHistorialDelayedWarning(false);
   };
 
   const handleSave = async ({ estado, notas }) => {
@@ -1351,26 +1681,53 @@ const AlertasPayroll = () => {
 
     try {
       setSaving(true);
-      await payrollService.updateResolucion(editingRow.idNotificacion, {
-        estado,
-        notasResolucion: notas,
-        usuarioResolucion: usuarioSesion,
-        fechaModificacion: nowLocalIso(),
+      setHistorialDelayedWarning(false);
+
+      // El backend toma usuarioEmail/usuarioRol del JWT — no se envian en el body.
+      // Enviamos las notas como `comentario` para que queden registradas en el historial.
+      const response = await alertasService.cambiarEstado(editingRow.idNotificacion, {
+        nuevoEstado: estado,
+        comentario: notas?.trim() || '',
       });
-      await Swal.fire({
-        title: 'Guardado',
-        text: 'Los cambios se guardaron correctamente.',
-        icon: 'success',
-        timer: 1800,
-        showConfirmButton: false,
-      });
-      setEditingRow(null);
-      loadData();
+
+      const idActual = editingRow.idNotificacion;
+
+      if (response && response.historialPersistido === false) {
+        // DAB OK pero Mongo falló: NO bloqueamos al usuario, mostramos
+        // banner dentro del modal y refrescamos lista + historial.
+        setHistorialDelayedWarning(true);
+        loadData();
+        if (idActual) loadHistorial(idActual);
+      } else {
+        await Swal.fire({
+          title: 'Guardado',
+          text: 'Los cambios se guardaron correctamente.',
+          icon: 'success',
+          timer: 1800,
+          showConfirmButton: false,
+        });
+        // Refrescar lista y cerrar el modal.
+        setEditingRow(null);
+        setHistorial([]);
+        setHistorialDelayedWarning(false);
+        loadData();
+        if (idActual) loadHistorial(idActual);
+      }
     } catch (err) {
+      // 5xx (DAB caído / SQL no disponible) — mensaje claro y accionable.
+      // 4xx — usar el mensaje del backend si vino, o uno genérico.
+      const status = err?.status;
+      const isServerError = typeof status === 'number' && status >= 500;
+      const title = isServerError ? 'No se pudo actualizar el estado' : 'Error';
+      const text = isServerError
+        ? 'No se pudo actualizar el estado en SQL. Reintenta más tarde.'
+        : err.message || 'No se pudieron guardar los cambios.';
+
       Swal.fire({
-        title: 'Error',
-        text: err.message || 'No se pudieron guardar los cambios.',
+        title,
+        text,
         icon: 'error',
+        confirmButtonText: 'Entendido',
       });
     } finally {
       setSaving(false);
@@ -1393,6 +1750,15 @@ const AlertasPayroll = () => {
             aria-label={`Ver y resolver alerta ${row.asunto || row.idNotificacion}`}
           >
             <Eye size={16} />
+          </button>
+          <button
+            type="button"
+            className="btn btn--icon btn--sm btn--ghost"
+            onClick={(e) => { e.stopPropagation(); openHistorialPopup(row); }}
+            data-tooltip="Ver historial de cambios"
+            aria-label={`Ver historial de la alerta ${row.asunto || row.idNotificacion}`}
+          >
+            <Clock size={16} />
           </button>
         </div>
       ),
@@ -1600,23 +1966,23 @@ const AlertasPayroll = () => {
             </div>
             <div className="payroll-kpi-card">
               <span className="payroll-kpi-card__label">Activas</span>
-              <span className="payroll-kpi-card__value" style={{ color: COLORS.A }}>{stats.activas}</span>
+              <span className="payroll-kpi-card__value payroll-kpi-card__value--activa">{stats.activas}</span>
             </div>
             <div className="payroll-kpi-card">
               <span className="payroll-kpi-card__label">En Proceso</span>
-              <span className="payroll-kpi-card__value" style={{ color: COLORS.P }}>{stats.enProceso}</span>
+              <span className="payroll-kpi-card__value payroll-kpi-card__value--en-proceso">{stats.enProceso}</span>
             </div>
             <div className="payroll-kpi-card">
               <span className="payroll-kpi-card__label">Resueltas</span>
-              <span className="payroll-kpi-card__value" style={{ color: COLORS.R }}>{stats.resueltas}</span>
+              <span className="payroll-kpi-card__value payroll-kpi-card__value--resuelta">{stats.resueltas}</span>
             </div>
             <div className="payroll-kpi-card">
               <span className="payroll-kpi-card__label">Cerradas</span>
-              <span className="payroll-kpi-card__value" style={{ color: COLORS.C }}>{stats.cerradas}</span>
+              <span className="payroll-kpi-card__value payroll-kpi-card__value--cerrada">{stats.cerradas}</span>
             </div>
             <div className="payroll-kpi-card">
               <span className="payroll-kpi-card__label">Error</span>
-              <span className="payroll-kpi-card__value" style={{ color: COLORS.E }}>{stats.error}</span>
+              <span className="payroll-kpi-card__value payroll-kpi-card__value--error">{stats.error}</span>
             </div>
           </div>
 
@@ -1954,8 +2320,24 @@ const AlertasPayroll = () => {
           saving={saving}
           onClose={closeAlerta}
           onSave={handleSave}
+          historial={historial}
+          historialLoading={historialLoading}
+          historialError={historialError}
+          onReloadHistorial={() => loadHistorial(editingRow?.idNotificacion)}
+          historialDelayedWarning={historialDelayedWarning}
+          onDismissHistorialWarning={() => setHistorialDelayedWarning(false)}
         />
       )}
+
+      <HistorialPopup
+        open={historialPopup.open}
+        idNotificacion={historialPopup.idNotificacion}
+        items={historialPopup.items}
+        loading={historialPopup.loading}
+        error={historialPopup.error}
+        onClose={closeHistorialPopup}
+        onReload={() => loadHistorialPopup(historialPopup.idNotificacion)}
+      />
     </div>
   );
 };
