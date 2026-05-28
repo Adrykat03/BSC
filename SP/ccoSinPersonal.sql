@@ -49,8 +49,8 @@ BEGIN
 	
 	
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
-			VALUES ('A', 'AL_CCO_Sin_Trab', 'ccoSinPersonal', @asunto, @HTML, @destinatarios, 'Con novedad', 'Alta', 'JIMMY', NULL);
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('A', 'AL_CCO_Sin_Trab', 'ccoSinPersonal', @asunto, @HTML, @destinatarios, NULL, NULL, 'Con novedad', 'Media', 'PRT - HORARIOS Y MARCACIONES', NULL);
 			EXEC msdb.dbo.Sp_send_dbmail
 				@profile_name = 'Informacion_Nomina',
 				@Subject = @asunto,
@@ -68,8 +68,8 @@ BEGIN
 									+N' </body>' 
 			
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
-			VALUES ('C', 'AL_CCO_Sin_Trab', 'ccoSinPersonal', @asunto, @HTML, @destinatarios, 'Sin novedad', 'Alta', 'JIMMY', NULL);
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('C', 'AL_CCO_Sin_Trab', 'ccoSinPersonal', @asunto, @HTML, @destinatarios, NULL, NULL, 'Sin novedad', 'Media', 'PRT - HORARIOS Y MARCACIONES', NULL);
 			EXEC msdb.dbo.sp_send_dbmail
 				@profile_name='Informacion_Nomina',
 				@recipients= @destinatarios, 

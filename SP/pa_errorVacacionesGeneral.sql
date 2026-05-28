@@ -1,3 +1,10 @@
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_errorVacacionesGeneral]    Script Date: 26/5/2026 18:05:16 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
 -- =============================================
 -- Create:		Mateo Alvear
@@ -14,8 +21,13 @@
 --				a alguna fecha en preprogramacion, se agrega una consulta
 --				para revisar si la preprogramacion tiene id diferente de la solicitud
 -- =============================================
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 26/05/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
 
-CREATE PROCEDURE [Avisos].[pa_errorVacacionesGeneral]
+ALTER PROCEDURE [Avisos].[pa_errorVacacionesGeneral]
 AS
 DECLARE
 @fi DATE,

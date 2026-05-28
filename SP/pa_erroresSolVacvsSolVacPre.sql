@@ -1,12 +1,23 @@
-
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_erroresSolVacvsSolVacPre]    Script Date: 26/5/2026 17:51:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =============================================
 -- Author:		Jimmy Cazaro
 -- Create date: 15-02-2023
 -- Description:	Se envia una notificacion en el caso que se tenga registro en la solicitud de vacación 
 --				vs solicitud de vacación preprogramación tiene que tener igual informacion
 -- =============================================
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 26/05/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
 
-CREATE PROCEDURE [Avisos].[pa_erroresSolVacvsSolVacPre]
+ALTER PROCEDURE [Avisos].[pa_erroresSolVacvsSolVacPre]
 AS
 BEGIN
 	IF OBJECT_ID(N'tempdb..#tmp_valida_vacacionsol', N'U') IS NOT NULL
@@ -93,8 +104,8 @@ BEGIN
 						FROM #tmp_valida_vacacionsol
 						FOR XML PATH('tr'), TYPE) AS varchar(max)))
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, descripcion, prioridad, categoria, mensajeError)
-		VALUES ('A', 'AL_VacSolProPre', 'pa_erroresSolVacvsSolVacPre', @asunto, @HTML, @destinatarios, @fi, 'Con novedad', 'Media', 'VACACIONES', NULL);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('A', 'AL_VacSolProPre', 'pa_erroresSolVacvsSolVacPre', @asunto, @HTML, @destinatarios, @fi, NULL, 'Con novedad', 'Media', 'VACACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,
@@ -142,8 +153,8 @@ BEGIN
 							
 					
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, descripcion, prioridad, categoria, mensajeError)
-		VALUES ('C', 'AL_VacSolProPre', 'pa_erroresSolVacvsSolVacPre', @asunto, @HTML, @destinatarios, @fi, 'Sin novedad', 'Media', 'VACACIONES', NULL);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('C', 'AL_VacSolProPre', 'pa_erroresSolVacvsSolVacPre', @asunto, @HTML, @destinatarios, @fi, NULL, 'Sin novedad', 'Media', 'VACACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,

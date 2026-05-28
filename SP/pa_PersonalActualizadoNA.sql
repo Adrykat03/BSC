@@ -128,8 +128,8 @@ BEGIN
 		SELECT @asunto = REPLACE(@asunto, '@fecha', @fecha)
 
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-		VALUES ('A', 'Trabajadores', 'pa_PersonalActualizadoNA', @asunto, @HTML, @destinatarios, @fi, @ff);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('A', 'AL_PerNomActAct', 'pa_PersonalActualizadoNA', @asunto, @HTML, @destinatarios, NULL, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,

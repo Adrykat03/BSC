@@ -102,8 +102,8 @@ BEGIN
 			BEGIN TRY
 				select @HTML = REPLACE(@HTML, '@fecha', convert(varchar(12),GETDATE(),103)) 
 				-- INSERT notificación consolidada
-				INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-				VALUES ('A', 'Horarios', 'pa_calculosHorarios', @asunto, @HTML, @c2, @Dirigido, @fecha_ini, @fecha_fin);
+				INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+				VALUES ('A', 'AL_Calculo_Hor', 'pa_calculosHorarios', @asunto, @HTML, @c2, @Dirigido, @fecha_ini, @fecha_fin, 'Con novedad', 'Media', 'PRT - HORARIOS Y MARCACIONES', NULL);
 				EXEC msdb.dbo.sp_send_dbmail 
 				@profile_name='Informacion_Nomina',
 				@recipients= @Dirigido, 

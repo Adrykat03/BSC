@@ -70,8 +70,8 @@ BEGIN
 				--SELECT @HTML = @htmlE + ' ' +@htmlGeneral 
 				BEGIN
 					-- INSERT notificación consolidada
-					INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
-					VALUES ('A', 'MAilBIOAP', 'pa_notificacionBiometrico', @var_correo_asunto, @var_correo_body, @ad_cor_analista, @var_correo_copia_oculta, 'Con novedad', 'Media', 'BIOMETRICO', NULL);
+					INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+					VALUES ('A', 'MAilBIOAP', 'pa_notificacionBiometrico', @var_correo_asunto, @var_correo_body, @ad_cor_analista, @var_correo_copia_oculta, NULL, NULL, 'Con novedad', 'Media', 'BIOMETRICO', NULL);
 					EXEC msdb.dbo.sp_send_dbmail 
 						@profile_name ='Informacion_Nomina',
 					 	@recipients = @ad_cor_analista, 

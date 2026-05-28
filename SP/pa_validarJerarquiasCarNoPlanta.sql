@@ -104,23 +104,39 @@ BEGIN
     SELECT @cuerpo = '<head> <title> </title>' + N' <style type="text/css"> #box-table { font-family: "Calibri"; font-size: 10px; text-align: center; border-collapse: collapse; border-top: 1px solid black; border-bottom: 1px solid black; } #box-table th { font-size: 10px; font-weight: normal; font-style: bold; background: black; border-right: 1px solid black; border-left: 1px solid black; border-bottom: 1px solid black; color: white; } #box-table td { border-right: 1px solid gray; border-left: 1px solid gray; border-bottom: 1px solid gray; color: black; } tr:nth-child(odd)   { background-color:#eee; } tr:nth-child(even)  { background-color:#fff; } th, td { padding: 4px; text-align: left;}</style> ' + N' </head>' + N' <body>' + '<br />' + N' <p style="font-family: Calibri; color:black; font-size: 14px; font-style: normal; font-variant: normal; font-weight: 400; ">  <h4> </h4> </p> ' + 
         N' <p  style="font-family: Calibri; color:black; font-size: 14px; font-style: normal; font-variant: normal; font-weight: 400; "> Estimado(a) ,' + @nombre + '</p>' + N' <hr/>' + isnull(@tableHTML5, '') + ' ' + N'<br/>' + N'<p style="font-family:Calibri">Atentamente,</p> ' + N'<p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p> ' + N'<div><p><a href="https://nomina.kfc.com.ec/KFCReporteador/vacaciones/AvisosVacaciones.aspx?A1=18" target="_blank">Ver Informe</a></p><br><label>Atentamente,</label><br><br><label><strong>Departamento de Nómina</strong></label></div> <p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p></body>';
 
-    -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
-    VALUES ('A', 'Avisos_LTJMNC', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J1 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia, 'Con novedad', 'Alta', 'JERARQUIAS', NULL);
-    EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
-        , @Subject = 'Listado de personas (CAR) con J1 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))'
-        , @recipients = @Dirigido
-        , @body_format = 'html'
-        ,
-        --@attach_query_result_as_file = 1,
-        --@query = @query1 ,
-        --@query_result_header = 1,
-        --   @query_result_separator =  ';',
-        --   @query_result_no_padding = 1,
-        --@query_result_width = 32767,
-        -- @query_attachment_filename = 'Listado de personas.csv',
-        @copy_recipients = @copia
-        , @body = @cuerpo
+    IF @w > 0
+    BEGIN
+        -- INSERT notificación consolidada
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('A', 'Avisos_LTJMNC', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J1 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia, NULL, NULL, 'Con novedad', 'Alta', 'JERARQUIAS', NULL);
+        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
+            , @Subject = 'Listado de personas (CAR) con J1 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))'
+            , @recipients = @Dirigido
+            , @body_format = 'html'
+            ,
+            --@attach_query_result_as_file = 1,
+            --@query = @query1 ,
+            --@query_result_header = 1,
+            --   @query_result_separator =  ';',
+            --   @query_result_no_padding = 1,
+            --@query_result_width = 32767,
+            -- @query_attachment_filename = 'Listado de personas.csv',
+            @copy_recipients = @copia
+            , @body = @cuerpo
+    END
+    ELSE
+    BEGIN
+        SELECT @cuerpo = N'<body><p>No se encontraron personas (CAR) con J1 menores a 060 sin pertenecer a las clases de nómina 27 o 11.</p></body>'
+        -- INSERT notificación consolidada
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('C', 'Avisos_LTJMNC', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J1 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia, NULL, NULL, 'Sin novedad', 'Alta', 'JERARQUIAS', NULL);
+        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
+            , @Subject = 'Listado de personas (CAR) con J1 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))'
+            , @recipients = @Dirigido
+            , @body_format = 'html'
+            , @copy_recipients = @copia
+            , @body = @cuerpo
+    END
 
     --------------------------------------------------------------------------------------------------------
     ----Valide es local "NO" el cargo Homologado de la jerarquia debe ser > 060 que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta) jefe 2
@@ -194,21 +210,37 @@ BEGIN
     SELECT @cuerpo = '<head> <title> </title>' + N' <style type="text/css"> #box-table { font-family: "Calibri"; font-size: 10px; text-align: center; border-collapse: collapse; border-top: 1px solid black; border-bottom: 1px solid black; } #box-table th { font-size: 10px; font-weight: normal; font-style: bold; background: black; border-right: 1px solid black; border-left: 1px solid black; border-bottom: 1px solid black; color: white; } #box-table td { border-right: 1px solid gray; border-left: 1px solid gray; border-bottom: 1px solid gray; color: black; } tr:nth-child(odd)   { background-color:#eee; } tr:nth-child(even)  { background-color:#fff; } th, td { padding: 4px; text-align: left;}</style> ' + N' </head>' + N' <body>' + '<br />' + N' <p style="font-family: Calibri; color:black; font-size: 14px; font-style: normal; font-variant: normal; font-weight: 400; ">  <h4> </h4> </p> ' + 
         N' <p  style="font-family: Calibri; color:black; font-size: 14px; font-style: normal; font-variant: normal; font-weight: 400; "> Estimado(a) ,' + @nombre + '</p>' + N' <hr/>' + isnull(@tableHTML5, '') + ' ' + N'<br/>' + N'<p style="font-family:Calibri">Atentamente,</p> ' + N'<p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p> ' + N'<div><p><a href="https://nomina.kfc.com.ec/KFCReporteador/vacaciones/AvisosVacaciones.aspx?A1=19" target="_blank">Ver Informe</a></p><br><label>Atentamente,</label><br><br><label><strong>Departamento de Nómina</strong></label></div> <p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p></body>';
 
-    -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
-    VALUES ('A', 'Avisos_LTJN2', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J2 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia, 'Con novedad', 'Alta', 'JERARQUIAS', NULL);
-    EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
-        , @Subject = 'Listado de personas (CAR) con J2 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))'
-        , @recipients = @Dirigido
-        , @body_format = 'html'
-        ,
-        --@attach_query_result_as_file = 1,
-        --@query = @query1 ,
-        --@query_result_header = 1,
-        --   @query_result_separator =  ';',
-        --   @query_result_no_padding = 1,
-        --@query_result_width = 32767,
-        --@query_attachment_filename = 'Listado de personas.csv',
-        @copy_recipients = @copia
-        , @body = @cuerpo
+    IF @w > 0
+    BEGIN
+        -- INSERT notificación consolidada
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('A', 'Avisos_LTJN2', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J2 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia, NULL, NULL, 'Con novedad', 'Alta', 'JERARQUIAS', NULL);
+        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
+            , @Subject = 'Listado de personas (CAR) con J2 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))'
+            , @recipients = @Dirigido
+            , @body_format = 'html'
+            ,
+            --@attach_query_result_as_file = 1,
+            --@query = @query1 ,
+            --@query_result_header = 1,
+            --   @query_result_separator =  ';',
+            --   @query_result_no_padding = 1,
+            --@query_result_width = 32767,
+            --@query_attachment_filename = 'Listado de personas.csv',
+            @copy_recipients = @copia
+            , @body = @cuerpo
+    END
+    ELSE
+    BEGIN
+        SELECT @cuerpo = N'<body><p>No se encontraron personas (CAR) con J2 menores a 060 sin pertenecer a las clases de nómina 27 o 11.</p></body>'
+        -- INSERT notificación consolidada
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('C', 'Avisos_LTJN2', 'pa_validarJerarquiasCarNoPlanta', 'Listado de personas (CAR) con J2 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))', @cuerpo, @w, @Dirigido, @copia, NULL, NULL, 'Sin novedad', 'Alta', 'JERARQUIAS', NULL);
+        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
+            , @Subject = 'Listado de personas (CAR) con J2 menores a 060 (que no pertenecen a la clase de nómina 27 (Embutser), 11 (Planta))'
+            , @recipients = @Dirigido
+            , @body_format = 'html'
+            , @copy_recipients = @copia
+            , @body = @cuerpo
+    END
 END

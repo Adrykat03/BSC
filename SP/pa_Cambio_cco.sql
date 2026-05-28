@@ -1,4 +1,10 @@
-
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_Cambio_cco]    Script Date: 19/5/2026 17:54:46 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =============================================
 -- Edit:		Andrés Gómez
 -- Edit date:	14-06-2022
@@ -11,8 +17,13 @@
 -- Description: Se realiza una mejora al proceso 
 --				ya que envia sin informacion
 -- =============================================
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 19/05/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
 
-CREATE PROCEDURE [Avisos].[pa_Cambio_cco]
+ALTER PROCEDURE [Avisos].[pa_Cambio_cco]
 @trabajador varchar(20),
 @fecha_ini DATE,
 @fecha_fin DATE,

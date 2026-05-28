@@ -155,8 +155,8 @@ Begin
 	 
 	 
   -- INSERT notificación consolidada
-  INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-  VALUES ('A', 'Jerarquías', 'pa_mismojefe1y2', 'Listado de CCO que tienen asignado jefe 1 o jefe 2 al mismo colaborador Tienda', @cuerpo, @w, @dirigido, @copia);
+  INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+  VALUES ('A', 'Avisos_MisJef', 'pa_mismojefe1y2', 'Listado de CCO que tienen asignado jefe 1 o jefe 2 al mismo colaborador Tienda', @cuerpo, @dirigido, NULL, NULL, 'Con novedad', 'Alta', 'JERARQUIA', NULL);
   exec msdb.dbo.Sp_send_dbmail
      @profile_name = 'Informacion_Nomina',  
      @Subject = 'Listado de CCO que tienen asignado jefe 1 o jefe 2 al mismo colaborador Tienda',
@@ -286,8 +286,8 @@ Begin
 	 
 	  
   -- INSERT notificación consolidada
-  INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-  VALUES ('A', 'Jerarquías', 'pa_mismojefe1y2', 'Listado de personas que tienen asignado jefe 1 o jefe 2 al mismo colaborador CAR', @cuerpo, @w, @dirigido, @copia);
+  INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+  VALUES ('A', 'Avisos_MisJefC', 'pa_mismojefe1y2', 'Listado de personas que tienen asignado jefe 1 o jefe 2 al mismo colaborador CAR', @cuerpo, @dirigido, NULL, NULL, 'Con novedad', 'Alta', 'JERARQUIA', NULL);
   exec msdb.dbo.Sp_send_dbmail
      @profile_name = 'Informacion_Nomina',  
      @Subject = 'Listado de personas que tienen asignado jefe 1 o jefe 2 al mismo colaborador CAR',

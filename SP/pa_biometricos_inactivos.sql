@@ -538,10 +538,10 @@ BEGIN
 									SELECT @html AS '-'
 									begin
 											-- INSERT notificación consolidada
-											INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios)
-											VALUES ('A', 'Biométricos', 'pa_biometricos_inactivos', @asunto, @html, @tiene6, @destinatarios);
+											INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
+											VALUES ('A', 'Biométricos', 'pa_biometricos_inactivos', @asunto, @html, @tiene6, @destinatarios, NULL, NULL);
 											exec msdb.dbo.Sp_send_dbmail
-											@profile_name = 'Informacion_Nomina',  
+											@profile_name = 'Informacion_Nomina',
 											@Subject = @asunto,
 											@recipients = @destinatarios,
 											--- @recipients = 'pasante.nominadosec@kfc.com.ec;',
@@ -562,8 +562,8 @@ BEGIN
 										if @html1 is not null 
 										begin
 											-- INSERT notificación consolidada
-											INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios)
-											VALUES ('A', 'Biométricos', 'pa_biometricos_inactivos', @asunto, @html1, @tiene6, @destinatarios);
+											INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
+											VALUES ('A', 'Biométricos', 'pa_biometricos_inactivos', @asunto, @html1, @tiene6, @destinatarios, NULL, NULL);
 											exec msdb.dbo.Sp_send_dbmail
 												@profile_name = 'Informacion_Nomina', 
 												@Subject = @asunto,

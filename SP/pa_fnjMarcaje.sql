@@ -127,7 +127,7 @@ BEGIN
 					N'</table>' +
 					N'<br/><br /></body>'
 	END
-	IF (SELECT COUNT(1) FROM #tmp_errores) = 0
+	ELSE
 	BEGIN
 		SELECT @HTML = N'<style type="text/css">
 						#box-table
@@ -166,25 +166,25 @@ BEGIN
 							min-width: 350px;
 						}
 						tr:nth-child(odd)	{ background-color:#eee; }
-						tr:nth-child(even)	{ background-color:#fff; }	
+						tr:nth-child(even)	{ background-color:#fff; }
 					</style>'
-					+	
+					+
 					N'<body><H4><font color="SteelBlue">VALIDAR LLAMADOS DE ATENCIÓN</H4>' +
 					N'<H4><font color="SteelBlue">Fecha: '+convert(varchar(12),GETDATE(),103)+'</H4>'+
 					N'<H4><font color="SteelBlue">Trabajadores con llamados de atención en fechas con falta no justificada vacación o ausencia.</H4>'+
 					N'<br/><br/> <h3>No se encontraron llamados de atención con FNJ</h3>'+
 					N'<br/><br /></body>'
+		-- INSERT notificación consolidada
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('C', 'AL_FNJ_LLAT', 'pa_fnjMarcaje', @asunto, @HTML, @destinatarios, NULL, NULL, 'Sin novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
+		EXEC msdb.dbo.Sp_send_dbmail
+		@profile_name = 'Informacion_Nomina',
+		@Subject = @asunto,
+		@recipients = @destinatarios,
+		@body_format= 'html',
+		@body = @HTML
 	END
 	SELECT @html
-	-- INSERT notificación consolidada
-	INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-	VALUES ('A', 'AL_FNJ_LLAT', 'pa_fnjMarcaje', @asunto, @HTML, @destinatarios, @fi, @ff, 'Con novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
-	EXEC msdb.dbo.Sp_send_dbmail
-	@profile_name = 'Informacion_Nomina',
-	@Subject = @asunto,
-	@recipients = @destinatarios,
-	@body_format= 'html',
-	@body = @HTML
 
 	DECLARE @Correo_Clase_Nomina AS TABLE (clase_nomina VARCHAR(6), analista VARCHAR(1000))
 

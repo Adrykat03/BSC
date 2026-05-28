@@ -106,8 +106,8 @@ set nocount on
         N' <p  style="font-family: Calibri; color:black; font-size: 14px; font-style: normal; font-variant: normal; font-weight: 400; "> Estimado(a) ,' + @nombre + '</p>' + N' <hr/>' + isnull(@tableHTML5, '') + ' ' + N'<br/>' + N'<p style="font-family:Calibri">Atentamente,</p> ' + N'<div><p><a href="https://nomina.kfc.com.ec/KFCReporteador/vacaciones/AvisosVacaciones.aspx?A1=16" target="_blank">Ver Informe</a></p><br><label>Atentamente,</label><br><br><label><strong>Departamento de Nómina</strong></label></div> <p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p></body>';
 
     -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasCarPlanta', 'Listado de personas (Planta) con J1 menores a 070 ', @cuerpo, @w, @Dirigido, @copia);
+    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, destinatariosCc)
+    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasCarPlanta', 'Listado de personas (Planta) con J1 menores a 070 ', @cuerpo, @w, @Dirigido, NULL, NULL, @copia);
     EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
         , @Subject = 'Listado de personas (Planta) con J1 menores a 070 '
         , @recipients =  @Dirigido
@@ -187,8 +187,8 @@ set nocount on
         N' <p  style="font-family: Calibri; color:black; font-size: 14px; font-style: normal; font-variant: normal; font-weight: 400; "> Estimado(a) ,' + @nombre + '</p>' + N' <hr/>' + isnull(@tableHTML5, '') + ' ' + N'<br/>' + N'<p style="font-family:Calibri">Atentamente,</p> ' + N'<div><p><a href="https://nomina.kfc.com.ec/KFCReporteador/vacaciones/AvisosVacaciones.aspx?A1=17" target="_blank">Ver Informe</a></p><br><label>Atentamente,</label><br><br><label><strong>Departamento de Nómina</strong></label></div> <p>Por favor no responder a este correo, en caso de que requiera informaci&oacute;n adicional, comun&iacute;quese con el &Aacute;rea de N&oacute;mina.</p></body>';
 
     -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasCarPlanta', 'Listado de personas (Planta) con J2 menores a 070', @cuerpo, @w, @Dirigido, @copia);
+    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, destinatariosCc)
+    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasCarPlanta', 'Listado de personas (Planta) con J2 menores a 070', @cuerpo, @w, @Dirigido, NULL, NULL, @copia);
     EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
         , @Subject = 'Listado de personas (Planta) con J2 menores a 070'
         , @recipients =  @Dirigido

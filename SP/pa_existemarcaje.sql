@@ -77,8 +77,8 @@ BEGIN
 	SELECT @fecha, CONVERT(VARCHAR(30), CONVERT(TIME, @Aux_fecha_hora)), @w;
 	
 	-- INSERT notificación consolidada
-	INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-	VALUES ('A', 'Marcajes', 'pa_existemarcaje', @asunto, @body, @Conteo_marcajes, @Dirigido, @copia);
+	INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+	VALUES ('A', 'CO_Marcaje', 'pa_existemarcaje', @asunto, @body, @Dirigido, NULL, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
 	EXEC msdb.dbo.Sp_send_dbmail
 	@profile_name = 'Informacion_Nomina',
 	@Subject = @asunto,

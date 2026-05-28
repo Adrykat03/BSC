@@ -99,15 +99,31 @@ BEGIN
     --                     from DB_NOMKFC.catalogos.centro_costos C where esLocal = ''S'' and
     --                      (select puesto from DB_NOMKFC.rrhh.vw_datosTrabajadores T where T.codigo  = C.jefe1) not in  (select valor from DB_NOMKFC.configuracion.parametros where parametro  = ''cargo_gteTienda'')
     --                      and estatus = 1'
-    -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
-    VALUES ('A', 'Avisos_VariosC', 'pa_cargosgtesjefoprTiendasMal', 'Listado de CCO con jefe 1 cuyo cargo es diferente al parámetro “cargo_gteTienda”) ', @cuerpo, @w, @dirigido, @copia, 'Con novedad', 'Alta', 'JERARQUIAS', NULL);
-    EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
-        , @Subject = 'Listado de CCO con jefe 1 cuyo cargo es diferente al parámetro “cargo_gteTienda”) '
-        , @recipients = @dirigido
-        , @body_format = 'html'
-        , @copy_recipients = @copia
-        , @body = @cuerpo
+    IF @w > 0
+    BEGIN
+        -- INSERT notificación consolidada
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('A', 'Avisos_VariosC', 'pa_cargosgtesjefoprTiendasMal', 'Listado de CCO con jefe 1 cuyo cargo es diferente al parámetro “cargo_gteTienda”) ', @cuerpo, @w, @dirigido, @copia, NULL, NULL, 'Con novedad', 'Alta', 'JERARQUIAS', NULL);
+        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
+            , @Subject = 'Listado de CCO con jefe 1 cuyo cargo es diferente al parámetro “cargo_gteTienda”) '
+            , @recipients = @dirigido
+            , @body_format = 'html'
+            , @copy_recipients = @copia
+            , @body = @cuerpo
+    END
+    ELSE
+    BEGIN
+        SELECT @cuerpo = N'<body><p>No se encontraron CCO con jefe 1 cuyo cargo sea diferente al parámetro cargo_gteTienda.</p></body>'
+        -- INSERT notificación consolidada
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('C', 'Avisos_VariosC', 'pa_cargosgtesjefoprTiendasMal', 'Listado de CCO con jefe 1 cuyo cargo es diferente al parámetro “cargo_gteTienda”) ', @cuerpo, @w, @dirigido, @copia, NULL, NULL, 'Sin novedad', 'Alta', 'JERARQUIAS', NULL);
+        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
+            , @Subject = 'Listado de CCO con jefe 1 cuyo cargo es diferente al parámetro “cargo_gteTienda”) '
+            , @recipients = @dirigido
+            , @body_format = 'html'
+            , @copy_recipients = @copia
+            , @body = @cuerpo
+    END
 
     --------------------------------------------------------------------------------------------------------
     ----Listado de CCO con jefe 2 que no pertence al cargo debido.
@@ -182,13 +198,29 @@ BEGIN
     --                    from DB_NOMKFC.catalogos.centro_costos C where esLocal = ''S'' and
     --                     (select puesto from DB_NOMKFC.rrhh.vw_datosTrabajadores T where T.codigo  = C.jefe2) not in  (select valor from DB_NOMKFC.configuracion.parametros where parametro  = ''cargo_gteTienda'')
     --                     and estatus = 1'
-    -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
-    VALUES ('A', 'Avisos_Varios', 'pa_cargosgtesjefoprTiendasMal', 'Listado de CCO con jefe 2 cuyo cargo es diferente al parámetro “cargo_gteTienda”) ', @cuerpo, @w, @dirigido, @copia, 'Con novedad', 'Baja', 'JERARQUIAS', NULL);
-    EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
-        , @Subject = 'Listado de CCO con jefe 2 cuyo cargo es diferente al parámetro “cargo_gteTienda”) '
-        , @recipients = @dirigido
-        , @body_format = 'html'  
-        , @copy_recipients = @copia
-        , @body = @cuerpo
+    IF @w > 0
+    BEGIN
+        -- INSERT notificación consolidada
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('A', 'Avisos_Varios', 'pa_cargosgtesjefoprTiendasMal', 'Listado de CCO con jefe 2 cuyo cargo es diferente al parámetro “cargo_gteTienda”) ', @cuerpo, @w, @dirigido, @copia, NULL, NULL, 'Con novedad', 'Baja', 'JERARQUIAS', NULL);
+        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
+            , @Subject = 'Listado de CCO con jefe 2 cuyo cargo es diferente al parámetro “cargo_gteTienda”) '
+            , @recipients = @dirigido
+            , @body_format = 'html'
+            , @copy_recipients = @copia
+            , @body = @cuerpo
+    END
+    ELSE
+    BEGIN
+        SELECT @cuerpo = N'<body><p>No se encontraron CCO con jefe 2 cuyo cargo sea diferente al parámetro cargo_gteTienda.</p></body>'
+        -- INSERT notificación consolidada
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('C', 'Avisos_Varios', 'pa_cargosgtesjefoprTiendasMal', 'Listado de CCO con jefe 2 cuyo cargo es diferente al parámetro “cargo_gteTienda”) ', @cuerpo, @w, @dirigido, @copia, NULL, NULL, 'Sin novedad', 'Baja', 'JERARQUIAS', NULL);
+        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
+            , @Subject = 'Listado de CCO con jefe 2 cuyo cargo es diferente al parámetro “cargo_gteTienda”) '
+            , @recipients = @dirigido
+            , @body_format = 'html'
+            , @copy_recipients = @copia
+            , @body = @cuerpo
+    END
 END

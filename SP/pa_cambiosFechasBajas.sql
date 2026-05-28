@@ -195,7 +195,20 @@ BEGIN
     BEGIN
         -- INSERT notificación consolidada
         INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-        VALUES ('A', 'pa_cambiosFechasBajas', 'pa_cambiosFechasBajas', 'Avisos de cambios de Fecha Bajas', @cuerpo, @w, @dirigido, @copia, @fechaIni, @fechaFin, 'Con novedad', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', NULL);
+        VALUES ('A', 'MAILAVICFB', 'pa_cambiosFechasBajas', 'Avisos de cambios de Fecha Bajas', @cuerpo, @w, @dirigido, @copia, @fechaIni, @fechaFin, 'Con novedad', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', NULL);
+        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
+            , @Subject = 'Avisos de cambios de Fecha Bajas'
+            , @recipients = @dirigido
+            , @body_format = 'html'
+            , @copy_recipients = @copia
+            , @body = @cuerpo
+    END
+    ELSE
+    BEGIN
+        SET @cuerpo = N'<body><h4>Avisos de cambios de Fecha Bajas</h4><p>No existe colaboradores con cambios en fecha de baja el día de hoy.</p></body>'
+        -- INSERT notificación consolidada
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('C', 'MAILAVICFB', 'pa_cambiosFechasBajas', 'Avisos de cambios de Fecha Bajas', @cuerpo, 0, @dirigido, @copia, NULL, NULL, 'Sin novedad', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', NULL);
         EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
             , @Subject = 'Avisos de cambios de Fecha Bajas'
             , @recipients = @dirigido

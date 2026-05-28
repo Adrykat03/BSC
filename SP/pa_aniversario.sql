@@ -141,8 +141,8 @@ BEGIN
 		IF @aux_correoPersonal != '' AND @aux_correoJefe1 != ''
 		BEGIN
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-			VALUES ('A', 'Aniversarios', 'pa_aniversario', @asunto, @body, @Dirigido);
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('A', 'pa_aniversario', 'pa_aniversario', @asunto, @body, @Dirigido, NULL, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
 			EXEC msdb.dbo.Sp_send_dbmail
 			@profile_name = 'Informacion_Nomina',
 			@Subject = @asunto,
@@ -153,8 +153,8 @@ BEGIN
 		ELSE
 		BEGIN
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-			VALUES ('A', 'Aniversarios', 'pa_aniversario', @asunto, @body, @Dirigido);
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('A', 'pa_aniversario', 'pa_aniversario', @asunto, @body, @Dirigido, NULL, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
 			EXEC msdb.dbo.Sp_send_dbmail
 			@profile_name = 'Informacion_Nomina',
 			@Subject = @asunto,

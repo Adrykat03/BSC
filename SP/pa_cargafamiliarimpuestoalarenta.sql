@@ -50,8 +50,8 @@ BEGIN
 		SELECT GETDATE(), @Dirigido, @body, 'Carga Familiar, Impuesto a la Renta', SUBSTRING(@referencia_02, 1, 499), SUBSTRING(@asunto, 1, 149); 
 
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-		VALUES ('A', 'Cargas Familiares', 'pa_cargafamiliarimpuestoalarenta', @asunto, @body, @Dirigido);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('A', 'CARFAM_IR_MAIL', 'pa_cargafamiliarimpuestoalarenta', @asunto, @body, @Dirigido, NULL, NULL, 'Con novedad', 'Media', 'CARGAS FAMILIARES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,

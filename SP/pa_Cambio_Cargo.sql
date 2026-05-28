@@ -1,3 +1,10 @@
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_Cambio_Cargo]    Script Date: 18/5/2026 16:12:32 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =============================================
 -- Author:		Andrés Gómez
 -- Create date: 15/06/2022
@@ -10,7 +17,12 @@
 -- Create date: 16/09/2022
 -- Description:	Se realiza una limpieza en el codigo
 -- =============================================
-CREATE   PROCEDURE [Avisos].[pa_Cambio_Cargo]
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 18/05/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
+ALTER   PROCEDURE [Avisos].[pa_Cambio_Cargo]
 @trabajador VARCHAR(15),
 @nombre varchar(200),
 @desc_actual varchar(250),

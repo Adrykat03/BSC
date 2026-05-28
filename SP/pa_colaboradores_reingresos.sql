@@ -176,8 +176,8 @@ BEGIN
 
 							/*		ENVIO DE CORREO GENERAL		*/
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-							VALUES ('A', 'Trabajadores', 'pa_colaboradores_reingresos', @asunto, @HTML, @destinatarios);
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('A', 'AlrClbRein', 'pa_colaboradores_reingresos', @asunto, @HTML, @destinatarios, NULL, NULL, 'Con novedad', 'Alta', 'NOMINA', NULL);
 							EXEC msdb.dbo.sp_send_dbmail 
 							@profile_name='Informacion_Nomina',
 							@recipients= @destinatarios, 		
@@ -218,8 +218,8 @@ BEGIN
 								+N' </body>' 
 			
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-							VALUES ('A', 'Trabajadores', 'pa_colaboradores_reingresos', @asunto, @HTML, 'pasante.nominadosec@kfc.com.ec');
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('C', 'AlrClbRein', 'pa_colaboradores_reingresos', @asunto, @HTML, 'pasante.nominadosec@kfc.com.ec', NULL, NULL, 'Sin novedad', 'Alta', 'NOMINA', NULL);
 							EXEC msdb.dbo.sp_send_dbmail 
 								@profile_name='Informacion_Nomina',
 								-- @recipients= 'pasante.nominadosec@kfc.com.ec', 	

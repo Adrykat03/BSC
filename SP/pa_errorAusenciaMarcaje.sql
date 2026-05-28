@@ -157,8 +157,8 @@ BEGIN
 							N'</body>'
 
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, descripcion, prioridad, categoria, mensajeError)
-		VALUES ('A', 'AL_Aus_Marcaje', 'pa_errorAusenciaMarcaje', @asunto, @HTML, @destinatarios, @fi, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('A', 'AL_Aus_Marcaje', 'pa_errorAusenciaMarcaje', @asunto, @HTML, @destinatarios, @fi, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,
@@ -203,8 +203,8 @@ BEGIN
 							N'<H3><font color="SteelBlue">No se encontraron trabajadores con marcajes erroneos en fechas de ausencia o marcajes de ausencia fuera de fechas de ausencia.</H3>'
 							
 		-- INSERT notificación consolidada
-		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, descripcion, prioridad, categoria, mensajeError)
-		VALUES ('C', 'AL_Aus_Marcaje', 'pa_errorAusenciaMarcaje', @asunto, @HTML, @destinatarios, @fi, 'Sin novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('C', 'AL_Aus_Marcaje', 'pa_errorAusenciaMarcaje', @asunto, @HTML, @destinatarios, @fi, NULL, 'Sin novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,

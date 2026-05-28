@@ -412,8 +412,8 @@ BEGIN
 
 						--/*		ENVIO DE CORREO GENERAL		*/
 						-- INSERT notificación consolidada
-						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-						VALUES ('A', 'Ausencias', 'pa_enfermedadconsecutiva', @asunto, @HTML, @destinatarios, @fi, @ff);
+						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+						VALUES ('A', 'EnfDiaLib', 'pa_enfermedadconsecutiva', @asunto, @HTML, @destinatarios, NULL, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
 						EXEC msdb.dbo.sp_send_dbmail 
 						@profile_name='Informacion_Nomina',
 						@recipients= @destinatarios, 		
@@ -483,11 +483,11 @@ BEGIN
 												-- SET @archivo = N'PermisosDiasLibres.csv';
 
 												-- INSERT notificación consolidada
-												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-												VALUES ('A', 'Ausencias', 'pa_enfermedadconsecutiva', @asunto, @HTML, @w, 'pasante.nominadosec@kfc.com.ec', @fi, @ff);
-												EXEC msdb.dbo.sp_send_dbmail 
+												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+												VALUES ('A', 'EnfDiaLib', 'pa_enfermedadconsecutiva', @asunto, @HTML, @w, 'pasante.nominadosec@kfc.com.ec', NULL, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
+												EXEC msdb.dbo.sp_send_dbmail
 												@profile_name='Informacion_Nomina',
-												-- @recipients= 'pasante.nominadosec@kfc.com.ec', 
+												-- @recipients= 'pasante.nominadosec@kfc.com.ec',
 												@recipients = @ANALISTA,
 												@subject = @asunto,
 												@body = @HTML,
@@ -531,17 +531,17 @@ BEGIN
 							+N' </body>' 
 
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-							VALUES ('A', 'Ausencias', 'pa_enfermedadconsecutiva', 'Alerta - Enfermedad, días libres consecutivos', @HTML, @w, 'pasante.nominadosec@kfc.com.ec', @fi, @ff);
-							EXEC msdb.dbo.sp_send_dbmail 
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('C', 'EnfDiaLib', 'pa_enfermedadconsecutiva', 'Alerta - Enfermedad, días libres consecutivos', @HTML, @w, 'pasante.nominadosec@kfc.com.ec', NULL, NULL, 'Sin novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
+							EXEC msdb.dbo.sp_send_dbmail
 							@profile_name='Informacion_Nomina',
-							-- @recipients= 'pasante.nominadosec@kfc.com.ec', 	
-							@recipients= @destinatarios, 
+							-- @recipients= 'pasante.nominadosec@kfc.com.ec',
+							@recipients= @destinatarios,
 							@subject = 'Alerta - Enfermedad, días libres consecutivos',
 							@body = @HTML,
-							@body_format = 'HTML' ;  
+							@body_format = 'HTML' ;
 					END
-		END 
+		END
 	ELSE
 		BEGIN
 			-- Si no se encontró nada en el marcaje
@@ -552,15 +552,15 @@ BEGIN
 							+N' </body>' 
 
 						-- INSERT notificación consolidada
-						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin)
-						VALUES ('A', 'Ausencias', 'pa_enfermedadconsecutiva', 'Alerta - Enfermedad, días libres consecutivos', @HTML, @w, 'pasante.nominadosec@kfc.com.ec', @fi, @ff);
-						EXEC msdb.dbo.sp_send_dbmail 
+						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+						VALUES ('C', 'EnfDiaLib', 'pa_enfermedadconsecutiva', 'Alerta - Enfermedad, días libres consecutivos', @HTML, @w, 'pasante.nominadosec@kfc.com.ec', NULL, NULL, 'Sin novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
+						EXEC msdb.dbo.sp_send_dbmail
 							@profile_name='Informacion_Nomina',
-							-- @recipients= 'pasante.nominadosec@kfc.com.ec', 	
-							@recipients= @destinatarios, 
+							-- @recipients= 'pasante.nominadosec@kfc.com.ec',
+							@recipients= @destinatarios,
 							@subject = 'Alerta - Enfermedad, días libres consecutivos',
 							@body = @HTML,
-							@body_format = 'HTML' ;  
+							@body_format = 'HTML' ;
 		END
 			
 	-- Eliminacion tablas temporales

@@ -114,8 +114,8 @@ BEGIN
 
     -- select @query1  = 'select cco , descCCO ,codigo  , nombre , cargoHomologado  from  DB_NOMKFC.dbo.avisosTemporal'
     -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasLocales', 'Listado de CCO locales con J1 menores a 050 (Locales)', @cuerpo, @w, @dirigido, @copia);
+    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, destinatariosCc)
+    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasLocales', 'Listado de CCO locales con J1 menores a 050 (Locales)', @cuerpo, @w, @dirigido, NULL, NULL, @copia);
     EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
         , @Subject = 'Listado de CCO locales con J1 menores a 050 (Locales)'
         , @recipients = @dirigido
@@ -212,8 +212,8 @@ BEGIN
 
     -- select @query1  = 'select cco , descCCO ,codigo  , nombre , cargoHomologado  from  DB_NOMKFC.dbo.avisosTemporal'
     -- INSERT notificación consolidada
-    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasLocales', 'Listado de CCO locales con J2 menores a 050 (Locales)', @cuerpo, @w, @dirigido, @copia);
+    INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, destinatariosCc)
+    VALUES ('A', 'Jerarquías', 'pa_validarJerarquiasLocales', 'Listado de CCO locales con J2 menores a 050 (Locales)', @cuerpo, @w, @dirigido, NULL, NULL, @copia);
     EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
         , @Subject = 'Listado de CCO locales con J2 menores a 050 (Locales)'
         , @recipients = @dirigido

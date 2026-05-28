@@ -75,11 +75,11 @@ BEGIN
 
 			/*		ENVIO DE CORREO			*/
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-			VALUES ('A', 'Estructura', 'pa_enviarDatosCCO', @asunto, @HTML, @destinatarios, @fi, @ff);
-			EXEC msdb.dbo.sp_send_dbmail 
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('A', 'pa_enviarDatosCCO', 'pa_enviarDatosCCO', @asunto, @HTML, @destinatarios, NULL, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
+			EXEC msdb.dbo.sp_send_dbmail
 				@profile_name='Informacion_Nomina',
-				@recipients= @destinatarios, 		
+				@recipients= @destinatarios,
 			 	@subject = @asunto,
 				@body = @HTML,
 				@query = @consulta,
@@ -107,15 +107,15 @@ BEGIN
 
 			/*		ENVIO DE CORREO			*/
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-			VALUES ('A', 'Estructura', 'pa_enviarDatosCCO', @asunto, @HTML, @destinatarios, @fi, @ff);
-			EXEC msdb.dbo.sp_send_dbmail 
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('C', 'pa_enviarDatosCCO', 'pa_enviarDatosCCO', @asunto, @HTML, @destinatarios, NULL, NULL, 'Sin novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
+			EXEC msdb.dbo.sp_send_dbmail
 				@profile_name='Informacion_Nomina',
-				@recipients= @destinatarios, 		
+				@recipients= @destinatarios,
 			 	@subject = @asunto,
 				@body = @HTML,
 				@body_format = 'HTML' ;
-		
+
 		END
 
 	/*		ELIMINACIÓN DE TABLAS TEMPORALES AUXILIARES				*/

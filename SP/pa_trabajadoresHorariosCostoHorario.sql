@@ -260,14 +260,14 @@ BEGIN
 			N' </body>'  
  
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin)
-			VALUES ('A', 'Horarios', 'pa_trabajadoresHorariosCostoHorario', 'Alerta - asociados, horarios y costo de horario', @HTML, 'sabrina.chinchin@kfc.com.ec;', @fecha_ini, @fecha_fin);
-			EXEC msdb.dbo.sp_send_dbmail 
-				@profile_name='Informacion_Nomina', 
-				@recipients= 'sabrina.chinchin@kfc.com.ec;', 
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion)
+			VALUES ('C', 'Horarios', 'pa_trabajadoresHorariosCostoHorario', 'Alerta - asociados, horarios y costo de horario', @HTML, 'sabrina.chinchin@kfc.com.ec;', NULL, NULL, 'Sin novedad');
+			EXEC msdb.dbo.sp_send_dbmail
+				@profile_name='Informacion_Nomina',
+				@recipients= 'sabrina.chinchin@kfc.com.ec;',
 				@subject = 'Alerta - asociados, horarios y costo de horario',
 				@body = @HTML,
-				@body_format = 'HTML' ;			
+				@body_format = 'HTML' ;
 		END
     END TRY
     BEGIN CATCH

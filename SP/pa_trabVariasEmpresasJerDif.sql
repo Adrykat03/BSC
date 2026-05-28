@@ -96,8 +96,8 @@ BEGIN
     N'<p style="font-family:Calibri"><strong>Soporte NOMINA</strong></p></body>' ;
 	 
    -- INSERT notificación consolidada
-   INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-   VALUES ('A', 'Trabajadores', 'pa_trabVariasEmpresasJerDif', 'Avisos trabajadores en varias empresas con jefe 2 diferente', @cuerpo, @w, @dirigido, @copia);
+   INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+   VALUES ('A', 'Avisos_TMEMJ', 'pa_trabVariasEmpresasJerDif', 'Avisos trabajadores en varias empresas con jefe 2 diferente', @cuerpo, @dirigido, NULL, NULL, 'Con novedad', 'Alta', 'JERARQUIA', NULL);
    exec msdb.dbo.Sp_send_dbmail
      @profile_name = 'Informacion_Nomina',  
      @Subject = 'Avisos trabajadores en varias empresas con jefe 2 diferente',
@@ -185,8 +185,8 @@ BEGIN
    
 
    -- INSERT notificación consolidada
-   INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc)
-   VALUES ('A', 'Trabajadores', 'pa_trabVariasEmpresasJerDif', 'Avisos trabajadores en varias empresas con jefe 1 diferente', @cuerpo, @w, @dirigido, @copia);
+   INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+   VALUES ('A', 'Avisos_TMEMJC', 'pa_trabVariasEmpresasJerDif', 'Avisos trabajadores en varias empresas con jefe 1 diferente', @cuerpo, @dirigido, NULL, NULL, 'Con novedad', 'Alta', 'JERARQUIA', NULL);
    exec msdb.dbo.Sp_send_dbmail
      @profile_name = 'Informacion_Nomina',  
      @Subject = 'Avisos trabajadores en varias empresas con jefe 1 diferente',

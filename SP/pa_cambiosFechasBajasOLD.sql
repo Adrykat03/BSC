@@ -137,8 +137,8 @@ BEGIN
     IF @i <> 1
     BEGIN
         -- INSERT notificación consolidada
-        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin)
-        VALUES ('A', 'Bajas', 'pa_cambiosFechasBajasOLD', 'Avisos de cambios de Fecha Bajas', @cuerpo, @w, @dirigido, @copia, @fechaIni, @fechaFin);
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('A', 'MAILAVICFB', 'pa_cambiosFechasBajasOLD', 'Avisos de cambios de Fecha Bajas', @cuerpo, @w, @dirigido, @copia, @fechaIni, @fechaFin, 'Con novedad', 'Media', 'PRT - HORARIOS Y MARCACIONES', NULL);
         EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
             , @Subject = 'Avisos de cambios de Fecha Bajas'
             , @recipients = @dirigido

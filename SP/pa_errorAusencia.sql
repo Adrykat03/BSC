@@ -1,4 +1,10 @@
-
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_errorAusencia]    Script Date: 26/5/2026 9:55:14 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =============================================
 -- Create:		Andrés Gómez
 -- Create date:	17-06-2022
@@ -12,8 +18,13 @@
 -- Create date:	12-09-2022
 -- Description: Se filtran los horarios y marcajes mas a fondo
 -- =============================================
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 26/05/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
 
-CREATE PROCEDURE [Avisos].[pa_errorAusencia]
+ALTER PROCEDURE [Avisos].[pa_errorAusencia]
 
 AS
 declare

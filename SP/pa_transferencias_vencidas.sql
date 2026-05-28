@@ -262,5 +262,21 @@ BEGIN
 		CLOSE CURSOR4
 		DEALLOCATE CURSOR4
 	END
+	ELSE
+	BEGIN
+		SELECT @HTML = N'<body><h3><font color="SteelBlue">TRANSFERENCIAS VENCIDAS, SIN EJECUTAR</h3>' +
+			N'<h4><font color="SteelBlue">Fecha: '+convert(varchar(12),GETDATE(),103)+'</h4>'+
+			N'<h4><font color="SteelBlue">No se encontraron transferencias vencidas sin ejecutar.</h4>'+
+			N'<br/><br /></body>'
+		-- INSERT notificación consolidada
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('C', 'AL_Tran_Venc', 'pa_transferencias_vencidas', @asunto, @HTML, @destinatarios, NULL, NULL, 'Sin novedad', 'Media', 'AFECTACION TRABAJADORES DIARIOS', NULL);
+		EXEC msdb.dbo.Sp_send_dbmail
+		@profile_name = 'Informacion_Nomina',
+		@Subject = @asunto,
+		@recipients = @destinatarios,
+		@body_format= 'html',
+		@body = @HTML
+	END
 
 END

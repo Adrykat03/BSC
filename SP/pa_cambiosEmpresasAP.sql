@@ -92,25 +92,25 @@ Declare @mesNombre varchar(20)
   
   
  -- INSERT notificación consolidada
- INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, destinatariosCc, descripcion, prioridad, categoria, mensajeError)
- VALUES ('A', 'Mail_APCE', 'pa_cambiosEmpresasAP', @asunto, @html, @correo, @correoSoporte, 'Reporteria', 'Media', 'ACCIONES DE PERSONAL', NULL);
- exec msdb.dbo.Sp_send_dbmail    
-     @profile_name = 'Informacion_Nomina',      
-     @Subject = @asunto,    
-     @recipients =   @correo,    
-     @blind_copy_recipients =@correoSoporte,    
-     @body_format= 'html',    
-     @body = @html       
-    
+ INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+ VALUES ('A', 'Mail_APCE', 'pa_cambiosEmpresasAP', @asunto, @html, @correo, @correoSoporte, NULL, NULL, 'Reporteria', 'Media', 'ACCIONES DE PERSONAL', NULL);
+ exec msdb.dbo.Sp_send_dbmail
+     @profile_name = 'Informacion_Nomina',
+     @Subject = @asunto,
+     @recipients =   @correo,
+     @blind_copy_recipients =@correoSoporte,
+     @body_format= 'html',
+     @body = @html
+
   -- INSERT notificación consolidada
-  INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
-  VALUES ('A', 'Mail_APCE', 'pa_cambiosEmpresasAP', @asunto, @html, @correoSoporte, 'Reporteria', 'Media', 'ACCIONES DE PERSONAL', NULL);
-  exec msdb.dbo.Sp_send_dbmail    
-     @profile_name = 'Informacion_Nomina',      
-     @Subject = @asunto,    
-     @recipients =   @correoSoporte,     
-     @body_format= 'html',    
-     @body = @html      
-     
-  End    
+  INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+  VALUES ('A', 'Mail_APCE', 'pa_cambiosEmpresasAP', @asunto, @html, @correoSoporte, NULL, NULL, 'Reporteria', 'Media', 'ACCIONES DE PERSONAL', NULL);
+  exec msdb.dbo.Sp_send_dbmail
+     @profile_name = 'Informacion_Nomina',
+     @Subject = @asunto,
+     @recipients =   @correoSoporte,
+     @body_format= 'html',
+     @body = @html
+
+  End
          

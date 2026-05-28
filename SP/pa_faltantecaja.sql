@@ -132,8 +132,8 @@ BEGIN
 		BEGIN TRAN @TransactionName;  
 		BEGIN TRY
 			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, destinatariosCc, periodoInicio, periodoFin)
-			VALUES ('A', 'Créditos Tienda', 'pa_faltantecaja', @Asunto, @Body, @Dirigido, @CopiaOculta, @fi, @ff);
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('A', 'AL_Falt_Caja', 'pa_faltantecaja', @Asunto, @Body, @Dirigido, @CopiaOculta, NULL, NULL, 'Con novedad', 'Alta', 'NOMINA', NULL);
 			EXEC msdb.dbo.Sp_send_dbmail
 			@profile_name = 'Informacion_Nomina',
 			@Subject = @Asunto,

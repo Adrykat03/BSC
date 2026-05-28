@@ -1,4 +1,10 @@
-
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_vacaciones_pasantes]    Script Date: 26/5/2026 12:36:16 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 /*
 
 =============================================
@@ -13,10 +19,15 @@ Edition date: 11-01-2024
 Description: Se modifica el filtro de fechas para comparar los ingresos con el valor de la creación del colaborador en la base de datos
 
 =============================================
+=============================================
+Author: Katerin Carrillo
+Create date: 26/05/2026
+Description: Se inserta los datos en la tabla notificacionesConsolidadas
+=============================================
 
 */
 
-CREATE PROCEDURE [Avisos].[pa_vacaciones_pasantes]
+ALTER PROCEDURE [Avisos].[pa_vacaciones_pasantes]
 AS
 BEGIN
 	-- Declaracion de variables 
@@ -134,8 +145,8 @@ BEGIN
 
 							--/*		ENVIO DE CORREO GENERAL		*/
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-							VALUES ('A', 'Vacaciones', 'pa_vacaciones_pasantes', @asunto, @HTML, @destinatarios);
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('A', 'AlrVacPas', 'pa_vacaciones_pasantes', @asunto, @HTML, @destinatarios, NULL, NULL, 'Con novedad', 'Baja', 'VACACIONES', NULL);
 							EXEC msdb.dbo.sp_send_dbmail 
 							@profile_name='Informacion_Nomina',
 							@recipients= @destinatarios, 		
@@ -165,8 +176,8 @@ BEGIN
 								+N' </body>' 
 			
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios)
-							VALUES ('A', 'Vacaciones', 'pa_vacaciones_pasantes', @asunto, @HTML, @destinatarios);
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('C', 'AlrVacPas', 'pa_vacaciones_pasantes', @asunto, @HTML, @destinatarios, NULL, NULL, 'Sin novedad', 'Baja', 'VACACIONES', NULL);
 							EXEC msdb.dbo.sp_send_dbmail 
 								@profile_name='Informacion_Nomina',
 								@recipients= @destinatarios, 

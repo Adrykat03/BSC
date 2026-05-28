@@ -193,10 +193,10 @@ BEGIN
 					declare @html varchar(max)=@htmlE + ' ' +@html1 + ' ' + @html2
 					begin
 							-- INSERT notificación consolidada
-							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios)
-							VALUES ('A', 'Cuentas Bancarias', 'pa_cuentas_duplicadas', @asunto, @html, @tiene2, @destinatarios);
+							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+							VALUES ('A', 'AL_DUPCTA', 'pa_cuentas_duplicadas', @asunto, @html, @tiene2, @destinatarios, NULL, NULL, 'Con novedad', 'Baja', 'NOMINA', NULL);
 							exec msdb.dbo.Sp_send_dbmail
-							@profile_name = 'Informacion_Nomina',  
+							@profile_name = 'Informacion_Nomina',
 							@Subject = @asunto,
 							@recipients = @destinatarios,
 							--@recipients = 'pasante.nominadosec@kfc.com.ec;',
@@ -219,10 +219,10 @@ BEGIN
 						if @html1 is not null
 						begin
 						-- INSERT notificación consolidada
-						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios)
-						VALUES ('A', 'Cuentas Bancarias', 'pa_cuentas_duplicadas', @asunto, @html1, @tiene2, @destinatarios);
+						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+						VALUES ('C', 'AL_DUPCTA', 'pa_cuentas_duplicadas', @asunto, @html1, @tiene2, @destinatarios, NULL, NULL, 'Sin novedad', 'Baja', 'NOMINA', NULL);
 						exec msdb.dbo.Sp_send_dbmail
-							@profile_name = 'Informacion_Nomina', 
+							@profile_name = 'Informacion_Nomina',
 							@Subject = @asunto,
 							@recipients = @destinatarios,
 							--@recipients = 'pasante.nominadosec@kfc.com.ec;',
