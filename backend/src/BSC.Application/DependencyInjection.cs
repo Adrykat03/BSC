@@ -14,13 +14,14 @@ public static class DependencyInjection
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(assembly);
+            // ValidationBehavior se registra como pipeline behavior global de MediatR.
+            // Esto engancha automaticamente FluentValidation a TODOS los IRequest<T>
+            // del assembly (incluido ChangeAlertaStatusCommand).
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         });
 
+        // Registra todos los AbstractValidator<T> del assembly (FluentValidation DI).
         services.AddValidatorsFromAssembly(assembly);
-
-        // Pipeline behavior para validacion automatica
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         return services;
     }
