@@ -20,5 +20,8 @@ public static class MongoDbMappings
                     .SetSerializer(new StringSerializer(BsonType.ObjectId));
             });
         }
+
+        // AlertaEstadoHistorial ya define [BsonId] + [BsonRepresentation(BsonType.ObjectId)]
+        // mediante atributos, igual que TaskItem; no necesita ClassMap explicito.
     }
 }

@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<ITaskItemRepository, TaskItemRepository>();
         services.AddScoped<IColaboradorRepository, ColaboradorRepository>();
         services.AddScoped<IBscDashboardConfigRepository, BscDashboardConfigRepository>();
+        services.AddScoped<IAlertaHistorialRepository, AlertaHistorialRepository>();
 
         // Services
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
@@ -66,6 +67,24 @@ public static class DependencyInjection
         {
             client.BaseAddress = new Uri(utileriasBase);
             client.Timeout = TimeSpan.FromSeconds(60);
+        });
+
+        // Data API Builder (DAB) - REST sobre Avisos.notificacionesConsolidadas.
+        // Soporta override por env (DAB_BASE_URL) y fallback al setting de appsettings.
+        var dabBase = Environment.GetEnvironmentVariable("DAB_BASE_URL")
+            ?? configuration["DabSettings:BaseUrl"]
+            ?? "http://bsc_dab:5000";
+        if (!dabBase.EndsWith('/'))
+        {
+            dabBase += "/";
+        }
+
+        services.AddSingleton(new DabSettings { BaseUrl = dabBase });
+
+        services.AddHttpClient<IDabAlertasClient, DabAlertasClient>(client =>
+        {
+            client.BaseAddress = new Uri(dabBase);
+            client.Timeout = TimeSpan.FromSeconds(30);
         });
 
         return services;
