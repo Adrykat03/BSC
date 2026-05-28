@@ -38,12 +38,15 @@ services:
       JwtSettings__Audience: ${JWT_AUDIENCE}
       UTILERIAS_API_BASE: ${UTILERIAS_API_BASE}
       UTILERIAS_TOKEN: ${UTILERIAS_TOKEN}
+      DAB_BASE_URL: http://bsc_dab:5000
+      TZ: America/Guayaquil
     ports:
       - "5000:8080"
     volumes:
       - ./files:/app/files
     depends_on:
       - bsc_mongo
+      - bsc_dab
     networks:
       bsc_net:
         ipv4_address: 19.168.78.11
