@@ -75,9 +75,27 @@ builder.Services.AddCors(options =>
 });
 
 // JWT Authentication
+//
+// Hallazgo Security A02 - Fail-fast en produccion:
+// appsettings.json incluye una clave default ("DEFAULT-DEV-KEY-...") para que dev arranque sin
+// configuracion adicional. En produccion esa clave NO debe usarse: si JWT_SECRET_KEY no esta
+// definida (o sigue siendo el default), abortamos el arranque para evitar que el sistema
+// firme tokens con una clave conocida.
+const string JwtDefaultDevKey = "DEFAULT-DEV-KEY-CHANGE-IN-PRODUCTION-32CHARS!";
 var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
     ?? builder.Configuration["JwtSettings:SecretKey"]
-    ?? "DEFAULT-DEV-KEY-CHANGE-IN-PRODUCTION-32CHARS!";
+    ?? JwtDefaultDevKey;
+
+if (builder.Environment.IsProduction() &&
+    (string.IsNullOrWhiteSpace(jwtKey) || jwtKey == JwtDefaultDevKey || jwtKey.Length < 32))
+{
+    throw new InvalidOperationException(
+        "JWT_SECRET_KEY no configurada en produccion. " +
+        "Defina la variable de entorno JWT_SECRET_KEY con un secreto de al menos 32 caracteres " +
+        "(o configure JwtSettings:SecretKey en un appsettings de produccion no commiteado). " +
+        "El valor default de desarrollo NO esta permitido en produccion.");
+}
+
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
     ?? builder.Configuration["JwtSettings:Issuer"]
     ?? "FlowPulse";
