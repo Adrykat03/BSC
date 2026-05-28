@@ -13,6 +13,7 @@ import {
   Download,
   Eye,
   Loader2,
+  RefreshCw,
   Search,
   X,
   ZoomIn,
@@ -1090,12 +1091,68 @@ function downloadAlertasXlsx(alertas, fileName) {
     'Usuario Resolución': a.usuarioResolucion || '',
     'Notas Resolución': a.notasResolucion || '',
   }));
+
   const ws = XLSX.utils.json_to_sheet(rows);
+
+  // ── Anchos de columna ──────────────────────────────────────────────────────
   const colWidths = Object.keys(rows[0]).map((key) => {
     const maxLen = Math.max(key.length, ...rows.map((r) => String(r[key] || '').length));
     return { wch: Math.min(maxLen + 2, 60) };
   });
   ws['!cols'] = colWidths;
+
+  // ── Congelar fila de encabezado ────────────────────────────────────────────
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+  // ── Estilos de celda ───────────────────────────────────────────────────────
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const headers = Object.keys(rows[0]);
+
+  const styleBorderHeader = {
+    top:    { style: 'thin', color: { rgb: 'C0C0C0' } },
+    bottom: { style: 'thin', color: { rgb: 'C0C0C0' } },
+    left:   { style: 'thin', color: { rgb: 'C0C0C0' } },
+    right:  { style: 'thin', color: { rgb: 'C0C0C0' } },
+  };
+  const styleBorderData = {
+    top:    { style: 'thin', color: { rgb: 'E0E0E0' } },
+    bottom: { style: 'thin', color: { rgb: 'E0E0E0' } },
+    left:   { style: 'thin', color: { rgb: 'E0E0E0' } },
+    right:  { style: 'thin', color: { rgb: 'E0E0E0' } },
+  };
+
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    const isHeader = R === 0;
+    const isEvenDataRow = !isHeader && R % 2 === 0; // fila 2,4,6... (índice par) → FFF5F5
+
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const cellAddr = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[cellAddr]) ws[cellAddr] = { t: 's', v: '' };
+
+      if (isHeader) {
+        ws[cellAddr].s = {
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11, name: 'Calibri' },
+          fill: { patternType: 'solid', fgColor: { rgb: 'E31837' } },
+          border: styleBorderHeader,
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
+        };
+      } else {
+        const bgColor = isEvenDataRow ? 'FFF5F5' : 'FFFFFF';
+        const isIdColumn = headers[C] === 'ID';
+        ws[cellAddr].s = {
+          font: { bold: false, color: { rgb: '000000' }, sz: 10, name: 'Calibri' },
+          fill: { patternType: 'solid', fgColor: { rgb: bgColor } },
+          border: styleBorderData,
+          alignment: {
+            horizontal: isIdColumn ? 'center' : 'left',
+            vertical: 'center',
+            wrapText: false,
+          },
+        };
+      }
+    }
+  }
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Alertas');
   XLSX.writeFile(wb, fileName);
@@ -2145,6 +2202,21 @@ const AlertasPayroll = () => {
                   data-tooltip={hasFilters ? 'Descargar resultados filtrados' : 'Descargar todas las alertas'}
                 >
                   <Download size={16} aria-hidden="true" /> Descargar
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--sm"
+                  onClick={loadData}
+                  disabled={loading}
+                  data-tooltip="Actualizar datos"
+                  aria-label="Actualizar datos"
+                >
+                  <RefreshCw
+                    size={16}
+                    aria-hidden="true"
+                    className={loading ? 'payroll-historial__spinner' : ''}
+                  /> Actualizar
                 </button>
 
                 <button
