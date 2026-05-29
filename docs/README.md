@@ -14,6 +14,7 @@
 
 ## Módulos / funcionalidades
 - [alertas-payroll.md](alertas-payroll.md) — Dashboard de Alertas Payroll: KPIs, tabla con sort/filtros/sticky, modal de previsualización HTML con zoom.
+- [manual-usuario-alertas-payroll.md](manual-usuario-alertas-payroll.md) — Manual de usuario del módulo Alertas Payroll (v1.0, 2026-05-29).
 
 ## Deploys / runbooks
 - [deploy-alertas-payroll.md](deploy-alertas-payroll.md) — Runbook del primer despliegue de Alertas Payroll + stand-up inicial de DAB en prod. Incluye plan abreviado para releases posteriores.
