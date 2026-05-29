@@ -1132,12 +1132,12 @@ function downloadAlertasXlsx(alertas, fileName) {
       if (isHeader) {
         ws[cellAddr].s = {
           font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11, name: 'Calibri' },
-          fill: { patternType: 'solid', fgColor: { rgb: 'E31837' } },
+          fill: { patternType: 'solid', fgColor: { rgb: '1F4E79' } },
           border: styleBorderHeader,
           alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
         };
       } else {
-        const bgColor = isEvenDataRow ? 'FFF5F5' : 'FFFFFF';
+        const bgColor = isEvenDataRow ? 'EBF3FB' : 'FFFFFF';
         const isIdColumn = headers[C] === 'ID';
         ws[cellAddr].s = {
           font: { bold: false, color: { rgb: '000000' }, sz: 10, name: 'Calibri' },
@@ -1155,7 +1155,7 @@ function downloadAlertasXlsx(alertas, fileName) {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Alertas');
-  XLSX.writeFile(wb, fileName);
+  XLSX.writeFile(wb, fileName, { cellStyles: true });
 }
 
 /* ========================================
