@@ -198,7 +198,7 @@ Componente único que reemplaza al antiguo `PreviewModal` y al modal de edición
 Estilo "carpeta" (esquinas superiores redondeadas, fondo blanco en activa, línea inferior de 3px en color primario). El tab "Adjunto" solo aparece cuando `row.rutaAdjunto` existe. Click en el tab Adjunto dispara la carga del blob (lazy) y cambia el panel izquierdo para mostrar el adjunto inline. El click en el botón "Previsualizar" del panel lateral hace lo mismo: cambia al tab Adjunto en lugar de abrir nueva pestaña.
 
 ### Tab Correo
-- `<iframe sandbox="" srcDoc={doc}>` con la columna `descripcionHtml` envuelta por `buildPreviewDocument(html)` (charset utf-8 + estilos base).
+- `<iframe sandbox="allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" srcDoc={doc}>` con la columna `descripcionHtml` envuelta por `buildPreviewDocument(html)` (charset utf-8 + estilos base). Los permisos permiten que los links del correo abran en nueva pestaña; scripts siguen bloqueados. Fix aplicado en commit `cb86fb2` (2026-05-29).
 - **Zoom 25-300%** en pasos de 25% (botones + Ctrl+rueda). Default 100%, reset al cambiar de fila.
 - Escalado con `transform: scale(N)` sobre el iframe; el stage wrapper se dimensiona en `BASE_W × scale × BASE_H × scale` para que los scrollbars reflejen el tamaño real escalado. `BASE_W = 800`, `BASE_H = 1100`.
 

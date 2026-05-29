@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual de Usuario — Alertas Payroll | BSC BackOffice</title>
+  <style>
+    :root {
+      --blue-dark:   #1F4E79;
+      --blue-mid:    #2E75B6;
+      --blue-light:  #EBF3FB;
+      --blue-accent: #3b82f6;
+      --red:         #ef4444;
+      --green:       #22c55e;
+      --yellow:      #eab308;
+      --gray-50:     #F9FAFB;
+      --gray-100:    #F3F4F6;
+      --gray-200:    #E5E7EB;
+      --gray-400:    #9CA3AF;
+      --gray-600:    #4B5563;
+      --gray-800:    #1F2937;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --radius: 8px;
+      --shadow: 0 1px 4px rgba(0,0,0,.10);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--gray-800);
+      background: var(--gray-50);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    nav#toc {
+      position: fixed;
+      top: 0; left: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--blue-dark);
+      color: #fff;
+      overflow-y: auto;
+      padding: 0 0 32px;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    nav#toc .toc-header {
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.15);
+      margin-bottom: 8px;
+    }
+
+    nav#toc .toc-header .brand {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: rgba(255,255,255,.55);
+      margin-bottom: 4px;
+    }
+
+    nav#toc .toc-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    nav#toc a {
+      display: block;
+      padding: 6px 20px;
+      color: rgba(255,255,255,.75);
+      text-decoration: none;
+      font-size: 13.5px;
+      transition: background .15s, color .15s;
+      border-left: 3px solid transparent;
+    }
+
+    nav#toc a:hover,
+    nav#toc a.active {
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      border-left-color: #60a5fa;
+    }
+
+    nav#toc .toc-section {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: rgba(255,255,255,.35);
+      padding: 16px 20px 4px;
+    }
+
+    nav#toc a.sub {
+      padding-left: 32px;
+      font-size: 13px;
+    }
+
+    /* ── Main ────────────────────────────────────────── */
+    main {
+      margin-left: 260px;
+      flex: 1;
+      max-width: 900px;
+      padding: 48px 48px 80px;
+    }
+
+    /* ── Page header ─────────────────────────────────── */
+    .page-header {
+      background: var(--blue-dark);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 32px 36px;
+      margin-bottom: 40px;
+    }
+
+    .page-header .badge {
+      display: inline-block;
+      background: rgba(255,255,255,.15);
+      color: rgba(255,255,255,.85);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+
+    .page-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .page-header .meta {
+      font-size: 13px;
+      color: rgba(255,255,255,.65);
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Section headings ────────────────────────────── */
+    h2 {
+      font-size: 21px;
+      font-weight: 700;
+      color: var(--blue-dark);
+      margin: 48px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--blue-light);
+      scroll-margin-top: 24px;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin: 28px 0 10px;
+      padding-left: 12px;
+      border-left: 3px solid var(--blue-accent);
+      scroll-margin-top: 24px;
+    }
+
+    h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gray-600);
+      margin: 20px 0 8px;
+      scroll-margin-top: 24px;
+    }
+
+    p { margin-bottom: 12px; }
+
+    /* ── Tables ──────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; margin: 16px 0 24px; border-radius: var(--radius); box-shadow: var(--shadow); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead th {
+      background: var(--blue-dark);
+      color: #fff;
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 16px;
+      white-space: nowrap;
+    }
+
+    thead th:first-child { border-radius: var(--radius) 0 0 0; }
+    thead th:last-child  { border-radius: 0 var(--radius) 0 0; }
+
+    tbody tr:nth-child(even) td { background: var(--blue-light); }
+    tbody tr:nth-child(odd)  td { background: #fff; }
+
+    tbody tr:last-child td:first-child { border-radius: 0 0 0 var(--radius); }
+    tbody tr:last-child td:last-child  { border-radius: 0 0 var(--radius) 0; }
+
+    td {
+      padding: 9px 16px;
+      border-bottom: 1px solid var(--gray-200);
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* ── Callouts ────────────────────────────────────── */
+    .callout {
+      display: flex;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    .callout.info    { background: var(--blue-light);  border-left: 4px solid var(--blue-accent); }
+    .callout.tip     { background: #f0fdf4;             border-left: 4px solid var(--green); }
+    .callout.warning { background: #fffbeb;             border-left: 4px solid var(--yellow); }
+    .callout.danger  { background: #fef2f2;             border-left: 4px solid var(--red); }
+
+    /* ── Code / kbd ──────────────────────────────────── */
+    code {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 13px;
+      background: var(--gray-100);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--blue-dark);
+    }
+
+    kbd {
+      font-family: var(--font);
+      font-size: 12px;
+      background: var(--gray-100);
+      border: 1px solid var(--gray-400);
+      border-radius: 4px;
+      padding: 1px 7px;
+      box-shadow: 0 1px 0 var(--gray-400);
+    }
+
+    /* ── Badges de estado ────────────────────────────── */
+    .badge-estado {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+
+    .badge-a  { background: #dcfce7; color: #15803d; }
+    .badge-p  { background: #f3e8ff; color: #7e22ce; }
+    .badge-r  { background: #dbeafe; color: #1d4ed8; }
+    .badge-c  { background: #fef9c3; color: #854d0e; }
+    .badge-e  { background: #fee2e2; color: #b91c1c; }
+
+    .badge-crit { background: #fee2e2; color: #b91c1c; }
+    .badge-alta { background: #ffedd5; color: #c2410c; }
+    .badge-med  { background: #fef9c3; color: #854d0e; }
+    .badge-baja { background: #f0fdf4; color: #15803d; }
+
+    /* ── Filas críticas demo ─────────────────────────── */
+    .critical-demo {
+      background: rgba(239,68,68,.08);
+      box-shadow: inset 4px 0 0 #ef4444;
+    }
+
+    /* ── Numbered steps ──────────────────────────────── */
+    ol.steps { padding-left: 0; list-style: none; counter-reset: step; }
+    ol.steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 14px;
+      margin-bottom: 12px;
+      align-items: flex-start;
+    }
+    ol.steps li::before {
+      content: counter(step);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      min-width: 26px;
+      background: var(--blue-dark);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 50%;
+      margin-top: 2px;
+    }
+
+    /* ── Feature card grid ───────────────────────────── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 16px 0 24px;
+    }
+
+    .feature-card {
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .feature-card .fc-icon { font-size: 22px; margin-bottom: 8px; }
+    .feature-card .fc-title { font-weight: 700; font-size: 14px; color: var(--gray-800); margin-bottom: 4px; }
+    .feature-card .fc-desc { font-size: 13px; color: var(--gray-600); line-height: 1.5; }
+
+    /* ── Divider ─────────────────────────────────────── */
+    hr { border: none; border-top: 1px solid var(--gray-200); margin: 40px 0; }
+
+    /* ── Footer ──────────────────────────────────────── */
+    footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--gray-200);
+      font-size: 13px;
+      color: var(--gray-400);
+      text-align: center;
+    }
+
+    /* ── Responsive ──────────────────────────────────── */
+    @media (max-width: 768px) {
+      nav#toc { display: none; }
+      main { margin-left: 0; padding: 24px 20px 60px; }
+    }
+
+    @media print {
+      nav#toc { display: none; }
+      main { margin-left: 0; padding: 0; }
+      h2, h3 { page-break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<nav id="toc">
+  <div class="toc-header">
+    <div class="brand">BSC BackOffice</div>
+    <h2>Alertas Payroll</h2>
+  </div>
+
+  <div class="toc-section">Introducción</div>
+  <a href="#intro">1. Introducción</a>
+  <a href="#acceso">2. Acceso al módulo</a>
+  <a href="#general">3. Vista general</a>
+
+  <div class="toc-section">Dashboard</div>
+  <a href="#dashboard">4. Tab Dashboard</a>
+  <a href="#dash-filtros" class="sub">4.1 Filtros</a>
+  <a href="#dash-resumen" class="sub">4.2 Resumen</a>
+  <a href="#dash-tarjetas" class="sub">4.3 Tarjetas</a>
+  <a href="#dash-grafico" class="sub">4.4 Gráfico de tiempo</a>
+
+  <div class="toc-section">Listado</div>
+  <a href="#listado">5. Tab Listado</a>
+  <a href="#list-kpis" class="sub">5.1 KPIs de estado</a>
+  <a href="#list-graficos" class="sub">5.2 Gráficos</a>
+  <a href="#list-filtros" class="sub">5.3 Filtros de la tabla</a>
+  <a href="#list-tabla" class="sub">5.4 Tabla de alertas</a>
+  <a href="#list-paginacion" class="sub">5.5 Paginación</a>
+  <a href="#list-actualizar" class="sub">5.6 Botón Actualizar</a>
+  <a href="#list-xlsx" class="sub">5.7 Descarga XLSX</a>
+
+  <div class="toc-section">Modal</div>
+  <a href="#modal">6. Ver y Resolver</a>
+  <a href="#modal-correo" class="sub">6.1 Tab Correo</a>
+  <a href="#modal-adjunto" class="sub">6.2 Tab Adjunto</a>
+  <a href="#modal-resolucion" class="sub">6.3 Panel Resolución</a>
+  <a href="#modal-guardar" class="sub">6.4 Guardar cambios</a>
+
+  <div class="toc-section">Referencia</div>
+  <a href="#estados">7. Estados y prioridades</a>
+  <a href="#criticas">8. Alertas críticas</a>
+  <a href="#faq">9. Preguntas frecuentes</a>
+</nav>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main>
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="badge">Manual de Usuario · v1.0</div>
+    <h1>Módulo Alertas Payroll</h1>
+    <div class="meta">
+      <span>📅 29 de mayo de 2026</span>
+      <span>👤 Analistas y Supervisores de Nómina</span>
+      <span>🏢 BSC BackOffice</span>
+    </div>
+  </div>
+
+  <!-- ── 1. INTRODUCCIÓN ── -->
+  <h2 id="intro">1. Introducción</h2>
+
+  <p>El módulo <strong>Alertas Payroll</strong> es el centro de notificaciones del sistema BSC BackOffice. Consolida en una sola pantalla todas las alertas generadas automáticamente por los procesos de nómina: validaciones de marcajes, vacaciones, ausencias, jerarquías, biométricos, horarios, entre otros.</p>
+
+  <p>Desde este módulo el equipo de Payroll puede:</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="fc-icon">📊</div>
+      <div class="fc-title">Monitorear</div>
+      <div class="fc-desc">Ver el estado general de todas las alertas en tiempo real.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">🔍</div>
+      <div class="fc-title">Filtrar y buscar</div>
+      <div class="fc-desc">Encontrar alertas por cualquier criterio: fecha, estado, prioridad, texto libre.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">✉️</div>
+      <div class="fc-title">Previsualizar</div>
+      <div class="fc-desc">Ver el contenido exacto del correo enviado a los involucrados.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">📎</div>
+      <div class="fc-title">Adjuntos</div>
+      <div class="fc-desc">Revisar y descargar reportes Excel, PDF u otros archivos adjuntos.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">✅</div>
+      <div class="fc-title">Resolver</div>
+      <div class="fc-desc">Registrar la resolución de cada alerta con notas y cambio de estado.</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">📥</div>
+      <div class="fc-title">Exportar</div>
+      <div class="fc-desc">Descargar reportes en Excel con formato profesional.</div>
+    </div>
+  </div>
+
+  <!-- ── 2. ACCESO ── -->
+  <h2 id="acceso">2. Acceso al módulo</h2>
+
+  <ol class="steps">
+    <li>Inicie sesión en <strong>BSC BackOffice</strong> con sus credenciales corporativas.</li>
+    <li>En el menú lateral izquierdo, haga clic en <strong>"Alertas Payroll"</strong>.</li>
+    <li>El sistema cargará automáticamente todas las alertas registradas y mostrará el <strong>Tab Dashboard</strong>.</li>
+  </ol>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
+    <span>Si es la primera vez que accede o acaba de iniciar sesión, espere unos segundos mientras el sistema carga los datos desde el servidor.</span>
+  </div>
+
+  <!-- ── 3. VISTA GENERAL ── -->
+  <h2 id="general">3. Vista general de la página</h2>
+
+  <p>La página se divide en dos grandes secciones accesibles mediante pestañas (tabs) ubicadas bajo el encabezado:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tab</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Dashboard</strong></td><td>Visión ejecutiva: KPIs por tipo de alerta y gráfico de tendencia temporal.</td></tr>
+        <tr><td><strong>Listado</strong></td><td>Tabla detallada de todas las alertas con filtros, acciones y descarga.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
+    <span>Ambas pestañas trabajan sobre el mismo conjunto de datos cargado al ingresar, pero mantienen sus propios filtros de forma independiente.</span>
+  </div>
+
+  <!-- ── 4. DASHBOARD ── -->
+  <h2 id="dashboard">4. Tab Dashboard</h2>
+
+  <p>El Dashboard ofrece una vista gerencial del estado de las alertas agrupadas por su <strong>tipo de descripción</strong>.</p>
+
+  <h3 id="dash-filtros">4.1 Filtros del Dashboard</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Filtro</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Prioridad</strong></td><td>Filtra por nivel: Crítica, Alta, Media, Baja.</td></tr>
+        <tr><td><strong>Categoría</strong></td><td>Filtra por área de negocio (Biométricos, Vacaciones, Marcajes, etc.).</td></tr>
+        <tr><td><strong>Estado</strong></td><td>Filtra por estado de la alerta.</td></tr>
+        <tr><td><strong>Fecha</strong></td><td>Rango de fechas sobre <em>Fecha de Creación</em>. Haga clic para abrir el selector; use la <strong>X</strong> integrada para limpiar sin abrir el selector.</td></tr>
+        <tr><td><strong>Agrupación temporal</strong></td><td>Selector <em>Día / Semana / Mes</em> — controla cómo se agrupan las barras en el gráfico de tiempo.</td></tr>
+        <tr><td><strong>Limpiar filtros</strong></td><td>Restablece todos los filtros del Dashboard, incluyendo el rango de fechas.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="dash-resumen">4.2 Resumen de resultados</h3>
+
+  <p>Sobre las tarjetas verá un texto similar a:</p>
+
+  <blockquote style="background:var(--gray-100);border-left:4px solid var(--blue-accent);padding:10px 16px;border-radius:0 var(--radius) var(--radius) 0;font-family:monospace;margin:12px 0;">
+    42 filtradas · 38 clasificadas · 4 sin clasificar
+  </blockquote>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Término</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Filtradas</strong></td><td>Total de alertas que pasan los filtros activos.</td></tr>
+        <tr><td><strong>Clasificadas</strong></td><td>Alertas con tipo de descripción reconocido.</td></tr>
+        <tr><td><strong>Sin clasificar</strong></td><td>Aparece en amarillo si hay alertas con descripción no reconocida. Informe al equipo técnico si lo ve frecuentemente.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="dash-tarjetas">4.3 Tarjetas por tipo de descripción</h3>
+
+  <p>Hay cuatro tarjetas, una por cada tipo de alerta:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tipo</th><th>Color de acento</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Con novedad</strong></td><td style="color:#ef4444;font-weight:700;">● Rojo</td></tr>
+        <tr><td><strong>Sin novedad</strong></td><td style="color:#22c55e;font-weight:700;">● Verde</td></tr>
+        <tr><td><strong>Reportería</strong></td><td style="color:#3b82f6;font-weight:700;">● Azul</td></tr>
+        <tr><td><strong>Error Proceso</strong></td><td style="color:#eab308;font-weight:700;">● Amarillo</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Cada tarjeta muestra el <strong>total</strong> de alertas del tipo (número central del donut) y el <strong>porcentaje del total</strong> filtrado (número grande en el color de la tarjeta).</p>
+
+  <h3 id="dash-grafico">4.4 Gráfico de alertas vs tiempo</h3>
+
+  <p>El gráfico de barras apiladas en la parte inferior muestra la evolución temporal de las alertas:</p>
+  <ul style="padding-left:20px;margin-bottom:12px;">
+    <li>El <strong>eje X</strong> agrupa las alertas según el selector Día / Semana / Mes.</li>
+    <li>Cada color corresponde a un tipo de descripción.</li>
+    <li><strong>Haga clic en una barra</strong> para descargar automáticamente un Excel con las alertas de ese período y tipo, aplicando los filtros activos.</li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-icon">💡</span>
+    <span>Use la agrupación <strong>Semana</strong> para detectar tendencias semanales de alertas y la agrupación <strong>Mes</strong> para reportes ejecutivos mensuales.</span>
+  </div>
+
+  <!-- ── 5. LISTADO ── -->
+  <h2 id="listado">5. Tab Listado</h2>
+
+  <p>El Listado ofrece la tabla completa de alertas con todas las opciones de filtrado, ordenamiento y acciones por registro.</p>
+
+  <h3 id="list-kpis">5.1 KPIs de estado</h3>
+
+  <p>En la parte superior del Listado encontrará 6 tarjetas con conteos por estado:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tarjeta</th><th>Estado que cuenta</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Total</strong></td><td>Todas las alertas (con el filtro de fecha activo si corresponde).</td></tr>
+        <tr><td><span class="badge-estado badge-a">Activas</span></td><td>Estado <code>A</code></td></tr>
+        <tr><td><span class="badge-estado badge-p">En Proceso</span></td><td>Estado <code>P</code></td></tr>
+        <tr><td><span class="badge-estado badge-r">Resueltas</span></td><td>Estado <code>R</code></td></tr>
+        <tr><td><span class="badge-estado badge-c">Cerradas</span></td><td>Estado <code>C</code></td></tr>
+        <tr><td><span class="badge-estado badge-e">Error</span></td><td>Estado <code>E</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="list-graficos">5.2 Gráficos del Listado</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Gráfico</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Pendientes por Resolver</strong></td>
+          <td>Donut con alertas en estado Activa, En Proceso o Error, agrupadas por tipo. Excluye "Sin novedad". La etiqueta central indica "Pendientes".</td>
+        </tr>
+        <tr>
+          <td><strong>Distribución por Estado</strong></td>
+          <td>Donut con la proporción de todos los estados (A, P, R, C, E).</td>
+        </tr>
+        <tr>
+          <td><strong>Alertas por Categoría</strong></td>
+          <td>Barras horizontales por área de negocio. Encima hay <strong>chips</strong> para filtrar por tipo: haga clic en cada chip para activar/desactivar. El botón al final alterna entre "Limpiar" y "Todas".</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="list-filtros">5.3 Filtros de la tabla</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Filtro</th><th>Cómo funciona</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Búsqueda global</strong></td>
+          <td>Campo de texto con ícono de lupa. Busca en <em>todas</em> las columnas simultáneamente (basta con que coincida en una).</td>
+        </tr>
+        <tr>
+          <td><strong>Filtro por fecha</strong></td>
+          <td>Botón con ícono de calendario. Abre selector de rango sobre <em>Fecha Creación</em>. La <strong>X</strong> integrada limpia el rango.</td>
+        </tr>
+        <tr>
+          <td><strong>Filtros por columna</strong></td>
+          <td>Segunda fila del encabezado de la tabla: un campo por columna. Se aplican todos en conjunto (AND). Útil para búsquedas muy específicas.</td>
+        </tr>
+        <tr>
+          <td><strong>Limpiar filtros</strong></td>
+          <td>Restablece búsqueda global, filtros por columna y rango de fechas en un clic. Se deshabilita cuando no hay filtros activos.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
+    <span>El contador <strong>X de Y</strong> a la derecha de la toolbar muestra cuántas alertas están visibles vs el total cargado.</span>
+  </div>
+
+  <h3 id="list-tabla">5.4 Tabla de alertas</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Columna</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Acciones</strong></td><td>Botón 👁 para ver y resolver la alerta.</td></tr>
+        <tr><td><strong>Fecha Creación</strong></td><td>Fecha y hora en que se generó la alerta.</td></tr>
+        <tr><td><strong>Estado</strong></td><td>Estado actual: Activa / En Proceso / Resuelta / Cerrada / Error.</td></tr>
+        <tr><td><strong>Prioridad</strong></td><td>Nivel de urgencia: Crítica / Alta / Media / Baja.</td></tr>
+        <tr><td><strong>Categoría</strong></td><td>Área de negocio que originó la alerta.</td></tr>
+        <tr><td><strong>Asunto</strong></td><td>Asunto del correo de notificación.</td></tr>
+        <tr><td><strong>Descripción</strong></td><td>Tipo: Con novedad / Sin novedad / Reportería / Error Proceso.</td></tr>
+        <tr><td><strong>Notificados</strong></td><td>Destinatarios del correo.</td></tr>
+        <tr><td><strong>Origen</strong></td><td>Sistema o proceso que generó la alerta.</td></tr>
+        <tr><td><strong>Fecha Resolución</strong></td><td>Fecha en que se marcó como resuelta (si aplica).</td></tr>
+        <tr><td><strong>Usuario Resolución</strong></td><td>Quién registró la resolución.</td></tr>
+        <tr><td><strong>Notas Resolución</strong></td><td>Observaciones ingresadas al resolver.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Ordenamiento de columnas</h4>
+  <p>Haga clic en el encabezado de cualquier columna para ordenar. Cada clic cicla entre: <strong>ascendente → descendente → sin orden</strong>. Las columnas de fecha se ordenan cronológicamente; las de texto usan orden alfabético en español.</p>
+
+  <h3 id="list-paginacion">5.5 Paginación</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Control</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Filas por página</strong></td><td>Selector con opciones 10, 20, 50, 100, 200 (defecto: 20).</td></tr>
+        <tr><td><strong>Navegación</strong></td><td>Botones Primera / Anterior / Siguiente / Última página.</td></tr>
+        <tr><td><strong>Indicador</strong></td><td><code>X–Y de Z</code>: rango visible y total filtrado.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
+    <span>Al cambiar cualquier filtro, la tabla regresa automáticamente a la <strong>primera página</strong>.</span>
+  </div>
+
+  <h3 id="list-actualizar">5.6 Botón Actualizar</h3>
+
+  <p>El botón <strong>"Actualizar"</strong> (ícono de flechas circulares, junto al botón Descargar) recarga los datos desde el servidor <strong>sin necesidad de refrescar toda la página</strong>.</p>
+
+  <ul style="padding-left:20px;margin-bottom:12px;">
+    <li>Durante la carga, el ícono gira y el botón se deshabilita temporalmente.</li>
+    <li>Los filtros aplicados se mantienen tras actualizar.</li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-icon">💡</span>
+    <span>Si trabaja el módulo durante toda la jornada, use <strong>"Actualizar"</strong> cada cierto tiempo para asegurarse de ver las alertas más recientes sin recargar la página.</span>
+  </div>
+
+  <h3 id="list-xlsx">5.7 Descarga XLSX</h3>
+
+  <p>El botón <strong>"Descargar"</strong> (azul, con ícono de descarga) genera un archivo Excel con las alertas visibles según los filtros activos.</p>
+
+  <ul style="padding-left:20px;margin-bottom:16px;">
+    <li>Sin filtros: descarga <strong>todas</strong> las alertas cargadas.</li>
+    <li>Con filtros: descarga el <strong>subconjunto filtrado completo</strong>, no solo la página visible.</li>
+    <li>Nombre del archivo: <code>Alertas_YYYY-MM-DD.xlsx</code></li>
+  </ul>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Elemento</th><th>Estilo</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Encabezado</strong></td><td>Fondo azul oscuro <code>#1F4E79</code>, texto blanco, negrita.</td></tr>
+        <tr><td><strong>Filas pares</strong></td><td>Fondo azul suave <code>#EBF3FB</code>.</td></tr>
+        <tr><td><strong>Filas impares</strong></td><td>Fondo blanco.</td></tr>
+        <tr><td><strong>Bordes</strong></td><td>Líneas finas en todas las celdas.</td></tr>
+        <tr><td><strong>Encabezado fijo</strong></td><td>Primera fila congelada: permanece visible al desplazarse.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>Columnas incluidas en el Excel:</strong> ID · Fecha Creación · Estado · Prioridad · Categoría · Asunto · Descripción · Notificados · Origen · Fecha Resolución · Usuario Resolución · Notas Resolución.</p>
+
+  <!-- ── 6. MODAL ── -->
+  <h2 id="modal">6. Modal de alerta — Ver y Resolver</h2>
+
+  <p>Al hacer clic en el botón <strong>👁 Ver</strong> de cualquier fila, se abre el modal de detalle. Este modal concentra toda la información y las acciones posibles sobre una alerta.</p>
+
+  <p>El modal tiene dos áreas principales:</p>
+  <ul style="padding-left:20px;margin-bottom:12px;">
+    <li><strong>Panel izquierdo (mayor):</strong> previsualización del contenido del correo o adjunto.</li>
+    <li><strong>Panel derecho (lateral):</strong> información de resolución y adjunto.</li>
+  </ul>
+
+  <h3 id="modal-correo">6.1 Tab Correo</h3>
+
+  <p>Vista predeterminada al abrir el modal. Muestra el HTML del correo de notificación que fue enviado a los destinatarios.</p>
+
+  <h4>Controles de zoom</h4>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Control</th><th>Acción</th></tr></thead>
+      <tbody>
+        <tr><td>Botón <strong>−</strong></td><td>Reduce el zoom un paso (mínimo 25%).</td></tr>
+        <tr><td>Porcentaje (ej. <code>100%</code>)</td><td>Indicador del zoom actual.</td></tr>
+        <tr><td>Botón <strong>+</strong></td><td>Aumenta el zoom un paso (máximo 300%).</td></tr>
+        <tr><td><kbd>Ctrl</kbd> + <em>rueda del ratón</em></td><td>Zoom rápido con el scroll del mouse.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
+    <span>El zoom se restablece a 100% automáticamente al abrir una alerta diferente.</span>
+  </div>
+
+  <h4>Links en el correo</h4>
+  <p>Si el correo contiene enlaces (por ejemplo, en alertas de Cargas Familiares), puede hacer clic directamente sobre ellos y se abrirán en una nueva pestaña del navegador.</p>
+
+  <h3 id="modal-adjunto">6.2 Tab Adjunto</h3>
+
+  <p>Si la alerta tiene un archivo adjunto, aparecerá el tab <strong>"Adjunto: nombre-del-archivo.ext"</strong>. Al hacer clic en el tab (o en el botón 👁 del panel lateral), el sistema descarga y muestra el archivo directamente dentro del modal:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tipo de archivo</th><th>Comportamiento</th></tr></thead>
+      <tbody>
+        <tr><td>PDF</td><td>Visualización inline como PDF.</td></tr>
+        <tr><td>Imágenes (PNG, JPG, GIF, WebP, SVG)</td><td>Visualización inline de la imagen.</td></tr>
+        <tr><td>Texto (TXT, JSON, XML, HTML)</td><td>Visualización del contenido como texto.</td></tr>
+        <tr><td>Excel / CSV (XLSX, XLS, CSV, TSV)</td><td>Tabla interactiva con tabs por hoja.</td></tr>
+        <tr><td>Otros formatos (DOCX, ZIP, etc.)</td><td>Mensaje con botón "Descargar adjunto".</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warning">
+    <span class="callout-icon">⚠️</span>
+    <span>Si el archivo no puede cargarse por error de red, aparecerá un botón <strong>"Reintentar"</strong>.</span>
+  </div>
+
+  <h3 id="modal-resolucion">6.3 Panel de Resolución</h3>
+
+  <p>En el panel lateral derecho se encuentra la información de gestión de la alerta:</p>
+
+  <h4>Sección "Resolución"</h4>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Campo</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Estado actual</strong></td><td>Estado vigente de la alerta.</td></tr>
+        <tr><td><strong>Prioridad</strong></td><td>Nivel de prioridad.</td></tr>
+        <tr><td><strong>Categoría</strong></td><td>Área de negocio.</td></tr>
+        <tr><td><strong>Cambiar estado</strong></td><td>Selector para actualizar el estado: En Proceso, Resuelto, Error.</td></tr>
+        <tr><td><strong>Notas de resolución</strong></td><td>Texto libre (máximo 500 caracteres). El contador cambia a amarillo al superar 450 y a rojo al llegar a 500.</td></tr>
+        <tr><td><strong>Usuario resolución</strong></td><td>Se completa automáticamente con su email de sesión.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Sección "Adjunto"</h4>
+  <p>Muestra el nombre del archivo adjunto (si existe) con dos botones:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Botón</th><th>Acción</th></tr></thead>
+      <tbody>
+        <tr><td>👁 (ojo)</td><td>Abre el tab Adjunto para previsualizar el archivo.</td></tr>
+        <tr><td>⬇ (descarga)</td><td>Descarga el archivo directamente a su computador.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Si no hay adjunto, se muestra <em>"Sin adjunto"</em> en gris.</p>
+
+  <h3 id="modal-guardar">6.4 Guardar cambios</h3>
+
+  <p>El botón <strong>"Guardar cambios"</strong> registra el nuevo estado y las notas de resolución en el sistema.</p>
+  <ul style="padding-left:20px;margin-bottom:12px;">
+    <li>Antes de guardar, el sistema pide confirmación.</li>
+    <li>El botón <strong>"Cancelar"</strong> cierra el modal sin guardar ningún cambio.</li>
+    <li>También puede cerrar con la tecla <kbd>Esc</kbd> o haciendo clic en el fondo oscuro.</li>
+  </ul>
+
+  <div class="callout warning">
+    <span class="callout-icon">⚠️</span>
+    <span>Los cambios de estado son <strong>visibles para todos los usuarios del sistema</strong> de forma inmediata tras guardar.</span>
+  </div>
+
+  <!-- ── 7. ESTADOS ── -->
+  <h2 id="estados">7. Estados y prioridades</h2>
+
+  <h3>Estados de una alerta</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Código</th><th>Etiqueta</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td><code>A</code></td><td><span class="badge-estado badge-a">Activa</span></td><td>Recién generada, pendiente de revisión.</td></tr>
+        <tr><td><code>P</code></td><td><span class="badge-estado badge-p">En Proceso</span></td><td>Alguien está trabajando en ella.</td></tr>
+        <tr><td><code>R</code></td><td><span class="badge-estado badge-r">Resuelta</span></td><td>Fue atendida y cerrada exitosamente.</td></tr>
+        <tr><td><code>C</code></td><td><span class="badge-estado badge-c">Cerrada</span></td><td>Cerrada sin resolución (informativa o descartada).</td></tr>
+        <tr><td><code>E</code></td><td><span class="badge-estado badge-e">Error</span></td><td>Ocurrió un error durante el procesamiento.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Prioridades</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Prioridad</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge-estado badge-crit">Crítica</span></td><td>Requiere atención inmediata.</td></tr>
+        <tr><td><span class="badge-estado badge-alta">Alta</span></td><td>Debe atenderse con urgencia.</td></tr>
+        <tr><td><span class="badge-estado badge-med">Media</span></td><td>Atención en tiempo regular.</td></tr>
+        <tr><td><span class="badge-estado badge-baja">Baja</span></td><td>Informativa, sin urgencia.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── 8. CRÍTICAS ── -->
+  <h2 id="criticas">8. Alertas críticas</h2>
+
+  <p>Las filas que cumplen <strong>las tres condiciones simultáneamente</strong> se resaltan con fondo rojo y una barra lateral izquierda roja:</p>
+
+  <ol style="padding-left:20px;margin-bottom:16px;">
+    <li>Prioridad <strong>Alta</strong> (o Crítica).</li>
+    <li>Estado <strong>Activa</strong>, <strong>En Proceso</strong> o <strong>Error</strong>.</li>
+    <li>Tipo <strong>Con Novedad</strong> o <strong>Error Proceso</strong>.</li>
+  </ol>
+
+  <p>Ejemplo visual de cómo se ve una fila crítica en la tabla:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Descripción</th><th>Asunto</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="critical-demo">
+          <td>29/05/2026 08:15</td>
+          <td><span class="badge-estado badge-a">Activa</span></td>
+          <td><span class="badge-estado badge-alta">Alta</span></td>
+          <td>Con novedad</td>
+          <td>Marcajes irregulares detectados — Tienda 05</td>
+        </tr>
+        <tr>
+          <td>28/05/2026 14:30</td>
+          <td><span class="badge-estado badge-r">Resuelta</span></td>
+          <td><span class="badge-estado badge-baja">Baja</span></td>
+          <td>Sin novedad</td>
+          <td>Revisión horarios — Semana 21</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout danger">
+    <span class="callout-icon">🔴</span>
+    <span>Las alertas resaltadas en rojo requieren atención prioritaria. Resuélvalas antes de continuar con otras tareas.</span>
+  </div>
+
+  <!-- ── 9. FAQ ── -->
+  <h2 id="faq">9. Preguntas frecuentes</h2>
+
+  <details style="margin-bottom:16px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:14px 18px;">
+    <summary style="font-weight:700;cursor:pointer;font-size:15px;color:var(--blue-dark);">¿Con qué frecuencia se generan nuevas alertas?</summary>
+    <p style="margin-top:10px;">Las alertas se generan cuando los procesos de nómina se ejecutan. La frecuencia depende de la configuración de cada proceso. Use el botón <strong>Actualizar</strong> para ver las alertas más recientes sin recargar la página.</p>
+  </details>
+
+  <details style="margin-bottom:16px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:14px 18px;">
+    <summary style="font-weight:700;cursor:pointer;font-size:15px;color:var(--blue-dark);">¿Puedo descargar solo las alertas que busqué?</summary>
+    <p style="margin-top:10px;">Sí. Aplique los filtros que necesite (fecha, estado, prioridad, búsqueda por texto) y luego haga clic en <strong>Descargar</strong>. El Excel contendrá únicamente las alertas filtradas, no toda la base de datos.</p>
+  </details>
+
+  <details style="margin-bottom:16px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:14px 18px;">
+    <summary style="font-weight:700;cursor:pointer;font-size:15px;color:var(--blue-dark);">¿Al cambiar el estado de una alerta, se notifica a alguien?</summary>
+    <p style="margin-top:10px;">El cambio de estado queda registrado en el sistema con su usuario y fecha de modificación. Las notificaciones automáticas hacia terceros dependen de la configuración de cada proceso.</p>
+  </details>
+
+  <details style="margin-bottom:16px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:14px 18px;">
+    <summary style="font-weight:700;cursor:pointer;font-size:15px;color:var(--blue-dark);">¿Por qué algunos links del correo no funcionan?</summary>
+    <p style="margin-top:10px;">Los links dentro del preview del correo se abren en una nueva pestaña. Si el link apunta a un sistema interno, asegúrese de tener acceso a la red corporativa.</p>
+  </details>
+
+  <details style="margin-bottom:16px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:14px 18px;">
+    <summary style="font-weight:700;cursor:pointer;font-size:15px;color:var(--blue-dark);">¿Qué significa "Sin clasificar" en el resumen del Dashboard?</summary>
+    <p style="margin-top:10px;">Indica que hay alertas cuya descripción no coincide con ninguno de los cuatro tipos reconocidos. Puede ser un tipo nuevo o un valor inesperado. Informe al equipo técnico si aparece frecuentemente.</p>
+  </details>
+
+  <details style="margin-bottom:16px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:14px 18px;">
+    <summary style="font-weight:700;cursor:pointer;font-size:15px;color:var(--blue-dark);">¿Puedo deshacer una resolución registrada?</summary>
+    <p style="margin-top:10px;">Puede cambiar el estado nuevamente abriendo el modal y guardando los cambios. No hay restricción de transición de estados desde la interfaz.</p>
+  </details>
+
+  <hr />
+
+  <footer>
+    <p>BSC BackOffice — Módulo Alertas Payroll · Manual de Usuario v1.0 · 29 de mayo de 2026</p>
+  </footer>
+
+</main>
+
+<script>
+  // Highlight active TOC link on scroll
+  const links = document.querySelectorAll('#toc a');
+  const sections = document.querySelectorAll('h2[id], h3[id]');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`#toc a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

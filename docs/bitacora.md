@@ -4,6 +4,31 @@ Registro cronológico de trabajos, decisiones y fixes relevantes. Orden: más re
 
 ---
 
+## 2026-05-29 — Fix iframe sandbox, manual de usuario Alertas (HTML) y carpeta docs/ al repo
+
+### Qué se hizo
+
+**1. Fix: links en preview del correo no abrían en nueva pestaña.**
+- `AlertaModal` usaba `sandbox=""` en el `<iframe>` del preview — atributo más restrictivo posible, bloquea toda navegación.
+- Solución: `sandbox="allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"`. Scripts siguen bloqueados.
+- Commit: `cb86fb2`.
+
+**2. Manual de usuario del módulo Alertas Payroll.**
+- Generado en dos formatos: `docs/manual-usuario-alertas-payroll.md` y `docs/manual-usuario-alertas-payroll.html`.
+- HTML con sidebar de navegación fija, badges de estado/prioridad en colores reales, tablas con formato blue-header, demo de fila crítica, FAQ como acordeón y script de resaltado de sección activa.
+- Commit: `24dc081` (primera versión) + commit posterior con el HTML.
+
+**3. Carpeta `docs/` incluida al repositorio.**
+- El `.gitignore` tenía `*.md` sin excepción para `docs/`. Se agregó `!docs/*.md`.
+- Todos los archivos técnicos de `docs/` (arquitectura, DAB, bitácora, reglas, deploy, modelo de datos) quedaron trackeados a partir de este commit.
+
+### Decisiones
+
+- El HTML se elige sobre Word/PDF porque cualquier usuario lo puede abrir sin instalar nada y puede ser alojado en el servidor estático sin build adicional.
+- Se mantuvo el `.md` como fuente de verdad para edición futura.
+
+---
+
 ## 2026-05-29 — Botón Actualizar en Alertas y formato XLSX en todos los módulos
 
 ### Qué se hizo

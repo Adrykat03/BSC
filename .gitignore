@@ -70,7 +70,9 @@ seeds/seed_usuarios_nomina.js
 *nomina*.csv
 *nomina*.xlsx
 
-# Documentación markdown (solo README.md y carpeta docs/ van al repo)
+# Documentación markdown (README, CONTEXTO, CLAUDE y carpeta docs/ van al repo)
 *.md
 !README.md
+!CONTEXTO.md
+!CLAUDE.md
 !docs/*.md
