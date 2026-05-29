@@ -13,6 +13,7 @@
     "@fontsource/inter": "^5.2.8",
     "bcryptjs": "^3.0.3",
     "chart.js": "^4.5.1",
+    "exceljs": "^4.4.0",
     "lucide-react": "^0.460.0",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.3.1",

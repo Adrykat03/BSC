@@ -1066,7 +1066,7 @@ const baseColumns = [
 /* ========================================
    XLSX Export
    ======================================== */
-function downloadAlertasXlsx(alertas, fileName) {
+async function downloadAlertasXlsx(alertas, fileName) {
   if (!alertas.length) {
     Swal.fire({
       title: 'Sin resultados',
@@ -1077,85 +1077,80 @@ function downloadAlertasXlsx(alertas, fileName) {
     });
     return;
   }
-  const rows = alertas.map((a) => ({
-    'ID': a.idNotificacion ?? '',
-    'Fecha Creación': formatDate(a.fechaCreacion),
-    'Estado': ESTADO_LABELS[a.estado] || a.estado || '',
-    'Prioridad': PRIORIDAD_LABELS[normalizePriority(a.prioridad)] || a.prioridad || '',
-    'Categoría': a.categoria || '',
-    'Asunto': a.asunto || '',
-    'Descripción': a.descripcion || '',
-    'Notificados': parseDestinatarios(a.destinatarios).join(', '),
-    'Origen': a.origen || '',
-    'Fecha Resolución': a.fechaModificacion ? formatDate(a.fechaModificacion) : '',
-    'Usuario Resolución': a.usuarioResolucion || '',
-    'Notas Resolución': a.notasResolucion || '',
-  }));
 
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const { default: ExcelJS } = await import('exceljs');
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Alertas');
+
+  const headers = [
+    'ID', 'Fecha Creación', 'Estado', 'Prioridad', 'Categoría',
+    'Asunto', 'Descripción', 'Notificados', 'Origen',
+    'Fecha Resolución', 'Usuario Resolución', 'Notas Resolución',
+  ];
 
   // ── Anchos de columna ──────────────────────────────────────────────────────
-  const colWidths = Object.keys(rows[0]).map((key) => {
-    const maxLen = Math.max(key.length, ...rows.map((r) => String(r[key] || '').length));
-    return { wch: Math.min(maxLen + 2, 60) };
+  const colWidths = [6, 18, 12, 12, 18, 40, 18, 35, 18, 18, 25, 40];
+  ws.columns = headers.map((h, i) => ({ header: h, key: h, width: colWidths[i] }));
+
+  // ── Estilo del encabezado ──────────────────────────────────────────────────
+  const headerRow = ws.getRow(1);
+  headerRow.height = 22;
+  headerRow.eachCell((cell) => {
+    cell.font   = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+    cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFC0C0C0' } },
+      bottom: { style: 'thin', color: { argb: 'FFC0C0C0' } },
+      left: { style: 'thin', color: { argb: 'FFC0C0C0' } },
+      right: { style: 'thin', color: { argb: 'FFC0C0C0' } },
+    };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
   });
-  ws['!cols'] = colWidths;
+
+  // ── Filas de datos ─────────────────────────────────────────────────────────
+  alertas.forEach((a, idx) => {
+    const rowData = [
+      a.idNotificacion ?? '',
+      formatDate(a.fechaCreacion),
+      ESTADO_LABELS[a.estado] || a.estado || '',
+      PRIORIDAD_LABELS[normalizePriority(a.prioridad)] || a.prioridad || '',
+      a.categoria || '',
+      a.asunto || '',
+      a.descripcion || '',
+      parseDestinatarios(a.destinatarios).join(', '),
+      a.origen || '',
+      a.fechaModificacion ? formatDate(a.fechaModificacion) : '',
+      a.usuarioResolucion || '',
+      a.notasResolucion || '',
+    ];
+    const row = ws.addRow(rowData);
+    row.height = 18;
+    const bgArgb = idx % 2 === 0 ? 'FFEBF3FB' : 'FFFFFFFF';
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      cell.font   = { size: 10, name: 'Calibri', color: { argb: 'FF000000' } };
+      cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+      };
+      cell.alignment = { horizontal: colNumber === 1 ? 'center' : 'left', vertical: 'middle' };
+    });
+  });
 
   // ── Congelar fila de encabezado ────────────────────────────────────────────
-  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
 
-  // ── Estilos de celda ───────────────────────────────────────────────────────
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  const headers = Object.keys(rows[0]);
-
-  const styleBorderHeader = {
-    top:    { style: 'thin', color: { rgb: 'C0C0C0' } },
-    bottom: { style: 'thin', color: { rgb: 'C0C0C0' } },
-    left:   { style: 'thin', color: { rgb: 'C0C0C0' } },
-    right:  { style: 'thin', color: { rgb: 'C0C0C0' } },
-  };
-  const styleBorderData = {
-    top:    { style: 'thin', color: { rgb: 'E0E0E0' } },
-    bottom: { style: 'thin', color: { rgb: 'E0E0E0' } },
-    left:   { style: 'thin', color: { rgb: 'E0E0E0' } },
-    right:  { style: 'thin', color: { rgb: 'E0E0E0' } },
-  };
-
-  for (let R = range.s.r; R <= range.e.r; R++) {
-    const isHeader = R === 0;
-    const isEvenDataRow = !isHeader && R % 2 === 0; // fila 2,4,6... (índice par) → FFF5F5
-
-    for (let C = range.s.c; C <= range.e.c; C++) {
-      const cellAddr = XLSX.utils.encode_cell({ r: R, c: C });
-      if (!ws[cellAddr]) ws[cellAddr] = { t: 's', v: '' };
-
-      if (isHeader) {
-        ws[cellAddr].s = {
-          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11, name: 'Calibri' },
-          fill: { patternType: 'solid', fgColor: { rgb: '1F4E79' } },
-          border: styleBorderHeader,
-          alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
-        };
-      } else {
-        const bgColor = isEvenDataRow ? 'EBF3FB' : 'FFFFFF';
-        const isIdColumn = headers[C] === 'ID';
-        ws[cellAddr].s = {
-          font: { bold: false, color: { rgb: '000000' }, sz: 10, name: 'Calibri' },
-          fill: { patternType: 'solid', fgColor: { rgb: bgColor } },
-          border: styleBorderData,
-          alignment: {
-            horizontal: isIdColumn ? 'center' : 'left',
-            vertical: 'center',
-            wrapText: false,
-          },
-        };
-      }
-    }
-  }
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Alertas');
-  XLSX.writeFile(wb, fileName, { cellStyles: true });
+  // ── Descargar ──────────────────────────────────────────────────────────────
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /* ========================================
