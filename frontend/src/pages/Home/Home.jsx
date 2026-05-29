@@ -196,20 +196,34 @@ const Home = () => {
         'Ultima actualizacion Colaborador': getLastCollaboratorUpdate(t),
       }));
 
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const { default: ExcelJS } = await import('exceljs');
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Reporte de Tareas');
 
-      // Auto-adjust column widths
-      const colWidths = Object.keys(rows[0] || {}).map((key) => {
-        const maxLen = Math.max(
-          key.length,
-          ...rows.map((r) => String(r[key] || '').length)
-        );
-        return { wch: Math.min(maxLen + 2, 60) };
+      const reportHeaders = Object.keys(rows[0] || {});
+      const reportColWidths = [30, 40, 22, 25, 25, 25, 25, 20, 15, 15, 30, 30, 30, 14, 25, 18, 18, 30];
+      ws.columns = reportHeaders.map((h, i) => ({ header: h, key: h, width: reportColWidths[i] ?? 20 }));
+
+      const hRow = ws.getRow(1);
+      hRow.height = 22;
+      hRow.eachCell((cell) => {
+        cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
+        cell.border    = { top: { style: 'thin', color: { argb: 'FFC0C0C0' } }, bottom: { style: 'thin', color: { argb: 'FFC0C0C0' } }, left: { style: 'thin', color: { argb: 'FFC0C0C0' } }, right: { style: 'thin', color: { argb: 'FFC0C0C0' } } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
       });
-      ws['!cols'] = colWidths;
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Reporte de Tareas');
+      rows.forEach((r, idx) => {
+        const row = ws.addRow(reportHeaders.map((h) => r[h]));
+        row.height = 18;
+        const bgArgb = idx % 2 === 0 ? 'FFEBF3FB' : 'FFFFFFFF';
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.font      = { size: 10, name: 'Calibri', color: { argb: 'FF000000' } };
+          cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
+          cell.border    = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        });
+      });
+      ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
 
       const today = new Date();
       const yyyy = today.getFullYear();
@@ -217,7 +231,14 @@ const Home = () => {
       const dd = String(today.getDate()).padStart(2, '0');
       const fileName = `Reporte_Tareas_${yyyy}-${mm}-${dd}.xlsx`;
 
-      XLSX.writeFile(wb, fileName);
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch (err) {
       alert('Error al generar el reporte: ' + (err.message || 'Error desconocido'));
     } finally {
@@ -821,7 +842,7 @@ const getLastCollaboratorUpdate = (task) => {
   return formatDateTimeDDMMYYYY(collabEntries[0].changedAt);
 };
 
-const downloadTasksXlsx = (tasks, fileName) => {
+const downloadTasksXlsx = async (tasks, fileName) => {
   const rows = tasks.map((t) => ({
     'Titulo': t.title || '',
     'Descripcion': t.description || '',
@@ -843,15 +864,43 @@ const downloadTasksXlsx = (tasks, fileName) => {
     alert('No hay tareas para descargar.');
     return;
   }
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const colWidths = Object.keys(rows[0]).map((key) => {
-    const maxLen = Math.max(key.length, ...rows.map((r) => String(r[key] || '').length));
-    return { wch: Math.min(maxLen + 2, 60) };
+  const { default: ExcelJS } = await import('exceljs');
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Tareas');
+
+  const taskHeaders = Object.keys(rows[0]);
+  const taskColWidths = [30, 40, 22, 25, 25, 20, 15, 15, 30, 30, 30, 14, 25, 18, 30];
+  ws.columns = taskHeaders.map((h, i) => ({ header: h, key: h, width: taskColWidths[i] ?? 20 }));
+
+  const hRow = ws.getRow(1);
+  hRow.height = 22;
+  hRow.eachCell((cell) => {
+    cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+    cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
+    cell.border    = { top: { style: 'thin', color: { argb: 'FFC0C0C0' } }, bottom: { style: 'thin', color: { argb: 'FFC0C0C0' } }, left: { style: 'thin', color: { argb: 'FFC0C0C0' } }, right: { style: 'thin', color: { argb: 'FFC0C0C0' } } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
   });
-  ws['!cols'] = colWidths;
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Tareas');
-  XLSX.writeFile(wb, fileName);
+  rows.forEach((r, idx) => {
+    const row = ws.addRow(taskHeaders.map((h) => r[h]));
+    row.height = 18;
+    const bgArgb = idx % 2 === 0 ? 'FFEBF3FB' : 'FFFFFFFF';
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.font      = { size: 10, name: 'Calibri', color: { argb: 'FF000000' } };
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
+      cell.border    = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+      cell.alignment = { horizontal: 'left', vertical: 'middle' };
+    });
+  });
+  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
 const TasksByCollaboratorChart = ({ data, historicReassigned, lateTasks, dateFrom, dateTo }) => {
