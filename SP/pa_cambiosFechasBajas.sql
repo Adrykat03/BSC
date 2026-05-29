@@ -1,5 +1,12 @@
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_cambiosFechasBajas]    Script Date: 28/5/2026 16:28:01 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
-CREATE PROCEDURE [Avisos].[pa_cambiosFechasBajas] @codigo VARCHAR(20)
+ALTER PROCEDURE [Avisos].[pa_cambiosFechasBajas] @codigo VARCHAR(20)
     , @fechaAnt DATE
     , @fechaNew DATE
 AS
@@ -22,22 +29,23 @@ DECLARE @tableHTML2 VARCHAR(8000)
     , @resultadoTrab  NVARCHAR(MAX)
 
 BEGIN
+    BEGIN TRY
     DECLARE @fechaIni DATE
         , @fechaFin DATE
-        , @estado SMALLINT = 0 
+        , @estado SMALLINT = 0
     DECLARE @tablaCuerpo AS TABLE (cuerpo TEXT)
 
     SELECT @copia = valor
     FROM Configuracion.parametros
-    WHERE parametro = 'MAILAVICFCB'  
+    WHERE parametro = 'MAILAVICFCB'
 
     SELECT @Dirigido = valor
         , @nombre = referencia_06
     FROM Configuracion.parametros
-    WHERE parametro = 'MAILAVICFB' 
+    WHERE parametro = 'MAILAVICFB'
 
     SELECT @w = 0
-	 
+
     SELECT @w = count(*)
     FROM RRHH.Prebajas_PRT b
     INNER JOIN rrhh.vw_datosTrabajadores dt
@@ -57,7 +65,7 @@ BEGIN
 
     IF ISNULL(@w, 0) > 0
     BEGIN
-        SELECT @resultadoTrab = '<tr><td style="width:30px;text-align: center;">' + dt.compania + '</td>' + '<td style="width:30px;text-align:center;">' + dt.cco + '</td>' + '<td style="width:200px;text-align:center;">' + dt.Desc_CCO + '</td>' + '<td style="width:30px;text-align:center;">' + dt.Trabajador + '</td>' + '<td style="width:200px;text-align:center;">' + dt.Nombre + '</td>' + '<td style="width:30px;text-align:center;">' + convert(VARCHAR(12), dt.Fecha_Antiguedad, 103) + '</td>' + '<td style="width:200px;text-align:center;">' + dt.Cargo + '</td>' + '<td style="width:30px;text-align:center;">' + convert(VARCHAR(12), @fechaAnt, 103) + '</td>' + '<td style="width:30px;text-align:center;">' + convert(VARCHAR(12), @fechaNew, 103) + '</td>' + '<td style="width:30px;text-align:center;">' + CASE 
+        SELECT @resultadoTrab = '<tr><td style="width:30px;text-align: center;">' + dt.compania + '</td>' + '<td style="width:30px;text-align:center;">' + dt.cco + '</td>' + '<td style="width:200px;text-align:center;">' + dt.Desc_CCO + '</td>' + '<td style="width:30px;text-align:center;">' + dt.Trabajador + '</td>' + '<td style="width:200px;text-align:center;">' + dt.Nombre + '</td>' + '<td style="width:30px;text-align:center;">' + convert(VARCHAR(12), dt.Fecha_Antiguedad, 103) + '</td>' + '<td style="width:200px;text-align:center;">' + dt.Cargo + '</td>' + '<td style="width:30px;text-align:center;">' + convert(VARCHAR(12), @fechaAnt, 103) + '</td>' + '<td style="width:30px;text-align:center;">' + convert(VARCHAR(12), @fechaNew, 103) + '</td>' + '<td style="width:30px;text-align:center;">' + CASE
                 WHEN @estado IN (0, 1, 2)
                     THEN 'Pendiente'
                 WHEN @estado = 3
@@ -75,7 +83,7 @@ BEGIN
         --------------------------------------------------------------------------------------------------------------------------------
         DECLARE CMarcajesBaja CURSOR LOCAL
         FOR
-        SELECT '<tr><td style="text-align: center;">' + convert(VARCHAR(12), fecha, 103) + '</td>' + '<td style="text-align: center;">' + isnull(comentario, '') + '</td>' + '<td align="center"style="text-align: center;">' + isnull(hora1, '') + '</td>' + '<td style="text-align: center;">' + isnull(hora2, '') + '</td>' + '<td style="text-align: center;">' + isnull(hora3, '') + '</td>' + '<td style="text-align: center;">' + isnull(hora4, '') + '</td>' + '<td style="text-align: center;">' + isnull(CASE 
+        SELECT '<tr><td style="text-align: center;">' + convert(VARCHAR(12), fecha, 103) + '</td>' + '<td style="text-align: center;">' + isnull(comentario, '') + '</td>' + '<td align="center"style="text-align: center;">' + isnull(hora1, '') + '</td>' + '<td style="text-align: center;">' + isnull(hora2, '') + '</td>' + '<td style="text-align: center;">' + isnull(hora3, '') + '</td>' + '<td style="text-align: center;">' + isnull(hora4, '') + '</td>' + '<td style="text-align: center;">' + isnull(CASE
                     WHEN estatus = 3
                         THEN 'Asentado'
                     WHEN estatus IN (2, 1)
@@ -121,7 +129,7 @@ BEGIN
         --------------------------------------------------------------------------------------------------------------------------------
         DECLARE CHorariossBaja CURSOR LOCAL
         FOR
-        SELECT '<tr><td style="text-align: center;">' + convert(VARCHAR(12), fecha, 103) + '</td>' + '<td style="text-align: center;">' + CASE 
+        SELECT '<tr><td style="text-align: center;">' + convert(VARCHAR(12), fecha, 103) + '</td>' + '<td style="text-align: center;">' + CASE
                 WHEN id_motivos = 'MO000'
                     THEN 'VACACIONES'
                 WHEN id_motivos = 'MO001A'
@@ -131,7 +139,7 @@ BEGIN
                 WHEN id_descanso = 3
                     THEN j.horadesde + '-' + j.horahasta
                 ELSE j.horadesde + '-' + j.horadesdedescanso
-                END + '</td>' + '<td style="text-align: center;">' + CASE 
+                END + '</td>' + '<td style="text-align: center;">' + CASE
                 WHEN id_motivos = 'MO000'
                     THEN 'VACACIONES'
                 WHEN id_motivos = 'MO001A'
@@ -168,20 +176,20 @@ BEGIN
         DEALLOCATE CHorariossBaja
 
         SET @cuerpo = '<!DOCTYPE html><html><head><title>Baja con cambios
-	     Editor</title><meta name="viewport"content="width=device-width, initial-scale=1"> 
+	     Editor</title><meta name="viewport"content="width=device-width, initial-scale=1">
 	     <style> .centrado { text-align: center;}table {border-collapse: collapse; width: 100%; font-size: smaller; font-family: calibri;}th,td {text-align: left; border-bottom: 1px solid #ddd;
-        padding: 8px;}tr:hover {background-color: coral;}tr:nth-child(even) {background-color: #f2f2f2;}      
+        padding: 8px;}tr:hover {background-color: coral;}tr:nth-child(even) {background-color: #f2f2f2;}
         </style></head><body style="font-family: calibri;"><div ><br/><h4 class="centrado">Avisos de cambios de Fecha Bajas</h4>
-	    <br/><p>Estimado(a),<strong>' + @Dirigido + 
+	    <br/><p>Estimado(a),<strong>' + @Dirigido +
             '</strong></p><hr/><p>Listado de los colaboradores que se les realizó un cambio de fecha de baja en PRT por el área de RRHH</p>
 	    <div style="font-family: calibri;font-size: smaller;"><div><table style="font-size: smaller;"><thead><tr><th style="width: 30px;text-align: center;">Empresa</th>
 	    <th style="width: 30px;text-align: center;">CCO</th><th style="width: 200px;text-align: center;">Descripción</th><th style="width: 30px;text-align: center;">Cédula</th><th style="width: 200px;text-align: center;">Nombre</th><th style="width: 30px;text-align: center;">Fecha Antigüedad</th><th style="width:200px;text-align:center;">Cargo</th><th style="width: 30px;text-align: center;">Fecha Baja Anterior</th><th style="width: 30px;text-align: center;">Fecha Baja Nueva</th><th style="width: 30px;text-align: center;">Estado Marcajes</th><th style="width: 30px;text-align: center;">Fecha Cambio</th>
-	    </tr></thead><tbody>' + @resultadoTrab + 
+	    </tr></thead><tbody>' + @resultadoTrab +
             '</tbody></table></div></div><p style="text-align: left;"><span style="text-decoration: underline;">Marcaciones registradas del corte de n&oacute;mina</span></p>
 	    <div style="font-family: calibri;font-size: smaller;"><div>
 	    <table style="font-size: smaller;"><thead>
 	    <tr><th style="text-align: center;">Fecha</th><th style="text-align: center;">Notas</th><th style="text-align: center;">Hora Entrada</th><th style="text-align: center;">Hora Salida Descanso</th><th style="text-align: center;">Hora Entrada Descanso</th><th style="text-align: center;">Hora Salida</th><th style="text-align: center;">Estado</th><th style="text-align: center;">Horas 25</th><th>Horas 50</th><th style="text-align: center;">Horas 100</th><th style="text-align: center;">Horas Feriados</th></tr>
-	    </thead><tbody>' + @Resultmarcajes + 
+	    </thead><tbody>' + @Resultmarcajes +
             '</tbody></table></div></div><p><span style="text-decoration: underline;">Horarios registradas del corte de n&oacute;mina</span></p><div style="font-family: calibri;font-size: smaller;"><div class="col"><table style="font-size: smaller;width: 400px;" class="table table-striped table-bordered table-hover"><thead><tr><th style="text-align: center;">Fecha</th><th style="text-align: center;">Jornada 1</th><th style="text-align: center;">Jornada 2</th></tr></thead><tbody>' + @Resulthorarios + '</tbody></Table></div></div></div><br/><br/><br/></body></html>'
     END
     ELSE
@@ -193,9 +201,9 @@ BEGIN
 
     IF @i <> 1
     BEGIN
-        -- INSERT notificación consolidada
-        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-        VALUES ('A', 'MAILAVICFB', 'pa_cambiosFechasBajas', 'Avisos de cambios de Fecha Bajas', @cuerpo, @w, @dirigido, @copia, @fechaIni, @fechaFin, 'Con novedad', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', NULL);
+        -- Insert en notificaciones consolidadas
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('A', 'MAILAVICFB', 'pa_cambiosFechasBajas', 'Avisos de cambios de Fecha Bajas', @cuerpo, @dirigido, @fechaIni, @fechaFin, 'Con novedad', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', NULL);
         EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
             , @Subject = 'Avisos de cambios de Fecha Bajas'
             , @recipients = @dirigido
@@ -203,17 +211,10 @@ BEGIN
             , @copy_recipients = @copia
             , @body = @cuerpo
     END
-    ELSE
-    BEGIN
-        SET @cuerpo = N'<body><h4>Avisos de cambios de Fecha Bajas</h4><p>No existe colaboradores con cambios en fecha de baja el día de hoy.</p></body>'
-        -- INSERT notificación consolidada
-        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-        VALUES ('C', 'MAILAVICFB', 'pa_cambiosFechasBajas', 'Avisos de cambios de Fecha Bajas', @cuerpo, 0, @dirigido, @copia, NULL, NULL, 'Sin novedad', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', NULL);
-        EXEC msdb.dbo.Sp_send_dbmail @profile_name = 'Informacion_Nomina'
-            , @Subject = 'Avisos de cambios de Fecha Bajas'
-            , @recipients = @dirigido
-            , @body_format = 'html'
-            , @copy_recipients = @copia
-            , @body = @cuerpo
-    END
+    END TRY
+    BEGIN CATCH
+        -- Insert en notificaciones consolidadas
+        INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+        VALUES ('E', 'MAILAVICFB', 'pa_cambiosFechasBajas', 'Avisos de cambios de Fecha Bajas', NULL, NULL, NULL, NULL, 'Error Proceso', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
+    END CATCH
 END

@@ -19,7 +19,7 @@ GO
 -- =============================================
 -- =============================================
 -- Author:		Katerin Carrillo
--- Create date: 19/05/2026
+-- Create date: 28/05/2026
 -- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
 -- =============================================
 
@@ -93,9 +93,12 @@ BEGIN
 
 		INSERT INTO db_nomkfc.logs.log_usuarios (id_usuario, fecha, descripcion, notas, operacion, ip, referencia_01, referencia_02, referencia_03, referencia_04, referencia_05, referencia_06)
 
-			SELECT SYSTEM_USER, getdate(),'Error al enviar el correo: ' + SUBSTRING(@errorMensaje, 1, 250) + ', al reportar el Cambio de CCO: ' + @referencia_02, 
+			SELECT SYSTEM_USER, getdate(),'Error al enviar el correo: ' + SUBSTRING(@errorMensaje, 1, 250) + ', al reportar el Cambio de CCO: ' + @referencia_02,
 			'',1,'','', 'Procedimiento Almacenado: RRHH.pa_cambio_centro_costo2',0,0,getdate(), '';
-	END CATCH	
+		-- Insert en notificaciones consolidadas
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('E', 'AL_Cambio', 'pa_Cambio_cco', @asunto, NULL, NULL, NULL, NULL, 'Error Proceso', 'Media', 'AFECTACION TRABAJADORES DIARIOS', @errorMensaje);
+	END CATCH
 
 
 	IF OBJECT_ID(N'tempdb..#tmp_trabajador_nomina', N'U') IS NOT NULL 

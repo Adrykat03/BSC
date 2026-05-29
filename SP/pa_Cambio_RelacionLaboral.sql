@@ -1,4 +1,10 @@
-
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_Cambio_RelacionLaboral]    Script Date: 28/5/2026 15:21:57 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =============================================
 -- Create:		Andrés Gómez
 -- Create date:	16-06-2022
@@ -10,8 +16,13 @@
 -- Create date:	16/09/2022
 -- Description: Limpieza de codigo
 -- =============================================
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 28/05/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
 
-CREATE   procedure [Avisos].[pa_Cambio_RelacionLaboral]
+alter   procedure [Avisos].[pa_Cambio_RelacionLaboral]
 @codigo VARCHAR(20),
 @fecha_ini DATE,
 @fecha_fin DATE,
@@ -77,8 +88,11 @@ BEGIN
 		END TRY
 		BEGIN CATCH
 			INSERT INTO db_nomkfc.logs.log_usuarios (id_usuario, fecha, descripcion, notas, operacion, ip, referencia_01, referencia_02, referencia_03, referencia_04, referencia_05, referencia_06)
-			select 'Adam', getdate(),'Error al enviar el correo de notificación del cambio de relación laboral del trabajador ' 
+			select 'Adam', getdate(),'Error al enviar el correo de notificación del cambio de relación laboral del trabajador '
 					+ LEFT(@codigo, 10) + ' con cco ' + @cco + ' _ ' + @desc_cco + ' y fecha de baja: ' + ISNULL(CONVERT(varchar(20), @fecha_baja, 105),'No tiene fecha de baja'),'',1,'','', 'pa_Cambio_RelacionLaboral',0,0,getdate(), '';
+			-- Insert en notificaciones consolidadas
+			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+			VALUES ('E', 'AL_Cam_rel_lab', 'pa_Cambio_RelacionLaboral', @asunto, NULL, NULL, NULL, NULL, 'Error Proceso', 'Baja', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
 		END CATCH
 	END
 	IF OBJECT_ID(N'tempdb..#temp_contratos', N'U') IS NOT NULL
