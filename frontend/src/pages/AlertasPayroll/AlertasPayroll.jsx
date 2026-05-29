@@ -706,7 +706,7 @@ const AlertaModal = ({
                     <iframe
                       title="Previsualización del correo"
                       className="preview-modal__iframe"
-                      sandbox=""
+                      sandbox="allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
                       srcDoc={doc}
                       style={{
                         width: PREVIEW_BASE_W,
