@@ -742,15 +742,45 @@ const Tasks = () => {
         'Ultima actualizacion Colaborador': getLastCollaboratorUpdate(t),
       }));
 
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const colWidths = Object.keys(rows[0] || {}).map((key) => ({
-        wch: Math.max(key.length, ...rows.map((r) => String(r[key]).length)) + 2,
-      }));
-      ws['!cols'] = colWidths;
+      const { default: ExcelJS } = await import('exceljs');
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Tareas');
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Tareas');
-      XLSX.writeFile(wb, `Tareas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      const taskHeaders = Object.keys(rows[0] || {});
+      const taskColWidths = [30, 40, 22, 25, 25, 20, 18, 18, 35, 14, 18, 30];
+      ws.columns = taskHeaders.map((h, i) => ({ header: h, key: h, width: taskColWidths[i] ?? 20 }));
+
+      const headerRow = ws.getRow(1);
+      headerRow.height = 22;
+      headerRow.eachCell((cell) => {
+        cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
+        cell.border    = { top: { style: 'thin', color: { argb: 'FFC0C0C0' } }, bottom: { style: 'thin', color: { argb: 'FFC0C0C0' } }, left: { style: 'thin', color: { argb: 'FFC0C0C0' } }, right: { style: 'thin', color: { argb: 'FFC0C0C0' } } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+
+      rows.forEach((r, idx) => {
+        const row = ws.addRow(taskHeaders.map((h) => r[h]));
+        row.height = 18;
+        const bgArgb = idx % 2 === 0 ? 'FFEBF3FB' : 'FFFFFFFF';
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.font      = { size: 10, name: 'Calibri', color: { argb: 'FF000000' } };
+          cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
+          cell.border    = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        });
+      });
+
+      ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Tareas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
 
       toast.dismiss(exportToast);
       toast.success(`Descargadas ${rows.length} tarea${rows.length === 1 ? '' : 's'}`);
@@ -775,28 +805,70 @@ const Tasks = () => {
         'Tarea de ejemplo (eliminar esta fila)', 'Descripción de ejemplo',
         '25/03/2026 14:30', '8', 'Documentos necesarios', 'Sin observaciones', '', '',
       ];
-      const wsTemplate = XLSX.utils.aoa_to_sheet([templateHeaders, exampleRow]);
-      wsTemplate['!cols'] = templateHeaders.map((h) => ({ wch: Math.max(h.length + 2, 20) }));
+      const { default: ExcelJS } = await import('exceljs');
+      const wb = new ExcelJS.Workbook();
 
-      // Sheet 2: collaborators list
+      // Sheet 1: plantilla de tareas
+      const wsTemplate = wb.addWorksheet('Tareas');
+      const tplColWidths = [35, 35, 28, 20, 30, 25, 30, 30];
+      wsTemplate.columns = templateHeaders.map((h, i) => ({ header: h, key: h, width: tplColWidths[i] ?? 20 }));
+      const tplHeaderRow = wsTemplate.getRow(1);
+      tplHeaderRow.height = 22;
+      tplHeaderRow.eachCell((cell) => {
+        cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
+        cell.border    = { top: { style: 'thin', color: { argb: 'FFC0C0C0' } }, bottom: { style: 'thin', color: { argb: 'FFC0C0C0' } }, left: { style: 'thin', color: { argb: 'FFC0C0C0' } }, right: { style: 'thin', color: { argb: 'FFC0C0C0' } } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+      const exampleDataRow = wsTemplate.addRow(exampleRow);
+      exampleDataRow.height = 18;
+      exampleDataRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.font      = { size: 10, name: 'Calibri', color: { argb: 'FF000000' }, italic: true };
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF9C4' } };
+        cell.border    = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
+      });
+      wsTemplate.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+
+      // Sheet 2: lista de colaboradores
       const allColabs = await colaboradorService.getAll();
       const colabRows = allColabs.map((c) => ({
         'Nombre completo': c.nombreCompleto || '',
         'Correo': c.correo || '',
         'Rol': (c.rolNames || (c.rolName ? [c.rolName] : [])).join(', '),
       }));
-      const wsColabs = XLSX.utils.json_to_sheet(colabRows.length > 0 ? colabRows : [{ 'Nombre completo': '', 'Correo': '', 'Rol': '' }]);
-      if (colabRows.length > 0) {
-        const colabKeys = Object.keys(colabRows[0]);
-        wsColabs['!cols'] = colabKeys.map((key) => ({
-          wch: Math.max(key.length, ...colabRows.map((r) => String(r[key]).length)) + 2,
-        }));
-      }
+      const wsColabs = wb.addWorksheet('Colaboradores');
+      const colabHeaders = ['Nombre completo', 'Correo', 'Rol'];
+      wsColabs.columns = colabHeaders.map((h) => ({ header: h, key: h, width: Math.max(h.length + 4, 25) }));
+      const colabHeaderRow = wsColabs.getRow(1);
+      colabHeaderRow.height = 22;
+      colabHeaderRow.eachCell((cell) => {
+        cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
+        cell.border    = { top: { style: 'thin', color: { argb: 'FFC0C0C0' } }, bottom: { style: 'thin', color: { argb: 'FFC0C0C0' } }, left: { style: 'thin', color: { argb: 'FFC0C0C0' } }, right: { style: 'thin', color: { argb: 'FFC0C0C0' } } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+      colabRows.forEach((r, idx) => {
+        const row = wsColabs.addRow([r['Nombre completo'], r['Correo'], r['Rol']]);
+        row.height = 18;
+        const bgArgb = idx % 2 === 0 ? 'FFEBF3FB' : 'FFFFFFFF';
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.font      = { size: 10, name: 'Calibri', color: { argb: 'FF000000' } };
+          cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
+          cell.border    = { top: { style: 'thin', color: { argb: 'FFE0E0E0' } }, bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }, left: { style: 'thin', color: { argb: 'FFE0E0E0' } }, right: { style: 'thin', color: { argb: 'FFE0E0E0' } } };
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        });
+      });
+      wsColabs.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, wsTemplate, 'Tareas');
-      XLSX.utils.book_append_sheet(wb, wsColabs, 'Colaboradores');
-      XLSX.writeFile(wb, 'Plantilla_Carga_Tareas.xlsx');
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Plantilla_Carga_Tareas.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
     } catch (err) {
       toast.error(`Error al generar plantilla: ${err.message}`);
     }
