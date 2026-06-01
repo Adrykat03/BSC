@@ -92,7 +92,7 @@ BEGIN
 					+ LEFT(@codigo, 10) + ' con cco ' + @cco + ' _ ' + @desc_cco + ' y fecha de baja: ' + ISNULL(CONVERT(varchar(20), @fecha_baja, 105),'No tiene fecha de baja'),'',1,'','', 'pa_Cambio_RelacionLaboral',0,0,getdate(), '';
 			-- Insert en notificaciones consolidadas
 			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-			VALUES ('E', 'AL_Cam_rel_lab', 'pa_Cambio_RelacionLaboral', @asunto, NULL, NULL, NULL, NULL, 'Error Proceso', 'Baja', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
+			VALUES ('E', 'AL_Cam_rel_lab', 'pa_Cambio_RelacionLaboral', @asunto, NULL, @Dirigido, NULL, NULL, 'Error Proceso', 'Baja', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
 		END CATCH
 	END
 	IF OBJECT_ID(N'tempdb..#temp_contratos', N'U') IS NOT NULL

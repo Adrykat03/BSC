@@ -97,7 +97,7 @@ BEGIN
 			'',1,'','', 'Procedimiento Almacenado: RRHH.pa_cambio_centro_costo2',0,0,getdate(), '';
 		-- Insert en notificaciones consolidadas
 		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-		VALUES ('E', 'AL_Cambio', 'pa_Cambio_cco', @asunto, NULL, NULL, NULL, NULL, 'Error Proceso', 'Media', 'AFECTACION TRABAJADORES DIARIOS', @errorMensaje);
+		VALUES ('E', 'AL_Cambio', 'pa_Cambio_cco', @asunto, NULL, @Dirigido, NULL, NULL, 'Error Proceso', 'Media', 'AFECTACION TRABAJADORES DIARIOS', @errorMensaje);
 	END CATCH
 
 

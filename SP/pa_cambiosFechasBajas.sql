@@ -215,6 +215,6 @@ BEGIN
     BEGIN CATCH
         -- Insert en notificaciones consolidadas
         INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-        VALUES ('E', 'MAILAVICFB', 'pa_cambiosFechasBajas', 'Avisos de cambios de Fecha Bajas', NULL, NULL, NULL, NULL, 'Error Proceso', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
+        VALUES ('E', 'MAILAVICFB', 'pa_cambiosFechasBajas', 'Avisos de cambios de Fecha Bajas', NULL, @dirigido, NULL, NULL, 'Error Proceso', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
     END CATCH
 END

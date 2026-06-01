@@ -74,7 +74,7 @@ BEGIN
 			, '',1,'','', 'pa_Cambio_Cargo',0,0,getdate(), '';
 			-- Insert en notificaciones consolidadas
 			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-			VALUES ('E', 'AL_Cambio_Cargo', 'pa_Cambio_Cargo', @asunto, NULL, NULL, NULL, NULL, 'Error Proceso', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
+			VALUES ('E', 'AL_Cambio_Cargo', 'pa_Cambio_Cargo', @asunto, NULL, @Dirigido, NULL, NULL, 'Error Proceso', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
 		END CATCH
 	END
 END
