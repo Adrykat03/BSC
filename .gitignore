@@ -62,6 +62,9 @@ Vulnerabilidades/
 # Artefactos de Windows (archivos con sufijo ;C)
 *;C
 
+# Backups locales de HTML
+html.backup*/
+
 # Archivos de negocio con PII (deben ir a storage externo)
 files/evidencias/
 files/insumos/
