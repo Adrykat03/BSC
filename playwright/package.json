@@ -1,0 +1,10 @@
+{
+  "name": "bsc-manual-screenshots",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Genera capturas de pantalla del manual de Alertas Payroll",
+  "main": "screenshot.js",
+  "dependencies": {
+    "playwright": "1.60.0"
+  }
+}
