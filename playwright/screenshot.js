@@ -20,9 +20,10 @@ const BASE_URL      = process.env.BSC_URL      || 'http://19.168.78.12:3000';
 const API_HOST_HDR  = process.env.BSC_API_HOST || 'localhost';
 const EMAIL         = process.env.BSC_EMAIL;
 const PASSWORD      = process.env.BSC_PASSWORD;
-const OUT_DIR   = '/output';
-const HTML_FILE = path.join(OUT_DIR, 'manual-usuario-alertas-payroll.html');
-const PDF_FILE  = path.join(OUT_DIR, 'manual-usuario-alertas-payroll.pdf');
+const OUT_DIR       = '/output';
+const TEMPLATE_FILE = path.join(OUT_DIR, 'manual-usuario-alertas-payroll.template.html');
+const HTML_FILE     = path.join(OUT_DIR, 'manual-usuario-alertas-payroll.html');
+const PDF_FILE      = path.join(OUT_DIR, 'manual-usuario-alertas-payroll.pdf');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Validar entorno
@@ -31,8 +32,8 @@ if (!EMAIL || !PASSWORD) {
   console.error('ERROR: Las variables BSC_EMAIL y BSC_PASSWORD son requeridas.');
   process.exit(1);
 }
-if (!fs.existsSync(HTML_FILE)) {
-  console.error(`ERROR: No se encontró ${HTML_FILE}`);
+if (!fs.existsSync(TEMPLATE_FILE)) {
+  console.error(`ERROR: No se encontró el template ${TEMPLATE_FILE}`);
   process.exit(1);
 }
 
@@ -224,7 +225,7 @@ async function captureScreenshots() {
 // Inyectar capturas en el HTML
 // ─────────────────────────────────────────────────────────────────────────────
 function buildHTML(shots) {
-  let html = fs.readFileSync(HTML_FILE, 'utf-8');
+  let html = fs.readFileSync(TEMPLATE_FILE, 'utf-8');
 
   const markers = [
     ['login',               'login'],
@@ -258,8 +259,18 @@ function buildHTML(shots) {
     html = html.replace(placeholder, figure(shot.src, shot.caption));
     injected++;
   }
-
   console.log(`  ✓ ${injected} capturas inyectadas en el HTML`);
+
+  // ── Correcciones de texto ────────────────────────────────────────────────
+  // Nombre del sistema
+  html = html.replace(/BSC BackOffice/g, 'Nomina2');
+  // Convertir <details> a formato siempre visible para compatibilidad con PDF
+  html = html.replace(/<details([^>]*)>/g, '<div class="faq-item"$1>');
+  html = html.replace(/<\/details>/g, '</div>');
+  html = html.replace(/<summary([^>]*)>/g, '<div class="faq-question"$1>');
+  html = html.replace(/<\/summary>/g, '</div>');
+  console.log('  ✓ Textos corregidos (Nomina2, FAQ expandido)');
+
   return html;
 }
 
@@ -273,19 +284,29 @@ async function generatePDF(htmlContent) {
   const page = await browser.newPage();
 
   await page.setContent(htmlContent, { waitUntil: 'networkidle' });
-  // Dar tiempo a que las imágenes base64 se rendericen
   await page.waitForTimeout(2000);
+
+  // Expandir todos los <details>/<div.faq-item> por si quedaron colapsados
+  await page.evaluate(() => {
+    document.querySelectorAll('details').forEach(d => { d.open = true; });
+    document.querySelectorAll('.faq-item').forEach(d => { d.style.display = 'block'; });
+    document.querySelectorAll('.faq-question').forEach(d => { d.style.display = 'block'; });
+  });
 
   await page.pdf({
     path: PDF_FILE,
     format: 'A4',
     printBackground: true,
-    margin: { top: '15mm', right: '12mm', bottom: '15mm', left: '12mm' },
+    // Márgenes: top más grande para dejar espacio al footer, sin header
+    margin: { top: '15mm', right: '12mm', bottom: '20mm', left: '12mm' },
     displayHeaderFooter: true,
-    headerTemplate: '<div></div>',
+    // Header vacío (sin título ni URL de Chrome)
+    headerTemplate: '<span style="font-size:1px;visibility:hidden;"> </span>',
     footerTemplate: `
-      <div style="font-size:9px;color:#9CA3AF;width:100%;text-align:center;padding:0 12mm;">
-        BSC BackOffice — Manual de Usuario Alertas Payroll &nbsp;|&nbsp;
+      <div style="font-family:'Segoe UI',sans-serif;font-size:9px;color:#9CA3AF;
+                  width:100%;text-align:center;padding:0 12mm;box-sizing:border-box;">
+        Nomina2 — Manual de Usuario Alertas Payroll
+        &nbsp;|&nbsp;
         Página <span class="pageNumber"></span> de <span class="totalPages"></span>
       </div>`,
   });
