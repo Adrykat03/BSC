@@ -14,23 +14,19 @@ namespace BSC.API.Controllers;
 /// La tabla principal (Avisos.notificacionesConsolidadas) vive en SQL Server y se actualiza
 /// via DAB. El historial de cambios de estado se persiste en MongoDB.
 ///
-/// Autorizacion (Hallazgo Security A01 - IDOR):
-/// El historial almacena emails de quienes operaron la alerta (PII). Restringimos el acceso
-/// a los roles administrativos/de supervision: Administrador, Gerente y Lider.
-/// El rol Colaborador queda fuera (no debe poder enumerar emails de otros operadores).
-/// La misma restriccion aplica al POST de cambiar-estado para defensa en profundidad.
+/// Todos los roles autenticados pueden visualizar alertas y cambiar su estado.
 /// </summary>
 [ApiController]
 [Authorize(Roles = AlertasController.RolesPermitidos)]
 [Route("api/[controller]")]
 public class AlertasController : ControllerBase
 {
-    // Roles autorizados para operar el modulo de Alertas Payroll.
-    // Coincide con las constantes de Domain.Constants.TaskStateTransitions.
+    // Todos los roles pueden operar el modulo de Alertas Payroll.
     internal const string RolesPermitidos =
         TaskStateTransitions.RolAdministrador + "," +
         TaskStateTransitions.RolGerente + "," +
-        TaskStateTransitions.RolLider;
+        TaskStateTransitions.RolLider + "," +
+        TaskStateTransitions.RolColaborador;
 
     private readonly IMediator _mediator;
 
