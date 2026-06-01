@@ -112,14 +112,23 @@ async function captureScreenshots() {
   const token = apiBody?.data?.token;
   if (!token) throw new Error('No se recibió token JWT en la respuesta del login');
 
-  // Inyectar el token en sessionStorage y navegar directo a la app
+  // Inyectar token + colapsar sidebar antes del siguiente page.goto (React remonta y lee localStorage)
   await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-  await page.evaluate((t) => sessionStorage.setItem('fp_token', t), token);
-  console.log('  ✓ Sesión iniciada (token inyectado)');
+  await page.evaluate((t) => {
+    sessionStorage.setItem('fp_token', t);
+    localStorage.setItem('fp_sidebar_collapsed', '1');
+  }, token);
+  console.log('  ✓ Sesión iniciada (token inyectado, sidebar colapsado)');
 
   // ── 3. ALERTAS PAYROLL — DASHBOARD ───────────────────────────────────────
   console.log('\n[3/7] Alertas Payroll — Dashboard');
   await page.goto(`${BASE_URL}/alertas-payroll`, { waitUntil: 'networkidle', timeout: 30000 });
+
+  // Ocultar sidebar completamente para screenshots limpios (persiste en navegaciones SPA)
+  await page.addStyleTag({ content: `
+    .layout__sidebar { display: none !important; }
+    .layout__main    { margin-left: 0 !important; }
+  ` });
   // Esperar que los charts se rendericen
   try {
     await page.waitForSelector('canvas', { timeout: 10000 });
