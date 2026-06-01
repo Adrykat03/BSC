@@ -60,8 +60,8 @@ async function captureScreenshots() {
   });
 
   const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-    deviceScaleFactor: 1.5,
+    viewport: { width: 1280, height: 800 },
+    deviceScaleFactor: 1,
   });
 
   const page = await context.newPage();
