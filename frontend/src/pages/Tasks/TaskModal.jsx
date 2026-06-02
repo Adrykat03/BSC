@@ -104,6 +104,25 @@ const FileDropZone = ({
     e.target.value = '';
   };
 
+  const handlePaste = useCallback(
+    (e) => {
+      const items = Array.from(e.clipboardData?.items || []);
+      const imageFiles = items
+        .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+        .map((item) => {
+          const file = item.getAsFile();
+          const ext = file.type.split('/')[1] || 'png';
+          const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          return new File([file], `imagen-${ts}.${ext}`, { type: file.type });
+        });
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        processFiles(imageFiles);
+      }
+    },
+    [processFiles],
+  );
+
   const hasFiles = files.length > 0 || (existingFiles && existingFiles.length > 0);
 
   return (
@@ -119,6 +138,7 @@ const FileDropZone = ({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
+        onPaste={handlePaste}
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -139,7 +159,7 @@ const FileDropZone = ({
         </span>
         {!hasFiles && (
           <span style={{ fontSize: '11px', color: 'var(--color-text-disabled)' }}>
-            Cualquier tipo de archivo (max 20MB)
+            Cualquier tipo de archivo · max 20MB · o pega una imagen con Ctrl+V
           </span>
         )}
       </div>
