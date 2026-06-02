@@ -28,6 +28,29 @@ const Label = ({ children, required }) => (
   </span>
 );
 
+/* Thumbnail para archivos imagen nuevos (aún no guardados en servidor) */
+const ImageThumb = ({ file, onClick }) => {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  if (!url) return <FileText size={16} style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />;
+  return (
+    <img
+      src={url}
+      alt=""
+      onClick={onClick}
+      style={{
+        width: 36, height: 36, objectFit: 'cover',
+        borderRadius: 4, border: '1px solid var(--color-border-main)',
+        cursor: onClick ? 'pointer' : 'default', flexShrink: 0,
+      }}
+    />
+  );
+};
+
 /* ────────────────────────────────────────────
    FileDropZone — reusable drag & drop area
    Supports multiple files
@@ -39,6 +62,7 @@ const FileDropZone = ({
   onRemoveNew,
   onRemoveExisting,
   onPreview,
+  onPreviewNew,
   onDownload,
   label,
   error,
@@ -236,37 +260,46 @@ const FileDropZone = ({
           ))}
 
           {/* New files (not yet saved) */}
-          {files.map((f, idx) => (
-            <div
-              key={`new-${idx}-${f.name}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '6px 12px',
-                borderBottom: '1px solid var(--color-border-light)',
-                fontSize: '13px',
-              }}
-            >
-              <FileText size={16} style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
-              <span style={{ flex: 1, wordBreak: 'break-all' }}>{f.name}</span>
-              <button
-                type="button"
-                data-tooltip="Eliminar"
-                onClick={() => onRemoveNew(idx)}
+          {files.map((f, idx) => {
+            const isImg = f.type.startsWith('image/');
+            return (
+              <div
+                key={`new-${idx}-${f.name}`}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '2px',
-                  color: 'var(--color-text-secondary)',
-                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  borderBottom: '1px solid var(--color-border-light)',
+                  fontSize: '13px',
                 }}
               >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
+                {isImg
+                  ? <ImageThumb file={f} onClick={onPreviewNew ? () => onPreviewNew(f) : undefined} />
+                  : <FileText size={16} style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
+                }
+                <span style={{ flex: 1, wordBreak: 'break-all' }}>{f.name}</span>
+                {isImg && onPreviewNew && (
+                  <button
+                    type="button"
+                    data-tooltip="Previsualizar"
+                    onClick={() => onPreviewNew(f)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: 'var(--color-text-secondary)', flexShrink: 0 }}
+                  >
+                    <Eye size={14} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  data-tooltip="Eliminar"
+                  onClick={() => onRemoveNew(idx)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: 'var(--color-text-secondary)', flexShrink: 0 }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -373,6 +406,7 @@ const TaskModal = ({
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
+
   const [assigneeList, setAssigneeList] = useState([]);
   const [selectedAssignee, setSelectedAssignee] = useState('');
   const [loadingAssignees, setLoadingAssignees] = useState(false);
@@ -388,6 +422,35 @@ const TaskModal = ({
   });
   const [insumoFiles, setInsumoFiles] = useState([]);
   const [evidenceFiles, setEvidenceFiles] = useState([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleDocPaste = (e) => {
+      const cd = e.clipboardData;
+      if (!cd) return;
+      // clipboardData.files es más confiable para imágenes pegadas desde el SO
+      const raw = cd.files.length
+        ? Array.from(cd.files)
+        : Array.from(cd.items || [])
+            .filter((it) => it.kind === 'file')
+            .map((it) => it.getAsFile())
+            .filter(Boolean);
+      const imageFiles = raw
+        .filter((f) => f && f.type.startsWith('image/'))
+        .map((f) => {
+          const ext = f.type.split('/')[1] || 'png';
+          const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          return new File([f], `imagen-${ts}.${ext}`, { type: f.type });
+        });
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        setEvidenceFiles((prev) => [...prev, ...imageFiles]);
+      }
+    };
+    document.addEventListener('paste', handleDocPaste);
+    return () => document.removeEventListener('paste', handleDocPaste);
+  }, [isOpen]);
+
   const [existingInsumoFiles, setExistingInsumoFiles] = useState([]);
   const [existingEvidenceFiles, setExistingEvidenceFiles] = useState([]);
   const [previewData, setPreviewData] = useState(null); // { url, fileName, mimeType }
@@ -563,6 +626,13 @@ const TaskModal = ({
     } catch (err) {
       toast.error(`Error al previsualizar archivo: ${err.message}`);
     }
+  };
+
+  const handlePreviewNewFile = (file) => {
+    if (previewData?.url) window.URL.revokeObjectURL(previewData.url);
+    const url = URL.createObjectURL(file);
+    setPreviewData({ url, fileName: file.name, mimeType: file.type });
+    setPreviewZoom(100);
   };
 
   const closePreview = () => {
@@ -1064,21 +1134,6 @@ const TaskModal = ({
                     height: '120px',
                     ...(isGerente ? readOnlyStyle : {}),
                   }}
-                  onPaste={(e) => {
-                    const items = Array.from(e.clipboardData?.items || []);
-                    const imageFiles = items
-                      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
-                      .map((item) => {
-                        const file = item.getAsFile();
-                        const ext = file.type.split('/')[1] || 'png';
-                        const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                        return new File([file], `imagen-${ts}.${ext}`, { type: file.type });
-                      });
-                    if (imageFiles.length > 0) {
-                      e.preventDefault();
-                      setEvidenceFiles((prev) => [...prev, ...imageFiles]);
-                    }
-                  }}
                 />
               </div>
 
@@ -1107,6 +1162,7 @@ const TaskModal = ({
                     }}
                     onRemoveExisting={(fileId) => handleRemoveExistingFile(fileId, 'evidence')}
                     onPreview={handlePreviewFile}
+                    onPreviewNew={handlePreviewNewFile}
                     onDownload={handleDownloadFile}
                     error={errors.evidenceFile}
                   />
