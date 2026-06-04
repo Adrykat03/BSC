@@ -1376,24 +1376,25 @@ const TaskModal = ({
               }}
             >
               <div style={{
-                minWidth: '100%',
+                width: `${previewZoom}%`,
                 minHeight: '100%',
                 display: 'flex',
-                alignItems: previewZoom <= 100 ? 'center' : 'flex-start',
-                justifyContent: previewZoom <= 100 ? 'center' : 'flex-start',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: '16px',
+                boxSizing: 'border-box',
+                margin: previewZoom <= 100 ? '0 auto' : '0',
+                transition: 'width 0.15s ease',
               }}>
                 <img
                   src={previewData.url}
                   alt={previewData.fileName}
                   draggable={false}
                   style={{
-                    width: `${previewZoom}%`,
-                    maxWidth: 'none',
+                    width: '100%',
                     height: 'auto',
-                    objectFit: 'contain',
+                    display: 'block',
                     borderRadius: '4px',
-                    transition: 'width 0.15s ease',
                   }}
                 />
               </div>
