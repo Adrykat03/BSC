@@ -280,7 +280,7 @@ const DonutChart = ({ segments, centerLabel = 'Total', showPercent = false }) =>
   return (
     <div className="payroll-donut">
       <div className="payroll-donut__svg-wrap">
-        <svg viewBox="0 0 160 160" width="160" height="160">
+        <svg viewBox="0 0 160 160" style={{ width: '100%', height: '100%' }}>
           {arcs.map((arc) => (
             <circle
               key={arc.label}
@@ -1946,19 +1946,19 @@ const AlertasPayroll = () => {
   ];
 
   const pendientesSegments = useMemo(() => {
-    const pendKeys = ['con_novedad', 'reporteria', 'error_proceso'];
-    const counts = { con_novedad: 0, reporteria: 0, error_proceso: 0 };
+    const counts = { alta: 0, media: 0, baja: 0 };
     dateFilteredData.forEach((n) => {
       if (!['A', 'P', 'E'].includes(n.estado)) return;
-      const k = classifyDescripcion(n.descripcion);
-      if (!k || !pendKeys.includes(k)) return;
-      counts[k] += 1;
+      const p = String(n.prioridad || '').trim().toLowerCase();
+      if (p === 'alta') counts.alta += 1;
+      else if (p === 'baja') counts.baja += 1;
+      else counts.media += 1;
     });
-    return pendKeys.map((k) => ({
-      label: DESC_LABELS[k],
-      value: counts[k],
-      color: DESC_COLORS[k],
-    }));
+    return [
+      { label: 'Alta',  value: counts.alta,  color: '#ef4444' },
+      { label: 'Media', value: counts.media, color: '#eab308' },
+      { label: 'Baja',  value: counts.baja,  color: '#22c55e' },
+    ];
   }, [dateFilteredData]);
 
   return (
