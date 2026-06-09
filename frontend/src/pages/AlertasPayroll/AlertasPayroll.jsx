@@ -309,13 +309,11 @@ const DonutChart = ({ segments, centerLabel = 'Total', showPercent = false }) =>
           return (
             <div key={seg.label} className="payroll-donut__legend-item">
               <span className="payroll-donut__legend-dot" style={{ background: seg.color }} />
-              <span>{seg.label}</span>
-              <span className="payroll-donut__legend-value">
-                {seg.value}
-                {showPercent && total > 0 && (
-                  <span className="payroll-donut__legend-pct"> · {pct}%</span>
-                )}
-              </span>
+              <span className="payroll-donut__legend-label">{seg.label}</span>
+              <span className="payroll-donut__legend-value">{seg.value}</span>
+              {showPercent && total > 0
+                ? <span className="payroll-donut__legend-pct">{pct}%</span>
+                : <span />}
             </div>
           );
         })}

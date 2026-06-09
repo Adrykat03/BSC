@@ -26,6 +26,7 @@
 | FUNC-021 | Alertas Payroll: historial de estados con auditoria MongoDB | Completada | 2026-05-10 |
 | FUNC-022 | Formato profesional XLSX y boton Actualizar en Alertas | Completada | 2026-05-29 |
 | FUNC-023 | Fix links iframe Alertas y manual de usuario HTML | Completada | 2026-05-29 |
+| FUNC-024 | Ajuste visual gráfico Pendientes por Resolver (prioridad) | Completada | 2026-06-09 |
 
 ---
 
@@ -315,6 +316,18 @@
   - `docs/manual-usuario-alertas-payroll.html` — manual renderizado con sidebar de navegacion fija, tablas formateadas, badges de estado en colores reales, FAQ acordeon y demo de fila critica.
   - `.gitignore` actualizado: se agrego excepcion `!docs/*.md` para que toda la carpeta `docs/` quede trackeada en el repo.
 - **Security:** Sin cambios de superficie. El sandbox del iframe se relajo minimamente (solo navegacion, scripts siguen bloqueados).
+
+---
+
+### [FUNC-024] Ajuste visual gráfico Pendientes por Resolver (prioridad)
+- **Estado:** Completada
+- **Fecha:** 2026-06-09
+- **Descripcion:** Pulido visual del gráfico donut "Pendientes por Resolver" en Alertas Payroll: reduccion de separacion entre SVG y leyenda, centrado del conjunto en la card, y alineacion columnar de numeros y porcentajes en la leyenda.
+- **Backend:** Sin cambios.
+- **Frontend:**
+  - `AlertasPayroll.css` — `.payroll-donut` gap reducido a `spacing-3`, `height: 100%` para centrado vertical; `.payroll-donut__legend` sin `flex: 1`; `.payroll-donut__legend-item` cambiado de flex a CSS grid `10px 1fr 28px 40px` para alinear columnas.
+  - `AlertasPayroll.jsx` — leyenda separada en dos spans distintos (`.payroll-donut__legend-value` y `.payroll-donut__legend-pct`) en lugar de un span anidado.
+- **Security:** Sin cambios de superficie.
 
 ---
 
