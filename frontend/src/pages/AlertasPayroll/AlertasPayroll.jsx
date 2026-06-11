@@ -104,6 +104,15 @@ function isCriticalRow(row) {
   return desc === 'con_novedad' || desc === 'error_proceso';
 }
 
+// Alertas que deben mostrarse SIEMPRE primero en el listado:
+// prioridad Alta + "Con novedad" + Activas (estado A).
+function isTopPriorityRow(row) {
+  if (!row) return false;
+  if (String(row.prioridad || '').trim().toLowerCase() !== 'alta') return false;
+  if (row.estado !== 'A') return false;
+  return classifyDescripcion(row.descripcion) === 'con_novedad';
+}
+
 const pad2 = (n) => String(n).padStart(2, '0');
 
 function isoDay(d) {
@@ -1882,6 +1891,15 @@ const AlertasPayroll = () => {
         });
       }
     }
+
+    // Pin al tope: las alertas Alta + Con novedad + Activas siempre primero.
+    // Array.sort es estable, así que se conserva el orden secundario (el sort
+    // de columna si está activo, u orden original) dentro de cada grupo.
+    rows = [...rows].sort((a, b) => {
+      const ap = isTopPriorityRow(a) ? 0 : 1;
+      const bp = isTopPriorityRow(b) ? 0 : 1;
+      return ap - bp;
+    });
 
     return rows;
   }, [dateFilteredData, globalFilter, columnFilters, sort, columns]);
