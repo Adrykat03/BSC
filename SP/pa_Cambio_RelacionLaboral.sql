@@ -1,4 +1,4 @@
-USE [DB_NOMKFC]
+﻿USE [DB_NOMKFC]
 GO
 /****** Object:  StoredProcedure [Avisos].[pa_Cambio_RelacionLaboral]    Script Date: 28/5/2026 15:21:57 ******/
 SET ANSI_NULLS ON
@@ -42,8 +42,9 @@ DECLARE
 @genero varchar(10),
 @saludo varchar(30),
 @fecha_baja date
-BEGIN				
-	SELECT @Dirigido = valor, @asunto = descripcion, @body = referencia_06 FROM Configuracion.parametros WHERE parametro = 'AL_Cam_rel_lab';
+BEGIN
+	BEGIN TRY
+		SELECT @Dirigido = valor, @asunto = descripcion, @body = referencia_06 FROM Configuracion.parametros WHERE parametro = 'AL_Cam_rel_lab';
 
 	IF OBJECT_ID(N'tempdb..#temp_contratos', N'U') IS NOT NULL
 				DROP TABLE #temp_contratos
@@ -75,8 +76,7 @@ BEGIN
 		SELECT @body = REPLACE (@body, '@contrato_ant', ISNULL(@contrato_anterior_desc,''))
 		SELECT @body = REPLACE (@body, '@contrato_actual', ISNULL(@contrato_actual_desc,''))
 		SELECT @body = REPLACE (@body, '@fbaja', ISNULL(CONVERT(varchar(22), @fecha_baja, 105),'No tiene fecha de baja'))
-		BEGIN TRY
-			-- INSERT notificación consolidada
+		-- INSERT notificación consolidada
 			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
 			VALUES ('A', 'AL_Cam_rel_lab', 'pa_Cambio_RelacionLaboral', @asunto, @body, @Dirigido, @fecha_ini, @fecha_fin, 'Con novedad', 'Baja', 'AFECTACION TRABAJADORES DIARIOS', NULL);
 			EXEC msdb.dbo.Sp_send_dbmail
@@ -85,16 +85,16 @@ BEGIN
 			@recipients = @Dirigido,
 			@body_format= 'html',
 			@body = @body;
-		END TRY
-		BEGIN CATCH
-			INSERT INTO db_nomkfc.logs.log_usuarios (id_usuario, fecha, descripcion, notas, operacion, ip, referencia_01, referencia_02, referencia_03, referencia_04, referencia_05, referencia_06)
-			select 'Adam', getdate(),'Error al enviar el correo de notificación del cambio de relación laboral del trabajador '
-					+ LEFT(@codigo, 10) + ' con cco ' + @cco + ' _ ' + @desc_cco + ' y fecha de baja: ' + ISNULL(CONVERT(varchar(20), @fecha_baja, 105),'No tiene fecha de baja'),'',1,'','', 'pa_Cambio_RelacionLaboral',0,0,getdate(), '';
-			-- Insert en notificaciones consolidadas
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-			VALUES ('E', 'AL_Cam_rel_lab', 'pa_Cambio_RelacionLaboral', @asunto, NULL, @Dirigido, NULL, NULL, 'Error Proceso', 'Baja', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
-		END CATCH
 	END
+	END TRY
+	BEGIN CATCH
+		INSERT INTO db_nomkfc.logs.log_usuarios (id_usuario, fecha, descripcion, notas, operacion, ip, referencia_01, referencia_02, referencia_03, referencia_04, referencia_05, referencia_06)
+		select 'Adam', getdate(),'Error al enviar el correo de notificación del cambio de relación laboral del trabajador '
+					+ LEFT(@codigo, 10) + ' con cco ' + @cco + ' _ ' + @desc_cco + ' y fecha de baja: ' + ISNULL(CONVERT(varchar(20), @fecha_baja, 105),'No tiene fecha de baja'),'',1,'','', 'pa_Cambio_RelacionLaboral',0,0,getdate(), '';
+		-- Insert en notificaciones consolidadas
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('E', 'AL_Cam_rel_lab', 'pa_Cambio_RelacionLaboral', @asunto, NULL, @Dirigido, NULL, NULL, 'Error Proceso', 'Baja', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
+	END CATCH
 	IF OBJECT_ID(N'tempdb..#temp_contratos', N'U') IS NOT NULL
 				DROP TABLE #temp_contratos
 END

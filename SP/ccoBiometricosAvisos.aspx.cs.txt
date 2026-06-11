@@ -1,0 +1,130 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace KFCReporteador.Maestros_Especiales
+{
+   
+    public partial class ccoBiometricosAvisos : System.Web.UI.Page
+    {
+        private static DataTable Tabla1;
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            string tipo =  Request.QueryString["A1"];
+            Avisos(short.Parse(tipo));
+        }
+
+
+        private void Avisos (short tipo)
+        {
+            string consulta = string.Empty;
+            
+            if (tipo == 1)
+            {
+                txtTituloAviso.InnerText = "CCO con equipos biométricos asignados, que no son de las provincias de Guayas y Pichincha, que no tienen asignado un usuario con rol Administrador";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 1";
+            } 
+            else if (tipo == 2)
+            {
+                txtTituloAviso.InnerText = "CCO a nivel nacional con equipo biométrico asignado, que no tienen relacionado rol de Administrador 601 O 0601";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 2";
+            }
+            else if (tipo == 3)
+            {
+                txtTituloAviso.InnerText = "CCO a nivel nacional (provincias Guayas y Pichincha ) con equipo biométrico asignado, que tienen relacionado un rol de Administrador diferente al 601 O 0601";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 3";
+            }
+            else if (tipo == 4)
+            {
+                txtTituloAviso.InnerText = "Base de personal por CCO con equipos biométricos asignados, que en la información LAST_TEMPLATE = “0”";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 4";
+            }
+            else if (tipo == 5)
+            {
+                txtTituloAviso.InnerText = "Biometricos Apagados ";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 5";
+            }
+            else if (tipo == 6)
+            {
+                txtTituloAviso.InnerText = "Personas con el document id vacio, deben cumplir con las condiciones de ser un trabajador, no ser 601 debe estar en los de contratación";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 6";
+            }
+            else if (tipo == 7)
+            {
+                txtTituloAviso.InnerText = "Enrolados que no pertenecen a la empresa";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 7";
+            }
+            else if (tipo == 8)
+            {
+                txtTituloAviso.InnerText = "Personas duplicadas";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 8";
+            }
+            else if (tipo == 9)
+            {
+                txtTituloAviso.InnerText = "Personas pendientes de Enrolar";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 9";
+            }
+            else if (tipo == 10)
+            {
+                txtTituloAviso.InnerText = "Personas que no tienen los datos completos Nombres y cedula y esten con template 1";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 10";
+            }
+            else if (tipo == 11)
+            {
+                txtTituloAviso.InnerText = "Personas que vienen de un cco que no tenia biométrico a uno que si tiene";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 11";
+            }
+            else if (tipo == 12)
+            {
+                txtTituloAviso.InnerText = "Personas que vienen de un cco que tenia biométrico a uno que no tiene";
+                consulta = "Exec Avisos.pa_avisos_biometricosDiel 12";
+            }
+
+
+            DataTable dt = GetDataSource(consulta);
+            gridResult.Columns.Clear();
+            gridResult.AutoGenerateColumns = true; 
+            gridResult.DataSource = dt;
+            gridResult.DataBind();
+            gridResult.Visible = true;
+        }
+
+        private DataTable GetDataSource(string consulta)
+        {
+            string query = consulta;
+            string conexion1 = DBLibreria.Generales.extraerValordeconfiguracion("CNUtilitario");
+            DataSet ds = new DataSet();
+            DataTable dt = new DataTable();
+
+            using (SqlConnection conexion = new SqlConnection(conexion1))
+            using (SqlDataAdapter adapter = new SqlDataAdapter(query.Trim(), conexion))
+            {
+                adapter.SelectCommand.CommandTimeout = 640;  
+                conexion.Open();
+                adapter.Fill(ds, "Resultado");
+                conexion.Close();
+            }
+
+            Tabla1 = ds.Tables["Resultado"];
+            return Tabla1;
+        }
+
+        protected void btn_excel_Click(object sender, EventArgs e)
+        {
+            string nombre = "ResultadoQuery" + DateTime.Today.ToShortDateString();
+            gridExportExcel.WriteXlsxToResponse();
+
+        }
+
+        protected void gridResult_DataBinding(object sender, EventArgs e)
+        {
+            gridResult.DataSource = Tabla1;
+
+        }
+    }
+}

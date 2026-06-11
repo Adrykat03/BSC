@@ -1,4 +1,4 @@
-USE [DB_NOMKFC]
+﻿USE [DB_NOMKFC]
 GO
 /****** Object:  StoredProcedure [Avisos].[pa_Cambio_Cargo]    Script Date: 18/5/2026 16:12:32 ******/
 SET ANSI_NULLS ON
@@ -40,7 +40,8 @@ DECLARE
 @asunto varchar(300)
 
 BEGIN
-	SELECT @Dirigido = valor, @asunto = descripcion, @body = referencia_06  FROM Configuracion.parametros WHERE parametro = 'AL_Cambio_Cargo';
+	BEGIN TRY
+		SELECT @Dirigido = valor, @asunto = descripcion, @body = referencia_06  FROM Configuracion.parametros WHERE parametro = 'AL_Cambio_Cargo';
 
 	IF @desc_ant <> @desc_actual
 	BEGIN
@@ -54,18 +55,18 @@ BEGIN
 		SELECT @body = REPLACE (@body, '@cargo_ant', ISNULL(@desc_ant, ''))
 		SELECT @body = REPLACE (@body, '@cargo_actual', @desc_actual)
 		SELECT @body = REPLACE (@body, '@fbaja', ISNULL(CONVERT(varchar(22), @fecha_baja, 105),'No tiene fecha de baja'))
-		BEGIN TRY
-			-- INSERT notificación consolidada
-			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
-			VALUES ('A', 'AL_Cambio_Cargo', 'pa_Cambio_Cargo', @asunto, @body, @Dirigido, 'Con novedad', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', NULL);
-			EXEC msdb.dbo.Sp_send_dbmail
-			@profile_name = 'Informacion_Nomina',
-			@Subject = @asunto,
-			@recipients = @Dirigido,
-			@body_format= 'html',
-			@body = @body; 
-		END TRY
-		BEGIN CATCH
+		-- INSERT notificación consolidada
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('A', 'AL_Cambio_Cargo', 'pa_Cambio_Cargo', @asunto, @body, @Dirigido, 'Con novedad', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', NULL);
+		EXEC msdb.dbo.Sp_send_dbmail
+		@profile_name = 'Informacion_Nomina',
+		@Subject = @asunto,
+		@recipients = @Dirigido,
+		@body_format= 'html',
+		@body = @body; 
+	END
+	END TRY
+	BEGIN CATCH
 			INSERT INTO db_nomkfc.logs.log_usuarios 
 			(id_usuario, fecha, descripcion, notas, operacion, ip, referencia_01, referencia_02, referencia_03, referencia_04, referencia_05, referencia_06)
 			select 'Adam', getdate(),'Error al enviar el correo cuando se realizó el cambio de cargo en el trabajador: '
@@ -75,6 +76,5 @@ BEGIN
 			-- Insert en notificaciones consolidadas
 			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
 			VALUES ('E', 'AL_Cambio_Cargo', 'pa_Cambio_Cargo', @asunto, NULL, @Dirigido, NULL, NULL, 'Error Proceso', 'Alta', 'AFECTACION TRABAJADORES DIARIOS', ERROR_MESSAGE());
-		END CATCH
-	END
+	END CATCH
 END

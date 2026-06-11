@@ -43,6 +43,7 @@ DECLARE
 	@fecha_Ingreso VARCHAR(10);
 
 BEGIN
+	BEGIN TRY
 
 	SELECT @nombre = Nombre, @fecha_Ingreso = CONVERT(VARCHAR(10), CONVERT(DATE, Fecha_Ingreso), 105)
 	FROM RRHH.vw_datosTrabajadores
@@ -74,7 +75,6 @@ BEGIN
 	DECLARE @TransactionName VARCHAR(30), @errorMensaje VARCHAR(510); 
 	SELECT @TransactionName = 'CambioCCOAsociado';  
 	BEGIN TRAN @TransactionName;  
-	BEGIN TRY
 		-- INSERT notificación consolidada
 		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
 		VALUES ('A', 'AL_Cambio', 'pa_Cambio_cco', @asunto, @body, @Dirigido, @fecha_ini, @fecha_fin, 'Reporteria', 'Media', 'AFECTACION TRABAJADORES DIARIOS', NULL);
@@ -87,7 +87,7 @@ BEGIN
 		COMMIT TRANSACTION  @TransactionName;
 	END TRY
 	BEGIN CATCH
-		ROLLBACK TRANSACTION @TransactionName;
+		IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION @TransactionName;
 
 		SELECT @errorMensaje = ERROR_MESSAGE();
 

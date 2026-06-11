@@ -175,8 +175,8 @@ BEGIN
 										td = dt.Nombre,'',
 										td = dt.cco,'',
 										td = dt.Desc_CCO,'',
-										td = CONVERT(VARCHAR,MAX(a.Desde), 103),'',
-										td = CONVERT(VARCHAR,MAX(a.Hasta), 103),'',
+										td = CONVERT(VARCHAR, a.Desde, 103),'',
+										td = CONVERT(VARCHAR, a.Hasta, 103),'',
 										td = a.[Fecha Inicio Vacacion],'',
 										td = a.[Fecha Fin Vacacion],'',
 										td = a.Error,''
