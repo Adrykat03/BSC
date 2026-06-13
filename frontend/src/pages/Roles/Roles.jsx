@@ -3,7 +3,13 @@ import { Plus, Pencil, Trash2, Shield, ChevronLeft, ChevronRight } from 'lucide-
 import Swal from 'sweetalert2';
 import toast, { Toaster } from 'react-hot-toast';
 import { rolesService } from '../../services/rolesService';
+import { MODULES } from '../../utils/modules';
 import RoleModal from './RoleModal';
+
+const MODULE_LABELS = MODULES.reduce((acc, m) => {
+  acc[m.key] = m.label;
+  return acc;
+}, {});
 
 const PAGE_SIZE = 10;
 
@@ -191,6 +197,7 @@ const Roles = () => {
                     <tr>
                       <th>Nombre</th>
                       <th>Descripcion</th>
+                      <th>Modulos</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -199,6 +206,19 @@ const Roles = () => {
                       <tr key={role.id}>
                         <td className="font-semibold">{role.name}</td>
                         <td className="text-secondary">{role.description}</td>
+                        <td>
+                          {Array.isArray(role.modules) && role.modules.length > 0 ? (
+                            <div className="d-flex flex-wrap gap-1">
+                              {role.modules.map((m) => (
+                                <span key={m} className="badge badge--active">
+                                  {MODULE_LABELS[m] || m}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-secondary">—</span>
+                          )}
+                        </td>
                         <td>
                           <div className="table__actions">
                             <button

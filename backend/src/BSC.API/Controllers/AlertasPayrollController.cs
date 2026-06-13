@@ -1,5 +1,7 @@
+using BSC.API.Authorization;
 using BSC.Application.DTOs;
 using BSC.Application.Queries.DescargarAdjunto;
+using BSC.Domain.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +14,7 @@ namespace BSC.API.Controllers;
 /// </summary>
 [ApiController]
 [Authorize]
+[RequireModule(Modules.AlertasPayroll)]
 [Route("api/alertas-payroll")]
 public class AlertasPayrollController : ControllerBase
 {

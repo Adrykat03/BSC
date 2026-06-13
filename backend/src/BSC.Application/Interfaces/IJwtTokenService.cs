@@ -5,5 +5,5 @@ namespace BSC.Application.Interfaces;
 /// </summary>
 public interface IJwtTokenService
 {
-    string GenerateToken(string userId, string name, string email, List<string> roles, string activeRole);
+    string GenerateToken(string userId, string name, string email, List<string> roles, string activeRole, List<string> modules);
 }

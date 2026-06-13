@@ -35,6 +35,7 @@ public class GetRoleByIdQueryHandler : IRequestHandler<GetRoleByIdQuery, ApiResp
             Id = role.Id,
             Name = role.Name,
             Description = role.Description,
+            Modules = role.Modules,
             CreatedAt = role.CreatedAt,
             UpdatedAt = role.UpdatedAt
         };

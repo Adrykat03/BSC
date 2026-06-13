@@ -36,6 +36,7 @@ public class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand, ApiRe
         {
             Name = request.Name,
             Description = request.Description,
+            Modules = request.Modules ?? new List<string>(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -49,6 +50,7 @@ public class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand, ApiRe
             Id = created.Id,
             Name = created.Name,
             Description = created.Description,
+            Modules = created.Modules,
             CreatedAt = created.CreatedAt,
             UpdatedAt = created.UpdatedAt
         };

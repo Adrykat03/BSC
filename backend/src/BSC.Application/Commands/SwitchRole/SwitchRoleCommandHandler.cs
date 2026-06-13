@@ -14,12 +14,14 @@ public class SwitchRoleCommandHandler : IRequestHandler<SwitchRoleCommand, ApiRe
 {
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IColaboradorRepository _colaboradorRepository;
+    private readonly IRoleRepository _roleRepository;
     private readonly ILogger<SwitchRoleCommandHandler> _logger;
 
-    public SwitchRoleCommandHandler(IJwtTokenService jwtTokenService, IColaboradorRepository colaboradorRepository, ILogger<SwitchRoleCommandHandler> logger)
+    public SwitchRoleCommandHandler(IJwtTokenService jwtTokenService, IColaboradorRepository colaboradorRepository, IRoleRepository roleRepository, ILogger<SwitchRoleCommandHandler> logger)
     {
         _jwtTokenService = jwtTokenService;
         _colaboradorRepository = colaboradorRepository;
+        _roleRepository = roleRepository;
         _logger = logger;
     }
 
@@ -34,12 +36,19 @@ public class SwitchRoleCommandHandler : IRequestHandler<SwitchRoleCommand, ApiRe
             );
         }
 
+        // Los modulos se calculan a partir del ROL ACTIVO (el rol al que se cambia).
+        var activeRoleEntity = await _roleRepository.GetByNameAsync(request.Role);
+        var modules = (activeRoleEntity != null && !activeRoleEntity.IsDeleted)
+            ? activeRoleEntity.Modules
+            : new List<string>();
+
         var token = _jwtTokenService.GenerateToken(
             request.UserId,
             request.UserName,
             request.UserEmail,
             request.UserRoles,
-            request.Role
+            request.Role,
+            modules
         );
 
         // Track last login on role switch

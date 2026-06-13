@@ -4,19 +4,13 @@ import { LogOut, User, ChevronDown, RefreshCw, Menu, Bell, HelpCircle } from 'lu
 import toast from 'react-hot-toast';
 import SessionContext from '../../context/SessionContext';
 import { tasksService } from '../../services/tasksService';
-
-const pageTitles = {
-  '/': 'Dashboard',
-  '/roles': 'Roles',
-  '/tasks': 'Tareas',
-  '/colaboradores': 'Colaboradores',
-  '/alertas-payroll': 'Alertas Payroll',
-};
+import { PAGE_TITLES } from '../../utils/modules';
 
 const Header = ({ isMobile, onOpenSidebar }) => {
   const location = useLocation();
-  const title = pageTitles[location.pathname] || 'Nomina2';
+  const title = PAGE_TITLES[location.pathname] || 'Nomina2';
   const { user, logout, switchRole } = useContext(SessionContext);
+  const hasTareas = !!user?.modules?.includes('tareas');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [switchingRole, setSwitchingRole] = useState(false);
   const dropdownRef = useRef(null);
@@ -25,7 +19,7 @@ const Header = ({ isMobile, onOpenSidebar }) => {
   const [pendingCount, setPendingCount] = useState(0);
 
   const fetchPendingCount = useCallback(async () => {
-    if (!user) return;
+    if (!user || !hasTareas) return;
     try {
       const asignadas = await tasksService.getAll(1, 1, '', 'Asignada');
       const reasignadas = await tasksService.getAll(1, 1, '', 'Reasignada');
@@ -33,13 +27,14 @@ const Header = ({ isMobile, onOpenSidebar }) => {
     } catch {
       setPendingCount(0);
     }
-  }, [user]);
+  }, [user, hasTareas]);
 
   useEffect(() => {
+    if (!hasTareas) return;
     fetchPendingCount();
     const interval = setInterval(fetchPendingCount, 60000);
     return () => clearInterval(interval);
-  }, [fetchPendingCount]);
+  }, [fetchPendingCount, hasTareas]);
 
   // Show last login permanently after login
   const [lastLoginText, setLastLoginText] = useState('');
@@ -107,7 +102,8 @@ const Header = ({ isMobile, onOpenSidebar }) => {
           >
             <HelpCircle size={20} style={{ color: 'var(--color-text-secondary)' }} />
           </a>
-          {/* Notification bell */}
+          {/* Notification bell — solo si el usuario tiene el modulo Tareas */}
+          {hasTareas && (
           <div
             style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
             onClick={() => {
@@ -142,6 +138,7 @@ const Header = ({ isMobile, onOpenSidebar }) => {
               </span>
             )}
           </div>
+          )}
           <div
             className={`dropdown${dropdownOpen ? ' dropdown--open' : ''}`}
             ref={dropdownRef}

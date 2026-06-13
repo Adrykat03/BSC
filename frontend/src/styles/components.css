@@ -1388,6 +1388,17 @@ select.form-control option {
   background-color: var(--color-bg-main);
 }
 
+/* Cuando el contenido del modal va dentro de un <form>, el form debe
+   comportarse como columna flex que llena el modal: asi el body hace
+   scroll y el footer queda siempre visible. */
+.modal__form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .modal__body {
   padding: var(--spacing-6);
   overflow-y: auto;

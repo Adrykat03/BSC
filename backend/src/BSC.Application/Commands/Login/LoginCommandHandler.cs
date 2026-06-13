@@ -54,16 +54,18 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             );
         }
 
-        // Resolver nombres de roles
-        var roleNames = new List<string>();
+        // Resolver roles (se conservan las entidades para emitir los modulos del rol activo)
+        var resolvedRoles = new List<Domain.Entities.Role>();
         foreach (var rolId in colaborador.RolIds)
         {
             var role = await _roleRepository.GetByIdAsync(rolId);
             if (role != null && !role.IsDeleted)
             {
-                roleNames.Add(role.Name);
+                resolvedRoles.Add(role);
             }
         }
+
+        var roleNames = resolvedRoles.Select(r => r.Name).ToList();
 
         if (roleNames.Count == 0)
         {
@@ -80,12 +82,18 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         // Default to highest-privilege role: Administrador > Gerente > Lider > Colaborador
         var rolePriority = new[] { "Administrador", "Gerente", "Lider", "Colaborador" };
         var activeRole = rolePriority.FirstOrDefault(r => roleNames.Contains(r)) ?? roleNames.First();
+
+        // Los modulos se calculan a partir del ROL ACTIVO (no la union de roles).
+        var activeRoleEntity = resolvedRoles.FirstOrDefault(r => r.Name == activeRole);
+        var modules = activeRoleEntity?.Modules ?? new List<string>();
+
         var token = _jwtTokenService.GenerateToken(
             colaborador.Id,
             colaborador.NombreCompleto,
             colaborador.Correo,
             roleNames,
-            activeRole
+            activeRole,
+            modules
         );
 
         var response = new LoginResponseDto

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using BSC.API.Authorization;
 using BSC.Application.DTOs;
 using BSC.Application.Features.Alertas.Commands.ChangeAlertaStatus;
 using BSC.Application.Features.Alertas.Queries.GetAlertaHistorial;
@@ -14,20 +15,14 @@ namespace BSC.API.Controllers;
 /// La tabla principal (Avisos.notificacionesConsolidadas) vive en SQL Server y se actualiza
 /// via DAB. El historial de cambios de estado se persiste en MongoDB.
 ///
-/// Todos los roles autenticados pueden visualizar alertas y cambiar su estado.
+/// El acceso se controla por el modulo "alertas-payroll" (claim "modules" del JWT).
 /// </summary>
 [ApiController]
-[Authorize(Roles = AlertasController.RolesPermitidos)]
+[Authorize]
+[RequireModule(Modules.AlertasPayroll)]
 [Route("api/[controller]")]
 public class AlertasController : ControllerBase
 {
-    // Todos los roles pueden operar el modulo de Alertas Payroll.
-    internal const string RolesPermitidos =
-        TaskStateTransitions.RolAdministrador + "," +
-        TaskStateTransitions.RolGerente + "," +
-        TaskStateTransitions.RolLider + "," +
-        TaskStateTransitions.RolColaborador;
-
     private readonly IMediator _mediator;
 
     public AlertasController(IMediator mediator)

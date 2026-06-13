@@ -33,6 +33,7 @@ public class GetRolesQueryHandler : IRequestHandler<GetRolesQuery, ApiResponse<P
             Id = r.Id,
             Name = r.Name,
             Description = r.Description,
+            Modules = r.Modules,
             CreatedAt = r.CreatedAt,
             UpdatedAt = r.UpdatedAt
         }).ToList();

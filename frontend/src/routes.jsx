@@ -2,7 +2,9 @@ import { lazy, Suspense, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ModuleRoute from './components/ModuleRoute';
 import SessionContext from './context/SessionContext';
+import { getFirstAllowedPath } from './utils/modules';
 
 const Login = lazy(() => import('./pages/Login/Login'));
 const Home = lazy(() => import('./pages/Home/Home'));
@@ -19,10 +21,19 @@ const SuspenseWrap = ({ children }) => (
 
 const HomeOrRedirect = () => {
   const { user } = useContext(SessionContext);
-  if (user?.role === 'Administrador') {
-    return <Navigate to="/roles" replace />;
+  const userModules = user?.modules || [];
+
+  // Si tiene dashboard, se queda en Home; si no, va a su primer modulo permitido.
+  if (userModules.includes('dashboard')) {
+    return <SuspenseWrap><Home /></SuspenseWrap>;
   }
-  return <SuspenseWrap><Home /></SuspenseWrap>;
+
+  const firstPath = getFirstAllowedPath(userModules);
+  if (firstPath) {
+    return <Navigate to={firstPath} replace />;
+  }
+
+  return <Navigate to="/login" replace />;
 };
 
 const AppRoutes = () => (
@@ -51,33 +62,41 @@ const AppRoutes = () => (
         <Route
           path="roles"
           element={
-            <SuspenseWrap>
-              <Roles />
-            </SuspenseWrap>
+            <ModuleRoute module="roles">
+              <SuspenseWrap>
+                <Roles />
+              </SuspenseWrap>
+            </ModuleRoute>
           }
         />
         <Route
           path="tasks"
           element={
-            <SuspenseWrap>
-              <Tasks />
-            </SuspenseWrap>
+            <ModuleRoute module="tareas">
+              <SuspenseWrap>
+                <Tasks />
+              </SuspenseWrap>
+            </ModuleRoute>
           }
         />
         <Route
           path="colaboradores"
           element={
-            <SuspenseWrap>
-              <Colaboradores />
-            </SuspenseWrap>
+            <ModuleRoute module="colaboradores">
+              <SuspenseWrap>
+                <Colaboradores />
+              </SuspenseWrap>
+            </ModuleRoute>
           }
         />
         <Route
           path="alertas-payroll"
           element={
-            <SuspenseWrap>
-              <AlertasPayroll />
-            </SuspenseWrap>
+            <ModuleRoute module="alertas-payroll">
+              <SuspenseWrap>
+                <AlertasPayroll />
+              </SuspenseWrap>
+            </ModuleRoute>
           }
         />
       </Route>

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using BSC.API.Authorization;
 using BSC.Application.Commands.AssignTask;
 using BSC.Application.Commands.ChangeTaskStatus;
 using BSC.Application.Commands.CreateTaskItem;
@@ -28,6 +29,7 @@ namespace BSC.API.Controllers;
 /// </summary>
 [ApiController]
 [Authorize]
+[RequireModule(Modules.Tareas)]
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
@@ -106,6 +108,7 @@ public class TasksController : ControllerBase
     /// <param name="to">Fecha fin del filtro (opcional).</param>
     /// <returns>Estadísticas del dashboard.</returns>
     [HttpGet("dashboard")]
+    [RequireModule(Modules.Dashboard)]
     [ProducesResponseType(typeof(ApiResponse<DashboardDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDashboard([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {

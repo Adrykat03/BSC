@@ -1,9 +1,11 @@
+using BSC.API.Authorization;
 using BSC.Application.Commands.CreateRole;
 using BSC.Application.Commands.DeleteRole;
 using BSC.Application.Commands.UpdateRole;
 using BSC.Application.DTOs;
 using BSC.Application.Queries.GetRoleById;
 using BSC.Application.Queries.GetRoles;
+using BSC.Domain.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +17,7 @@ namespace BSC.API.Controllers;
 /// </summary>
 [ApiController]
 [Authorize]
+[RequireModule(Modules.Roles)]
 [Route("api/[controller]")]
 public class RolesController : ControllerBase
 {

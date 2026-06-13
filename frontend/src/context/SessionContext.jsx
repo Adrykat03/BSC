@@ -39,6 +39,16 @@ function extractUser(claims) {
   }
   if (!Array.isArray(roles)) roles = [roles];
 
+  let modules = [];
+  if (claims.modules) {
+    try {
+      modules = typeof claims.modules === 'string' ? JSON.parse(claims.modules) : claims.modules;
+    } catch {
+      modules = Array.isArray(claims.modules) ? claims.modules : [claims.modules];
+    }
+  }
+  if (!Array.isArray(modules)) modules = [modules];
+
   // .NET JWT uses full URI claim keys
   const nameId = claims.nameid || claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || claims.sub || '';
   const name = claims.unique_name || claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || '';
@@ -51,6 +61,7 @@ function extractUser(claims) {
     email,
     role,
     roles,
+    modules,
   };
 }
 

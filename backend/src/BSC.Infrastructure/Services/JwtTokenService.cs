@@ -25,7 +25,7 @@ public class JwtTokenService : IJwtTokenService
         _expirationMinutes = expirationMinutes;
     }
 
-    public string GenerateToken(string userId, string name, string email, List<string> roles, string activeRole)
+    public string GenerateToken(string userId, string name, string email, List<string> roles, string activeRole, List<string> modules)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -36,6 +36,7 @@ public class JwtTokenService : IJwtTokenService
             new(ClaimTypes.Name, name),
             new(ClaimTypes.Email, email),
             new("roles", JsonSerializer.Serialize(roles)),
+            new("modules", JsonSerializer.Serialize(modules ?? new List<string>())),
             new(ClaimTypes.Role, activeRole)
         };
 

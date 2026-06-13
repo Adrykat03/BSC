@@ -27,6 +27,8 @@
 | FUNC-022 | Formato profesional XLSX y boton Actualizar en Alertas | Completada | 2026-05-29 |
 | FUNC-023 | Fix links iframe Alertas y manual de usuario HTML | Completada | 2026-05-29 |
 | FUNC-024 | Ajuste visual gráfico Pendientes por Resolver (prioridad) | Completada | 2026-06-09 |
+| FUNC-025 | Permisos por módulo en roles (Fase 1: visibilidad) | Completada | 2026-06-12 |
+| FUNC-026 | Fix modal Colaborador: scroll footer + roles como botones | Completada | 2026-06-13 |
 
 ---
 
@@ -328,6 +330,42 @@
   - `AlertasPayroll.css` — `.payroll-donut` gap reducido a `spacing-3`, `height: 100%` para centrado vertical; `.payroll-donut__legend` sin `flex: 1`; `.payroll-donut__legend-item` cambiado de flex a CSS grid `10px 1fr 28px 40px` para alinear columnas.
   - `AlertasPayroll.jsx` — leyenda separada en dos spans distintos (`.payroll-donut__legend-value` y `.payroll-donut__legend-pct`) en lugar de un span anidado.
 - **Security:** Sin cambios de superficie.
+
+---
+
+### [FUNC-025] Permisos por módulo en roles (Fase 1: visibilidad)
+- **Estado:** Completada
+- **Fecha:** 2026-06-12
+- **Descripcion:** Se reemplaza la visibilidad de módulos hardcodeada por nombre de rol por un sistema de permisos por módulo. Al crear/editar un rol, el admin elige qué módulos puede ver (Dashboard, Roles, Colaboradores, Tareas, Alertas Payroll). Menú, rutas y landing pasan a ser data-driven según los módulos del rol activo. Alcance acotado a visibilidad de módulos; el workflow de Tareas y las cards del Dashboard por rol quedan intactos (eso son permisos de acción, otra fase).
+- **Backend:**
+  - `Domain/Constants/Modules.cs` — catálogo de 5 keys (dashboard, roles, colaboradores, tareas, alertas-payroll).
+  - `Domain/Entities/Role.cs` — campo `List<string> Modules` (`[BsonElement("modules")]`).
+  - CRUD de roles: `CreateRole`/`UpdateRole` (Command/Handler/Validator) + `RoleDto` + queries GetRoles/GetRoleById incluyen `Modules` (validado contra catálogo).
+  - JWT: claim `modules` (array JSON, mismo patrón que `roles`) calculado del **rol activo**; emitido en login y switch-role (`IJwtTokenService`/`JwtTokenService`, `LoginCommandHandler`, `SwitchRoleCommandHandler`).
+  - Enforcement: atributo `[RequireModule("key")]` policy-based (`Authorization/RequireModuleAttribute.cs`, `ModuleRequirement.cs`, `ModuleAuthorizationHandler.cs`, `ModulePolicyProvider.cs`). Falla cerrado (sin claim → 403). Aplicado: Alertas/AlertasPayroll→alertas-payroll, Roles→roles, Colaboradores→colaboradores, Tasks→tareas con override `dashboard` en GetDashboard. Auth/Health sin requerimiento.
+  - Tests: `AlertasControllerAuthorizationTests` adaptado a `[RequireModule]`. Build 0 errores, 9/9 tests verdes.
+- **Frontend:**
+  - `utils/modules.js` — catálogo único (key, path, label, icon) + helpers (única fuente de verdad).
+  - `context/SessionContext.jsx` — `extractUser` parsea claim `modules` → `user.modules`.
+  - `components/ModuleRoute.jsx` — guard por módulo; redirige al primer módulo permitido.
+  - `Sidebar.jsx` y `routes.jsx` — data-driven según `user.modules`. Landing = primer módulo permitido.
+  - `Header.jsx` — títulos derivados del catálogo; oculta campana y evita fetch a Tareas si el rol no tiene módulo `tareas`.
+  - `Roles/RoleModal.jsx` — selector de módulos (toggle-group design system). `Roles.jsx` — columna de módulos como badges.
+- **Datos:** `seeds/seed_usuarios_nomina.js` actualizado con `modules` por rol; `seeds/migrate_roles_modules.js` (migración idempotente para BD ya poblada). Matriz: Administrador=roles/colaboradores/tareas/alertas-payroll; Gerente/Lider/Colaborador=dashboard/tareas/alertas-payroll.
+- **Security:** Aprobado con observaciones. Núcleo sólido (fail-closed, override clase+acción correcto, sin escalada). Hallazgo ALTO **preexistente**: acceso a alertas vía `/dab` sin auth (lectura y PATCH) elude el control por módulo — pendiente de corregir canalizando por backend o autenticando DAB. Medios: `usuarioResolucion` desde cliente (misma raíz DAB), CORS hardcodeado. Bajos: JWT estático (cambios de permiso aplican tras re-login/switch), guard frontend solo UX (confirmado sin bypass real).
+
+---
+
+### [FUNC-026] Fix modal Colaborador: scroll footer + roles como botones
+- **Estado:** Completada
+- **Fecha:** 2026-06-13
+- **Descripcion:** Correccion de UX detectada al probar FUNC-025. En el modal de crear colaborador no se veian los botones de accion (Cancelar/Crear) porque el `<form>` envolvia `modal__body` + `modal__footer` y rompia el layout flex: en modo crear (mas alto, con reglas de password) el footer se salia de los 90vh. Ademas el selector de roles se veia roto al hacer wrap.
+- **Backend:** Sin cambios.
+- **Frontend:**
+  - `styles/components.css` — nueva clase `.modal__form` (columna flex que llena el modal) para que el body haga scroll y el footer quede fijo.
+  - `pages/Colaboradores/ColaboradorModal.jsx` — `<form>` con clase `modal__form`; selector de roles convertido a botones individuales (`btn btn--sm`, primary/secondary) con `d-flex flex-wrap gap-2`, reemplazando el grupo segmentado con estilos inline. Label estandar del design system.
+  - `pages/Roles/RoleModal.jsx` — misma clase `modal__form` aplicada (estructura identica, mas alto por el selector de modulos de FUNC-025).
+- **Security:** Sin cambios de superficie (solo UI).
 
 ---
 

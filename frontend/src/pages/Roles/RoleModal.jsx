@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { MODULES } from '../../utils/modules';
 
 const RoleModal = ({ isOpen, onClose, onSubmit, role, loading }) => {
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', modules: [] });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -15,12 +16,29 @@ const RoleModal = ({ isOpen, onClose, onSubmit, role, loading }) => {
 
   useEffect(() => {
     if (role) {
-      setFormData({ name: role.name || '', description: role.description || '' });
+      setFormData({
+        name: role.name || '',
+        description: role.description || '',
+        modules: Array.isArray(role.modules) ? role.modules : [],
+      });
     } else {
-      setFormData({ name: '', description: '' });
+      setFormData({ name: '', description: '', modules: [] });
     }
     setErrors({});
   }, [role, isOpen]);
+
+  const handleModuleToggle = (moduleKey) => {
+    setFormData((prev) => {
+      const isSelected = prev.modules.includes(moduleKey);
+      const newModules = isSelected
+        ? prev.modules.filter((k) => k !== moduleKey)
+        : [...prev.modules, moduleKey];
+      return { ...prev, modules: newModules };
+    });
+    if (errors.modules) {
+      setErrors((prev) => ({ ...prev, modules: '' }));
+    }
+  };
 
   const validate = () => {
     const newErrors = {};
@@ -29,6 +47,9 @@ const RoleModal = ({ isOpen, onClose, onSubmit, role, loading }) => {
     }
     if (!formData.description.trim()) {
       newErrors.description = 'La descripcion es requerida';
+    }
+    if (!formData.modules || formData.modules.length === 0) {
+      newErrors.modules = 'Debe seleccionar al menos un modulo';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -65,7 +86,7 @@ const RoleModal = ({ isOpen, onClose, onSubmit, role, loading }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="modal__form">
           <div className="modal__body">
             <div className="form-group mb-4">
               <label className="form-label form-label--required">Nombre</label>
@@ -94,6 +115,29 @@ const RoleModal = ({ isOpen, onClose, onSubmit, role, loading }) => {
               />
               {errors.description && (
                 <span className="form-helper form-helper--error">{errors.description}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label form-label--required">Modulos</label>
+              <div className="d-flex flex-wrap gap-2 mt-1">
+                {MODULES.map(({ key, label, icon: Icon }) => {
+                  const selected = formData.modules.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => handleModuleToggle(key)}
+                      className={`btn btn--sm ${selected ? 'btn--primary' : 'btn--secondary'}`}
+                    >
+                      <Icon size={16} />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.modules && (
+                <span className="form-helper form-helper--error">{errors.modules}</span>
               )}
             </div>
           </div>

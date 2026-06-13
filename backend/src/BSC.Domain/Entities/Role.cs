@@ -18,6 +18,12 @@ public class Role
     [BsonElement("description")]
     public string Description { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Modulos a los que este rol da acceso. Keys del catalogo <see cref="Constants.Modules"/>.
+    /// </summary>
+    [BsonElement("modules")]
+    public List<string> Modules { get; set; } = new();
+
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; }
 

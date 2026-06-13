@@ -122,6 +122,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// Autorizacion por modulo (claim "modules" del JWT) via policies dinamicas.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider, BSC.API.Authorization.ModulePolicyProvider>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, BSC.API.Authorization.ModuleAuthorizationHandler>();
+
 // Rate Limiting
 builder.Services.AddRateLimiter(options =>
 {

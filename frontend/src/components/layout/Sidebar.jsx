@@ -1,12 +1,13 @@
 import { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Shield, ClipboardList, Users, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import SessionContext from '../../context/SessionContext';
+import { getAllowedModules } from '../../utils/modules';
 
 const Sidebar = ({ isMobile, onCloseSidebar, collapsed = false, onToggleCollapse }) => {
   const { user } = useContext(SessionContext);
-  const role = user?.role || '';
-  const isAdmin = role === 'Administrador';
+  const allowedModules = getAllowedModules(user?.modules || []);
+
   const handleNavClick = () => {
     if (isMobile && onCloseSidebar) {
       onCloseSidebar();
@@ -43,108 +44,23 @@ const Sidebar = ({ isMobile, onCloseSidebar, collapsed = false, onToggleCollapse
 
       <nav>
         <ul className="sidebar__nav">
-          {!isAdmin && (
-            <li className="sidebar__nav-item">
+          {allowedModules.map(({ key, path, label, icon: Icon }) => (
+            <li className="sidebar__nav-item" key={key}>
               <NavLink
-                to="/"
-                end
-                aria-label="Dashboard"
-                data-tooltip="Dashboard"
+                to={path}
+                end={path === '/'}
+                aria-label={label}
+                data-tooltip={label}
                 className={({ isActive }) =>
                   `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                 }
                 onClick={handleNavClick}
               >
-                <Home className="sidebar__nav-icon" size={20} />
-                <span>Dashboard</span>
+                <Icon className="sidebar__nav-icon" size={20} />
+                <span>{label}</span>
               </NavLink>
             </li>
-          )}
-
-          {/* Administrador: Roles y Colaboradores */}
-          {isAdmin && (
-            <>
-              <li className="sidebar__nav-item">
-                <NavLink
-                  to="/roles"
-                  aria-label="Roles"
-                  data-tooltip="Roles"
-                  className={({ isActive }) =>
-                    `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
-                  }
-                  onClick={handleNavClick}
-                >
-                  <Shield className="sidebar__nav-icon" size={20} />
-                  <span>Roles</span>
-                </NavLink>
-              </li>
-              <li className="sidebar__nav-item">
-                <NavLink
-                  to="/colaboradores"
-                  aria-label="Colaboradores"
-                  data-tooltip="Colaboradores"
-                  className={({ isActive }) =>
-                    `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
-                  }
-                  onClick={handleNavClick}
-                >
-                  <Users className="sidebar__nav-icon" size={20} />
-                  <span>Colaboradores</span>
-                </NavLink>
-              </li>
-              <li className="sidebar__nav-item">
-                <NavLink
-                  to="/tasks"
-                  aria-label="Tareas"
-                  data-tooltip="Tareas"
-                  className={({ isActive }) =>
-                    `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
-                  }
-                  onClick={handleNavClick}
-                >
-                  <ClipboardList className="sidebar__nav-icon" size={20} />
-                  <span>Tareas</span>
-                </NavLink>
-              </li>
-            </>
-          )}
-
-          {/* Todos excepto Administrador: Tareas */}
-          {!isAdmin && (
-            <>
-              <li><hr style={{ border: 'none', borderTop: '1px solid var(--color-border-main)', margin: 'var(--spacing-2) var(--spacing-4)' }} /></li>
-              <li className="sidebar__nav-item">
-                <NavLink
-                  to="/tasks"
-                  aria-label="Tareas"
-                  data-tooltip="Tareas"
-                  className={({ isActive }) =>
-                    `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
-                  }
-                  onClick={handleNavClick}
-                >
-                  <ClipboardList className="sidebar__nav-icon" size={20} />
-                  <span>Tareas</span>
-                </NavLink>
-              </li>
-            </>
-          )}
-
-          <li><hr style={{ border: 'none', borderTop: '1px solid var(--color-border-main)', margin: 'var(--spacing-2) var(--spacing-4)' }} /></li>
-          <li className="sidebar__nav-item">
-            <NavLink
-              to="/alertas-payroll"
-              aria-label="Alertas Payroll"
-              data-tooltip="Alertas Payroll"
-              className={({ isActive }) =>
-                `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
-              }
-              onClick={handleNavClick}
-            >
-              <Bell className="sidebar__nav-icon" size={20} />
-              <span>Alertas Payroll</span>
-            </NavLink>
-          </li>
+          ))}
         </ul>
       </nav>
     </div>

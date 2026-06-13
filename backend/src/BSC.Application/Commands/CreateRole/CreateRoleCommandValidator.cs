@@ -1,3 +1,4 @@
+using BSC.Domain.Constants;
 using FluentValidation;
 
 namespace BSC.Application.Commands.CreateRole;
@@ -16,5 +17,10 @@ public class CreateRoleCommandValidator : AbstractValidator<CreateRoleCommand>
         RuleFor(x => x.Description)
             .NotEmpty().WithMessage("La descripción es requerida.")
             .MaximumLength(500).WithMessage("La descripción no puede exceder 500 caracteres.");
+
+        // La lista de modulos puede estar vacia, pero ninguna key puede ser invalida.
+        RuleForEach(x => x.Modules)
+            .Must(Modules.IsValid)
+            .WithMessage($"Módulo inválido. Módulos permitidos: {string.Join(", ", Modules.All)}.");
     }
 }

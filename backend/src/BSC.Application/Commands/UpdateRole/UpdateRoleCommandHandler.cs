@@ -42,6 +42,7 @@ public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommand, ApiRe
 
         role.Name = request.Name;
         role.Description = request.Description;
+        role.Modules = request.Modules ?? new List<string>();
         role.UpdatedAt = DateTime.UtcNow;
 
         var updated = await _roleRepository.UpdateAsync(role);
@@ -53,6 +54,7 @@ public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommand, ApiRe
             Id = updated.Id,
             Name = updated.Name,
             Description = updated.Description,
+            Modules = updated.Modules,
             CreatedAt = updated.CreatedAt,
             UpdatedAt = updated.UpdatedAt
         };

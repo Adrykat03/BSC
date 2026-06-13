@@ -1,9 +1,11 @@
+using BSC.API.Authorization;
 using BSC.Application.DTOs;
 using BSC.Application.Features.Colaboradores.Commands.Create;
 using BSC.Application.Features.Colaboradores.Commands.Delete;
 using BSC.Application.Features.Colaboradores.Commands.Update;
 using BSC.Application.Features.Colaboradores.Queries.GetAll;
 using BSC.Application.Features.Colaboradores.Queries.GetById;
+using BSC.Domain.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +14,7 @@ namespace BSC.API.Controllers;
 
 [ApiController]
 [Authorize]
+[RequireModule(Modules.Colaboradores)]
 [Route("api/[controller]")]
 public class ColaboradoresController : ControllerBase
 {

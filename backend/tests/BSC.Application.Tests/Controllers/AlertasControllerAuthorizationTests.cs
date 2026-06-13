@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Reflection;
+using BSC.API.Authorization;
 using BSC.API.Controllers;
 using BSC.Domain.Constants;
 using FluentAssertions;
@@ -9,64 +10,58 @@ using Xunit;
 namespace BSC.Application.Tests.Controllers;
 
 /// <summary>
-/// Cierre del Hallazgo Security A01 (IDOR sobre GET /api/alertas/{id}/historial).
+/// Cierre del Hallazgo Security A01 (IDOR sobre GET /api/alertas/{id}/historial), adaptado al
+/// nuevo modelo de autorizacion por MODULO.
 ///
-/// Verifica que la autorizacion por rol del controlador AlertasController:
-///   - Esta declarada (no solo [Authorize] simple).
-///   - Incluye los roles administrativos/supervisores: Administrador, Gerente, Lider.
-///   - NO incluye al rol Colaborador (que es el que permitiria enumerar emails de otros operadores).
+/// Verifica que el AlertasController:
+///   - Exige autenticacion ([Authorize]).
+///   - Esta restringido por el modulo "alertas-payroll" mediante [RequireModule].
+///   - Ningun endpoint usa [AllowAnonymous] (no debe romper la autorizacion).
 ///
-/// La verificacion se hace por reflexion sobre los atributos del controlador.
-/// Como ASP.NET Core aplica [Authorize(Roles=...)] en el pipeline antes de invocar la accion,
-/// si la decoracion existe con los roles correctos, un usuario sin esos roles recibira 403.
+/// El acceso ya NO se controla por nombre de rol sino por la pertenencia del rol activo al
+/// modulo "alertas-payroll" (claim "modules" del JWT). Como el rol Colaborador NO incluye ese
+/// modulo en la matriz por defecto, sigue sin poder enumerar historiales (cierre del A01).
 /// </summary>
 public class AlertasControllerAuthorizationTests
 {
-    private static AuthorizeAttribute GetClassAuthorizeAttribute()
+    private static RequireModuleAttribute GetClassRequireModuleAttribute()
     {
         var attr = typeof(AlertasController)
-            .GetCustomAttributes<AuthorizeAttribute>(inherit: true)
+            .GetCustomAttributes<RequireModuleAttribute>(inherit: true)
             .FirstOrDefault();
 
-        attr.Should().NotBeNull("AlertasController debe estar decorado con [Authorize(Roles=...)] " +
-                                 "para evitar el IDOR descrito en el hallazgo Security A01.");
+        attr.Should().NotBeNull("AlertasController debe estar decorado con [RequireModule] " +
+                                 "para restringir el acceso por modulo (modelo de permisos por modulo).");
         return attr!;
     }
 
     [Fact]
-    public void AlertasController_ShouldDeclareRolesAuthorization()
+    public void AlertasController_ShouldRequireAuthentication()
     {
-        var attr = GetClassAuthorizeAttribute();
+        var authorize = typeof(AlertasController)
+            .GetCustomAttributes<AuthorizeAttribute>(inherit: true)
+            .ToList();
 
-        attr.Roles.Should().NotBeNullOrWhiteSpace(
-            "El [Authorize] del controlador debe especificar Roles=... para restringir el acceso.");
+        authorize.Should().NotBeEmpty(
+            "AlertasController debe exigir autenticacion ([Authorize] o [RequireModule], que hereda de AuthorizeAttribute).");
     }
 
     [Fact]
-    public void AlertasController_ShouldIncludeAdministrativeRoles()
+    public void AlertasController_ShouldRequireAlertasPayrollModule()
     {
-        var attr = GetClassAuthorizeAttribute();
-        var roles = (attr.Roles ?? string.Empty)
-            .Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries)
-            .ToList();
+        var attr = GetClassRequireModuleAttribute();
 
-        roles.Should().Contain(TaskStateTransitions.RolAdministrador);
-        roles.Should().Contain(TaskStateTransitions.RolGerente);
-        roles.Should().Contain(TaskStateTransitions.RolLider);
+        attr.Module.Should().Be(Modules.AlertasPayroll,
+            "el controlador de Alertas debe exigir el modulo 'alertas-payroll'.");
     }
 
     [Fact]
-    public void AlertasController_ShouldNotIncludeColaboradorRole()
+    public void RequireModule_ShouldMapToPolicyWithModulePrefix()
     {
-        var attr = GetClassAuthorizeAttribute();
-        var roles = (attr.Roles ?? string.Empty)
-            .Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries)
-            .ToList();
+        var attr = GetClassRequireModuleAttribute();
 
-        // El rol Colaborador no debe estar listado: permitiria a cualquier colaborador autenticado
-        // leer emails de otros operadores en el historial (PII / IDOR).
-        roles.Should().NotContain(TaskStateTransitions.RolColaborador,
-            "Colaborador NO debe poder leer historiales de Alertas (hallazgo Security A01).");
+        attr.Policy.Should().Be(RequireModuleAttribute.PolicyPrefix + Modules.AlertasPayroll,
+            "la policy debe codificar el modulo para que el IAuthorizationPolicyProvider la resuelva.");
     }
 
     [Fact]
@@ -80,7 +75,7 @@ public class AlertasControllerAuthorizationTests
         {
             var allowAnonymous = method.GetCustomAttributes<AllowAnonymousAttribute>(inherit: true).Any();
             allowAnonymous.Should().BeFalse(
-                $"El metodo {method.Name} no debe tener [AllowAnonymous]; rompe la autorizacion por rol.");
+                $"El metodo {method.Name} no debe tener [AllowAnonymous]; rompe la autorizacion por modulo.");
         }
     }
 }
