@@ -2,8 +2,8 @@
 
 **Sistema:** BSC BackOffice  
 **Módulo:** Alertas Payroll  
-**Versión:** 1.0  
-**Fecha:** 2026-05-29  
+**Versión:** 1.1  
+**Fecha:** 2026-06-18  
 **Dirigido a:** Analistas y Supervisores de Nómina / Payroll
 
 ---
@@ -59,6 +59,8 @@ Las alertas se generan desde procedimientos almacenados (SP) que se ejecutan per
 3. El sistema cargará automáticamente todas las alertas registradas, mostrando primero el **Tab Dashboard**.
 
 > **Nota:** Si es la primera vez que accede o acaba de iniciar sesión, espere unos segundos mientras el sistema carga los datos desde el servidor.
+
+> **Permisos:** La opción **"Alertas Payroll"** en el menú lateral solo aparece para los roles que tienen habilitado el módulo. Si no la ve, su rol no tiene acceso a este módulo; solicite la habilitación al administrador. Si tiene varios roles, el acceso depende del **rol activo** (puede cambiarlo desde el menú de usuario).
 
 ---
 
@@ -154,7 +156,7 @@ En la parte superior del Listado encontrará 6 tarjetas con conteos por estado:
 Bajo los KPIs hay tres gráficos:
 
 **Pendientes por Resolver (donut)**  
-Muestra solo las alertas en estado Activa, En Proceso o Error, agrupadas por tipo. Excluye "Sin novedad" por su naturaleza informativa. La etiqueta central indica "Pendientes".
+Muestra solo las alertas en estado Activa, En Proceso o Error, agrupadas por **prioridad**: Alta (rojo), Media (amarillo) y Baja (verde). La etiqueta central indica "Pendientes" y cada segmento de la leyenda muestra su cantidad y porcentaje. Permite ver de un vistazo cuántos pendientes hay de cada nivel de urgencia.
 
 **Distribución por Estado (donut)**  
 Muestra la proporción de todos los estados (A, P, R, C, E).
@@ -206,6 +208,9 @@ La tabla presenta las siguientes columnas:
 
 **Ordenamiento:**  
 Haga clic en el encabezado de cualquier columna para ordenar. Cada clic cicla entre: ascendente → descendente → sin orden. Las columnas de fecha se ordenan cronológicamente; las de texto usan orden alfabético en español.
+
+**Orden prioritario automático:**  
+Independientemente del orden que elija, las alertas más urgentes —**Prioridad Alta + Con Novedad + Activas**— se fijan siempre al inicio de la tabla, para que no se pierdan entre páginas. El resto de las filas conserva el orden de la columna elegida (o el orden original si no ha ordenado por ninguna).
 
 ### 5.5 Paginación
 
@@ -365,6 +370,8 @@ Las filas que cumplen las tres condiciones siguientes se resaltan con fondo rojo
 
 Estas alertas requieren atención prioritaria. El resaltado visual facilita su identificación rápida en la tabla, incluso entre muchos registros.
 
+> Además, el subconjunto más urgente —**Prioridad Alta + Con Novedad + Activas**— se fija automáticamente al inicio de la tabla del Listado (ver [5.4](#54-tabla-de-alertas)), de modo que aparece primero sin importar el orden o la página en que se encuentre.
+
 ---
 
 ## 9. Preguntas frecuentes
@@ -392,4 +399,4 @@ Puede cambiar el estado nuevamente a `Activa` o cualquier otro estado abriendo e
 
 ---
 
-*Manual generado para BSC BackOffice — Módulo Alertas Payroll v1.0 | 2026-05-29*
+*Manual generado para BSC BackOffice — Módulo Alertas Payroll v1.1 | 2026-06-18*

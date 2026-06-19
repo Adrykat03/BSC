@@ -441,10 +441,10 @@
 
   <!-- HEADER -->
   <div class="page-header">
-    <div class="badge">Manual de Usuario · v1.0</div>
+    <div class="badge">Manual de Usuario · v1.1</div>
     <h1>Módulo Alertas Payroll</h1>
     <div class="meta">
-      <span>📅 29 de mayo de 2026</span>
+      <span>📅 18 de junio de 2026</span>
       <span>👤 Analistas y Supervisores de Nómina</span>
       <span>🏢 BSC BackOffice</span>
     </div>
@@ -502,6 +502,11 @@
   <div class="callout info">
     <span class="callout-icon">ℹ️</span>
     <span>Si es la primera vez que accede o acaba de iniciar sesión, espere unos segundos mientras el sistema carga los datos desde el servidor.</span>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">🔒</span>
+    <span><strong>Permisos:</strong> La opción "Alertas Payroll" en el menú solo aparece para los roles que tienen habilitado el módulo. Si no la ve, su rol no tiene acceso; solicite la habilitación al administrador. Si tiene varios roles, el acceso depende del <strong>rol activo</strong> (cámbielo desde el menú de usuario).</span>
   </div>
 
 <!-- SHOT:login -->
@@ -643,7 +648,7 @@
       <tbody>
         <tr>
           <td><strong>Pendientes por Resolver</strong></td>
-          <td>Donut con alertas en estado Activa, En Proceso o Error, agrupadas por tipo. Excluye "Sin novedad". La etiqueta central indica "Pendientes".</td>
+          <td>Donut con alertas en estado Activa, En Proceso o Error, agrupadas por <strong>prioridad</strong>: Alta (rojo), Media (amarillo) y Baja (verde). Cada segmento muestra su cantidad y porcentaje. La etiqueta central indica "Pendientes".</td>
         </tr>
         <tr>
           <td><strong>Distribución por Estado</strong></td>
@@ -714,6 +719,9 @@
 
   <h4>Ordenamiento de columnas</h4>
   <p>Haga clic en el encabezado de cualquier columna para ordenar. Cada clic cicla entre: <strong>ascendente → descendente → sin orden</strong>. Las columnas de fecha se ordenan cronológicamente; las de texto usan orden alfabético en español.</p>
+
+  <h4>Orden prioritario automático</h4>
+  <p>Independientemente del orden que elija, las alertas más urgentes —<strong>Prioridad Alta + Con Novedad + Activas</strong>— se fijan siempre al inicio de la tabla para que no se pierdan entre páginas. El resto de las filas conserva el orden de la columna elegida (o el orden original).</p>
 
 <!-- SHOT:listado_tabla -->
 
@@ -930,6 +938,11 @@
     <li>Tipo <strong>Con Novedad</strong> o <strong>Error Proceso</strong>.</li>
   </ol>
 
+  <div class="callout info">
+    <span class="callout-icon">⬆️</span>
+    <span>Además, el subconjunto más urgente —<strong>Prioridad Alta + Con Novedad + Activas</strong>— se fija automáticamente al inicio de la tabla del Listado, de modo que aparece primero sin importar el orden o la página.</span>
+  </div>
+
   <p>Ejemplo visual de cómo se ve una fila crítica en la tabla:</p>
 
   <div class="table-wrap">
@@ -999,7 +1012,7 @@
   <hr />
 
   <footer>
-    <p>BSC BackOffice — Módulo Alertas Payroll · Manual de Usuario v1.0 · 29 de mayo de 2026</p>
+    <p>BSC BackOffice — Módulo Alertas Payroll · Manual de Usuario v1.1 · 18 de junio de 2026</p>
   </footer>
 
 </main>
