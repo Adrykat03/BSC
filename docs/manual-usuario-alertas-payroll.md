@@ -4,7 +4,7 @@
 **Módulo:** Alertas Payroll  
 **Versión:** 1.1  
 **Fecha:** 2026-06-18  
-**Dirigido a:** Analistas y Supervisores de Nómina / Payroll
+**Dirigido a:** Analistas y Supervisores de Nómina
 
 ---
 
@@ -41,7 +41,7 @@
 
 El módulo **Alertas Payroll** es el centro de notificaciones del sistema BSC BackOffice. Consolida en una sola pantalla todas las alertas generadas automáticamente por los procesos de nómina: validaciones de marcajes, vacaciones, ausencias, jerarquías, biométricos, horarios, entre otros.
 
-Las alertas se generan desde procedimientos almacenados (SP) que se ejecutan periódicamente y depositan sus resultados en la base de datos. Desde este módulo el equipo de Payroll puede:
+Las alertas se generan desde procedimientos almacenados (SP) que se ejecutan periódicamente y depositan sus resultados en la base de datos. Desde este módulo el equipo de Nómina puede:
 
 - Monitorear el estado general de las alertas en tiempo real.
 - Filtrar y buscar alertas por cualquier criterio.
