@@ -1,3 +1,10 @@
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_TrabajadoresValidacion]    Script Date: 13/6/2026 1:00:42 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =============================================
 -- Author:		<Pamela Pupiales>
 -- Create date: <30/03/2023>
@@ -8,10 +15,18 @@
 -- Edition date: <02/04/2024>
 -- Description:	<Se aumenta la comprobación de la existencia de datos en Adam Consolidados, y se toma el año de ejecución automaticamente>
 -- =============================================
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 13/06/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
 
-CREATE PROCEDURE [Avisos].[pa_TrabajadoresValidacion]
+
+ALTER PROCEDURE [Avisos].[pa_TrabajadoresValidacion]
 AS
 BEGIN
+DECLARE @asunto varchar (400), @destinatarios varchar(max);
+BEGIN TRY
 -- Comprobacion de existencia de datos en la base Adam Consolidados
 IF( SELECT COUNT(Codigo) FROM [Adam_Consolidados].[dbo].[TB_Trabajadores_Mes]  WHERE CONVERT(INT,Anio) >= YEAR(CONVERT(date, GETDATE())) and CONVERT(INT,Mes)= MONTH(DATEADD(DAY, 0, CONVERT(date, GETDATE()))) ) > 0
 	BEGIN
@@ -75,7 +90,7 @@ IF( SELECT COUNT(Codigo) FROM [Adam_Consolidados].[dbo].[TB_Trabajadores_Mes]  W
 		order by Compania,Concepto, Mes
 	
 		DECLARE @tiene1 int = 0, @tiene2 int = 0, @tiene3 int = 0, @tiene4 int = 0
-		DECLARE @htmlE varchar(max)='', @html1 varchar(max)='', @html2 varchar(max)='', @html3 varchar(max)='',@html4 varchar(max)='', @asunto varchar (400), @saludos varchar(500)='', @destinatarios varchar(max); 
+		DECLARE @htmlE varchar(max)='', @html1 varchar(max)='', @html2 varchar(max)='', @html3 varchar(max)='',@html4 varchar(max)='', @saludos varchar(500)='';
 	
 		SELECT @destinatarios= valor, @asunto=descripcion FROM [DB_NOMKFC].[Configuracion].[parametros] WHERE parametro = 'AvisosTrabMonto'
 		SELECT DISTINCT @tiene1 = COUNT(1) FROM  #Trabajadores --0
@@ -383,7 +398,7 @@ IF( SELECT COUNT(Codigo) FROM [Adam_Consolidados].[dbo].[TB_Trabajadores_Mes]  W
 						begin
 								-- INSERT notificación consolidada
 								INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-								VALUES ('A', 'AvisosTrabMonto', 'pa_TrabajadoresValidacion', @asunto, @html, @tiene4, @destinatarios, NULL, NULL, 'Con novedad', 'Media', 'JIMMY', NULL);
+								VALUES ('A', 'AvisosTrabMonto', 'pa_TrabajadoresValidacion', @asunto, @html, @tiene4, @destinatarios, NULL, NULL, 'Con novedad', 'Baja', 'NOMINA', NULL);
 								exec msdb.dbo.Sp_send_dbmail
 								@profile_name = 'Informacion_Nomina',  
 								@Subject = @asunto,
@@ -408,7 +423,7 @@ IF( SELECT COUNT(Codigo) FROM [Adam_Consolidados].[dbo].[TB_Trabajadores_Mes]  W
 							begin
 							-- INSERT notificación consolidada
 							INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-							VALUES ('C', 'AvisosTrabMonto', 'pa_TrabajadoresValidacion', @asunto, @html1, @tiene4, @destinatarios, NULL, NULL, 'Sin novedad', 'Media', 'JIMMY', NULL);
+							VALUES ('C', 'AvisosTrabMonto', 'pa_TrabajadoresValidacion', @asunto, @html1, @tiene4, @destinatarios, NULL, NULL, 'Sin novedad', 'Baja', 'NOMINA', NULL);
 							exec msdb.dbo.Sp_send_dbmail
 								@profile_name = 'Informacion_Nomina', 
 								@Subject = @asunto,
@@ -419,4 +434,13 @@ IF( SELECT COUNT(Codigo) FROM [Adam_Consolidados].[dbo].[TB_Trabajadores_Mes]  W
 							end
 				END
 	END
+END TRY
+BEGIN CATCH
+	IF @destinatarios IS NULL
+		SELECT @destinatarios = valor, @asunto = descripcion
+		FROM Configuracion.parametros WHERE parametro = 'AvisosTrabMonto';
+	--Insert en notificaciones consolidadas
+	INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+	VALUES ('E', 'AvisosTrabMonto', 'pa_TrabajadoresValidacion', @asunto, NULL, @destinatarios, NULL, NULL, 'Error Proceso', 'Baja', 'NOMINA', ERROR_MESSAGE());
+END CATCH
 END

@@ -1,3 +1,10 @@
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_usuarioIngresoCumplea]    Script Date: 13/6/2026 1:19:11 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =============================================
 -- Author:		<Pamela Pupiales>
 -- Create date: <18-04-2023>
@@ -8,9 +15,16 @@
 -- Create date: <06-03-2024>
 -- Description:	<Se agrega el campo "Fecha de antiguedad">
 -- =============================================
-CREATE PROCEDURE [Avisos].[pa_usuarioIngresoCumplea]
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 12/06/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
+
+ALTER PROCEDURE [Avisos].[pa_usuarioIngresoCumplea]
 	AS
 	BEGIN
+	BEGIN TRY
 	DECLARE @fecha date = DATEADD(DAY, 0, CONVERT(date, GETDATE()))
 	IF OBJECT_ID(N'tempdb..#InfoUser', N'U') IS NOT NULL
 		DROP TABLE #InfoUser
@@ -149,4 +163,10 @@ CREATE PROCEDURE [Avisos].[pa_usuarioIngresoCumplea]
 							@body = @html1
 						end
 			END
+	END TRY
+	BEGIN CATCH
+		--Insert en notificaciones consolidadas
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('E', 'CambioCumple', 'pa_usuarioIngresoCumplea', @asunto, NULL, NULL, @destinatarios, NULL, NULL, 'Error Proceso', 'Alta', 'PRT - HORARIOS Y MARCACIONES', ERROR_MESSAGE());
+	END CATCH
 END

@@ -1,4 +1,10 @@
-
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_permisosconsecutivos]    Script Date: 13/6/2026 1:26:15 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 /*
 
 =============================================
@@ -8,9 +14,14 @@ Create date: 28-11-2023
 Description: Alerta para identificar (3 o más) permisos - dias libres consecutivos reportados en el marcaje
 
 =============================================
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 12/06/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
 
 */
-CREATE PROCEDURE [Avisos].[pa_permisosconsecutivos]
+ALTER PROCEDURE [Avisos].[pa_permisosconsecutivos]
 AS
 BEGIN
 	
@@ -521,9 +532,7 @@ td {
 												--SET @archivo = N''+ convert(varchar(12),GETDATE(), 105) + ' - PermisosDiasLibresConsecutivos.csv';
 												---- SET @archivo = N'PermisosDiasLibres.csv';
 
-												-- INSERT notificación consolidada
-												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-												VALUES ('A', 'PrmDiaLib', 'pa_permisosconsecutivos', @asunto, @HTML, @w, @ANALISTA, @fi, @ff, 'Con novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
+												-- INSERT por-analista removido: el registro en notificacionesConsolidadas lo hace la fila general (1 sola). Aqui solo se envia el correo al analista.
 												EXEC msdb.dbo.sp_send_dbmail 
 												@profile_name='Informacion_Nomina',
 												 @recipients = @ANALISTA,
@@ -556,9 +565,12 @@ td {
 						CLOSE CURSOR4
 						DEALLOCATE CURSOR4
 
-					END TRY 
+					END TRY
 					BEGIN CATCH
 						INSERT INTO Logs.log_envio_correo(fecha, correo, correocc, html, modulo, referencia_02) VALUES (GETDATE(), 'pasante.nominadosec@kfc.com.ec;' , NULL, @html, 'Alerta - Permisos, días libres consecutivos', 'Error al envíar correo')
+						--Insert en notificaciones consolidadas
+						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+						VALUES ('E', 'PrmDiaLib', 'pa_permisosconsecutivos', @asunto, NULL, @destinatarios, NULL, NULL, 'Error Proceso', 'Alta', 'PRT - HORARIOS Y MARCACIONES', ERROR_MESSAGE());
 					END CATCH
 				ELSE
 					BEGIN 

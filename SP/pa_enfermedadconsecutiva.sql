@@ -1,4 +1,10 @@
-
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_enfermedadconsecutiva]    Script Date: 13/6/2026 1:35:02 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 /*
 
 =============================================
@@ -8,9 +14,14 @@ Create date: 24-11-2023
 Description: Alerta para identificar enfermedades - dias libres consecutivos reportados en el marcaje
 
 =============================================
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 12/06/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
 
 */
-CREATE PROCEDURE [Avisos].[pa_enfermedadconsecutiva]
+ALTER PROCEDURE [Avisos].[pa_enfermedadconsecutiva]
 AS
 BEGIN
 	
@@ -393,42 +404,59 @@ BEGIN
 				IF (SELECT COUNT(1) FROM ##tmp_final_alerta_enfermedad) > 0 
 					BEGIN TRY
 
-						-- ENVIO DE RESULTADOS POR CORREO 
-						SELECT @HTML = N'<body><h3><font color="SteelBlue">ALERTA POR AUSENTISMO</h3>'
+						-- ENVIO DE RESULTADOS POR CORREO
+						SELECT @HTML = N'<style type="text/css">
+												.box-table { font-family: "Calibri"; font-size: 10px; text-align: center; border-collapse: collapse; border-top: 1px solid black; border-bottom: 1px solid black; }
+												.box-table th { font-size: 11px; font-weight: normal; font-style: bold; background: black; border-right: 1px solid black; border-left: 1px solid black; border-bottom: 1px solid black; color: white; }
+												.box-table td { border-right: 1px solid gray; border-left: 1px solid gray; border-bottom: 1px solid gray; color: black; padding-left: 5px; padding-right: 5px; padding-top: 2px; padding-bottom: 2px; }
+										</style>'+
+							N'<body><h3><font color="SteelBlue">ALERTA POR AUSENTISMO</h3>'
 							+N'<h4><font color="SteelBlue">Fecha: '+convert(varchar(12),GETDATE(), 103)+'</h4>'
 							+N'<h5><font color="SteelBlue">Se adjuntan las alertas encontradas por enfermedad consecutiva reportada en el marcaje.</h5>'
-							+N'<br/><br />'
-							+N' </body>' 
-			
-						SET @consulta = N'SELECT '''''''' + CONVERT(varchar(26), codigo_empleado) as codigo_empleado, nombre, '''''''' + CONVERT(varchar(26), cco) AS cco, descripcion_cco AS descripcion_local,
-											tipo_contrato, comentario AS Tipo_Ausencia, ISNULL(referencia_06, '''') as Comentario, CONVERT(varchar(12),fecha_inicial, 103) AS fecha_inicio, 
-											CONVERT(varchar(12),fecha_final, 103) AS fecha_fin, verificador_Parciales
+							+N'<br/>'
+							+N'<table class="box-table" >'
+							+N' <tr>'
+							+N' <th style="text-align:center"> Cod Empleado</th>'
+							+N' <th style="text-align:center"> Nombre</th>'
+							+N' <th style="text-align:center"> CCO</th>'
+							+N' <th style="text-align:center"> Descripción Local</th>'
+  							+N' <th style="text-align:center"> Tipo Contrato</th>'
+							+N' <th style="text-align:center"> Tipo Ausencia</th>'
+							+N' <th style="text-align:center"> Comentario</th>'
+							+N' <th style="text-align:center"> Fecha Inicio</th>'
+							+N' <th style="text-align:center"> Fecha Fin</th>'
+							+N' <th style="text-align:center"> Verificado Parciales</th>'
+							+cast( (SELECT	td = CONVERT(varchar(26), codigo_empleado), '',
+											td = nombre, '',
+											td = CONVERT(varchar(26), cco), '',
+											td = descripcion_cco, '',
+											td = tipo_contrato, '',
+											td = comentario, '',
+											td = ISNULL(referencia_06, ''), '',
+											td = CONVERT(varchar(12),fecha_inicial, 103), '',
+											td = CONVERT(varchar(12),fecha_final, 103), '',
+											td = verificador_Parciales, ''
 										  FROM ##tmp_final_alerta_enfermedad
-										  ORDER BY nombre, fecha_inicial';
-
-						SET @archivo = N''+ convert(varchar(12),GETDATE(), 105) + ' - EnfermedadDiasLibresConsecutivos.csv';
-						-- SET @archivo = N'PermisosDiasLibres.csv';
+										  ORDER BY nombre, fecha_inicial
+							FOR XML PATH('tr'),TYPE
+							) as varchar(max))+
+								N'</table>'+
+							N'<br/>'
+							+N' </body>';
 
 
 						--/*		ENVIO DE CORREO GENERAL		*/
 						-- INSERT notificación consolidada
 						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
 						VALUES ('A', 'EnfDiaLib', 'pa_enfermedadconsecutiva', @asunto, @HTML, @destinatarios, NULL, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
-						EXEC msdb.dbo.sp_send_dbmail 
+						EXEC msdb.dbo.sp_send_dbmail
 						@profile_name='Informacion_Nomina',
-						@recipients= @destinatarios, 		
-						-- @recipients= 'pasante.nominadosec@kfc.com.ec', 		 
+						@recipients= @destinatarios,
+						-- @recipients= 'pasante.nominadosec@kfc.com.ec',
 						@subject = @asunto,
 						@body = @HTML,
-						@query = @consulta,
-						@attach_query_result_as_file = 1,
-						@query_attachment_filename = @archivo,
 						--@importance = 'High',
-						@query_result_separator = @tab,
-						@query_result_header = 1,
-						@query_result_no_padding = 1,
-						@exclude_query_output = 1,
-						@body_format = 'HTML' ; 
+						@body_format = 'HTML' ;
 
 						/*		 CURSOR PARA ENVIO DE CORREOS PARA CADA ANALISTA DE NOMINA SEGÚN EL CAMPO CLASE_NOMINA				*/
 						DECLARE @Correo_Clase_Nomina AS TABLE (clase_nomina VARCHAR(6), analista VARCHAR(1000))
@@ -482,9 +510,7 @@ BEGIN
 												SET @archivo = N''+ convert(varchar(12),GETDATE(), 105) + ' - EnfermedadDiasLibresConsecutivos.csv';
 												-- SET @archivo = N'PermisosDiasLibres.csv';
 
-												-- INSERT notificación consolidada
-												INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-												VALUES ('A', 'EnfDiaLib', 'pa_enfermedadconsecutiva', @asunto, @HTML, @w, 'pasante.nominadosec@kfc.com.ec', NULL, NULL, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
+												-- INSERT por-analista removido: el registro en notificacionesConsolidadas lo hace la fila general (1 sola). Aqui solo se envia el correo al analista.
 												EXEC msdb.dbo.sp_send_dbmail
 												@profile_name='Informacion_Nomina',
 												-- @recipients= 'pasante.nominadosec@kfc.com.ec',
@@ -518,9 +544,12 @@ BEGIN
 						CLOSE CURSOR4
 						DEALLOCATE CURSOR4
 
-					END TRY 
+					END TRY
 					BEGIN CATCH
 						INSERT INTO Logs.log_envio_correo(fecha, correo, correocc, html, modulo, referencia_02) VALUES (GETDATE(), 'pasante.nominadosec@kfc.com.ec' , NULL, @html, 'Alerta - Enfermedad, días libres consecutivos', 'Error al envíar correo')
+						--Insert en notificaciones consolidadas
+						INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+						VALUES ('E', 'EnfDiaLib', 'pa_enfermedadconsecutiva', @asunto, NULL, @destinatarios, NULL, NULL, 'Error Proceso', 'Baja', 'PRT - HORARIOS Y MARCACIONES', ERROR_MESSAGE());
 					END CATCH
 				ELSE
 					BEGIN 

@@ -1,3 +1,10 @@
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_fnjMarcaje]    Script Date: 12/6/2026 17:45:16 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =============================================
 -- Author:		Mateo Alvear
 -- Create date: 09-11-2022
@@ -13,12 +20,18 @@
 -- Create date: 15-12-2022
 -- Description: Se quitan trabajadores con baja
 -- =============================================
-CREATE PROCEDURE [Avisos].[pa_fnjMarcaje]
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 12/06/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
+alter PROCEDURE [Avisos].[pa_fnjMarcaje]
 AS
 BEGIN
 	SET NOCOUNT ON;
 	DECLARE @fi date, @ff date, @asunto varchar(250), @destinatarios varchar(max)
 
+	BEGIN TRY
 	SELECT @fi = FechaInicioNomina, @ff = FechaFinNomina FROM Utilidades.fn_fechasperiodonomina(GETDATE())
 
 	IF OBJECT_ID(N'tempdb..#tmp_errores', N'U') IS NOT NULL
@@ -176,7 +189,7 @@ BEGIN
 					N'<br/><br /></body>'
 		-- INSERT notificación consolidada
 		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-		VALUES ('C', 'AL_FNJ_LLAT', 'pa_fnjMarcaje', @asunto, @HTML, @destinatarios, NULL, NULL, 'Sin novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
+		VALUES ('C', 'AL_FNJ_LLAT', 'pa_fnjMarcaje', @asunto, @HTML, @destinatarios, NULL, NULL, 'Sin novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
 		EXEC msdb.dbo.Sp_send_dbmail
 		@profile_name = 'Informacion_Nomina',
 		@Subject = @asunto,
@@ -284,7 +297,7 @@ BEGIN
 				N' </body>'
 			-- INSERT notificación consolidada
 			INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-			VALUES ('A', 'AL_FNJ_LLAT', 'pa_fnjMarcaje', @asunto, @html, @w, @ANALISTA, @fi, @ff, 'Con novedad', 'Alta', 'PRT - HORARIOS Y MARCACIONES', NULL);
+			VALUES ('A', 'AL_FNJ_LLAT', 'pa_fnjMarcaje', @asunto, @html, @w, @ANALISTA, @fi, @ff, 'Con novedad', 'Baja', 'PRT - HORARIOS Y MARCACIONES', NULL);
 			EXEC msdb.dbo.Sp_send_dbmail
 			@profile_name = 'Informacion_Nomina',
 			@Subject = @asunto,
@@ -296,4 +309,13 @@ BEGIN
 	END
 	CLOSE CURSOR4
 	DEALLOCATE CURSOR4
+	END TRY
+	BEGIN CATCH
+		IF @destinatarios IS NULL
+			SELECT @destinatarios = valor, @asunto = descripcion
+			FROM Configuracion.parametros WHERE parametro = 'AL_FNJ_LLAT';
+		--Insert en notificaciones consolidadas
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('E', 'AL_FNJ_LLAT', 'pa_fnjMarcaje', @asunto, NULL, @destinatarios, NULL, NULL, 'Error Proceso', 'Baja', 'PRT - HORARIOS Y MARCACIONES', ERROR_MESSAGE());
+	END CATCH
 END

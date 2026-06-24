@@ -43,11 +43,7 @@ declare
 @fechaIngreso smalldatetime,
 @anio smallint,
 @i smallint=0,
-@b smallint=0,
-@totalRegistros INT,
-@descripcion    VARCHAR(50),
-@estado         CHAR(1),
-@html_nc        VARCHAR(MAX)
+@b smallint=0
 
 Begin --- comienzo del proceso
     BEGIN TRY
@@ -200,10 +196,6 @@ end
 
   -- select @query1   = '  SELECT tipo,compania,empresa ,trabajador,nombre , mensaje ,fecha FROM Adam.dbo.fpv_avisos_dif_ciclos_temp order by tipo '
 
-SELECT @totalRegistros = COUNT(*) FROM fpv_avisos_dif_ciclos_temp WHERE tipo = 'Error_dias_asignados_Pro'
-set @descripcion = case when @totalRegistros > 0 then 'Con novedad' else 'Sin novedad' end
-set @estado      = case when @totalRegistros > 0 then 'A'           else 'C'           end
-
   select @html = '<head><title></title><style type="text/css">.style10{width:153px;text-align:center}.style12{color:maroon;text-decoration:underline}</style></head><body><h1 style="font-family:''Calibri'';font-size:medium;font-weight:700;font-style:normal;color:#930">Buenos D&iacute;as</h1><b></b><p>Le adjuntamos un listado de los problemas que existen con los datos de la tabla detalle de vacaciones, para los trabajadores que son reingresos</p><br><div><p><a href="https://nomina.kfc.com.ec/KFCReporteador/vacaciones/AvisosVacaciones.aspx?A1=4" target="_blank">Ver Informe</a></p><br><label>Atentamente,</label><br><br><label><strong>Departamento de N&oacute;mina</strong></label></div></body>' ;
 
     if (select count(*) from fpv_avisos_dif_ciclos_temp where tipo ='Error_dias_asignados_Pro') = 0
@@ -231,46 +223,13 @@ set @estado      = case when @totalRegistros > 0 then 'A'           else 'C'    
 
     end
 
-set @html_nc =
-    '<div style="font-family:Calibri;">' +
-    '<p>Buenos d&iacute;as estimado(a) analista, se adjunta listado de avisos de vacaciones.</p>' +
-    '<table style="border-collapse:collapse;width:95%;" border="1">' +
-    '<tr style="background-color:black;color:white;">' +
-    '<td style="text-align:center;padding:4px;width:81%;"><strong>Descripci&oacute;n</strong></td>' +
-    '<td style="text-align:center;padding:4px;width:11%;"><strong>Registros</strong></td>' +
-    '<td style="text-align:center;padding:4px;width:8%;"><strong>Reporte</strong></td></tr>' +
-    '<tr><td style="padding:4px;">&nbsp;Punto G: Diferencias entre ciclos en programacion de vacaciones (reingresos)</td>' +
-    '<td style="text-align:center;padding:4px;">' + CAST(@totalRegistros as varchar(10)) + '</td>' +
-    '<td style="text-align:center;padding:4px;"><a href="https://nomina.kfc.com.ec/KFCReporteador/vacaciones/AvisosVacaciones.aspx?A1=4" target="_blank">Ver Informe</a></td>' +
-    '</tr></table></div>'
-
------------- Insert notificacionesConsolidadas
-INSERT INTO DB_NOMKFC.Avisos.notificacionesConsolidadas
-    (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc,
-     periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-VALUES
-    (@estado, 'Mail_AvVac', 'sp_fpv_aviso_vacaciones_dif_ciclos_en_ProgramacionVac',
-     'Punto G: Diferencias entre los ciclos en la programacion, para los reingresos en otras empresas (causa baja 08)',
-     @html_nc, @totalRegistros, @correo, @correoCC,
-     NULL, NULL, @descripcion, 'Baja', 'VACACIONES', NULL)
-
-
-
     END TRY
     BEGIN CATCH
         IF CURSOR_STATUS('global', 'C_BuscarTrabReDet') >= 0
             CLOSE C_BuscarTrabReDet
         IF CURSOR_STATUS('global', 'C_BuscarTrabReDet') > -2
             DEALLOCATE C_BuscarTrabReDet
-        --Insert en notificaciones consolidadas
-        INSERT INTO DB_NOMKFC.Avisos.notificacionesConsolidadas
-            (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, destinatariosCc,
-             periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
-        VALUES
-            ('E', 'Mail_AvVac', 'sp_fpv_aviso_vacaciones_dif_ciclos_en_ProgramacionVac',
-             'Punto G: Diferencias entre los ciclos en la programacion, para los reingresos en otras empresas (causa baja 08)',
-             NULL, NULL, ISNULL(@correo, ''), ISNULL(@correoCC, NULL),
-             NULL, NULL, 'Error Proceso', 'Baja', 'VACACIONES', ERROR_MESSAGE())
+        ;THROW;
     END CATCH
 End --- fin del proceso
 

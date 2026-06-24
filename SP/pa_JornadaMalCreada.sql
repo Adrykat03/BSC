@@ -1,4 +1,10 @@
-
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_JornadaMalCreada]    Script Date: 13/6/2026 1:23:14 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- ======================================================
 -- Create:		Andrés Gómez							
 -- Create date:	16-06-2022								
@@ -12,7 +18,12 @@
 --				solo los horarios que se estan usando 
 --				actualmente y son erróneos
 -- ======================================================
-CREATE   PROCEDURE [Avisos].[pa_JornadaMalCreada]
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 12/06/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
+ALTER   PROCEDURE [Avisos].[pa_JornadaMalCreada]
 
 AS
 declare
@@ -26,6 +37,7 @@ declare
 @body varchar(MAX),
 @CONT INT = 0
 BEGIN 
+	BEGIN TRY
 		SET LANGUAGE 'Spanish';
 		SET DATEFORMAT ymd;
 		DECLARE @Aux_fecha_hora DATETIME = GETDATE();
@@ -281,4 +293,10 @@ SELECT @CONT = COUNT(1) FROM @Jorn_error_usadas
 			--	drop table #tmp_jornada_erronea
 
 
+	END TRY
+	BEGIN CATCH
+		--Insert en notificaciones consolidadas
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, cantidadRegistros, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('E', 'AL_Jornadas', 'pa_JornadaMalCreada', @asunto, NULL, NULL, @Dirigido, NULL, NULL, 'Error Proceso', 'Media', 'PRT - HORARIOS Y MARCACIONES', ERROR_MESSAGE());
+	END CATCH
 	END

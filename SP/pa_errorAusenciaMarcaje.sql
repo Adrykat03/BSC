@@ -1,3 +1,10 @@
+USE [DB_NOMKFC]
+GO
+/****** Object:  StoredProcedure [Avisos].[pa_errorAusenciaMarcaje]    Script Date: 13/6/2026 1:05:45 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =============================================
 -- Author:		Mateo Alvear
 -- Create date: 18-11-2022
@@ -8,11 +15,19 @@
 -- Edit date:	28-11-2022
 -- Description:	A petición de Dennis se revisa unicamente del corte actual en adelante ya que las marcaciones anteriores no pueden cambiarse
 -- =============================================
-CREATE PROCEDURE [Avisos].[pa_errorAusenciaMarcaje]
+-- =============================================
+-- Author:		Katerin Carrillo
+-- Create date: 12/06/2026
+-- Description:	Se inserta los datos en la tabla notificacionesConsolidadas
+-- =============================================
+
+ALTER PROCEDURE [Avisos].[pa_errorAusenciaMarcaje]
 AS
 BEGIN
 	DECLARE @fi date
+	DECLARE @destinatarios varchar(500), @asunto varchar(300)
 
+	BEGIN TRY
 	SELECT @fi = FechaInicioNomina FROM Utilidades.fn_fechasperiodonomina(GETDATE())
 
 	IF OBJECT_ID(N'tempdb..#tmp_errores', N'U') IS NOT NULL
@@ -84,8 +99,6 @@ BEGIN
 	ORDER BY m.codigo_emp_equipo
 
 	DELETE FROM #tmp_errores WHERE Desde < @fi OR Hasta < @fi
-
-	DECLARE @destinatarios varchar(500), @asunto varchar(300)
 
 	SELECT @destinatarios = valor, @asunto = descripcion FROM Configuracion.parametros WHERE parametro = 'AL_Aus_Marcaje'
 
@@ -222,4 +235,13 @@ BEGIN
 		DROP TABLE #tmp_marcaciones
 	IF OBJECT_ID(N'tempdb..#tmp_cortes', N'U') IS NOT NULL
 		DROP TABLE #tmp_cortes
+	END TRY
+	BEGIN CATCH
+		IF @destinatarios IS NULL
+			SELECT @destinatarios = valor, @asunto = descripcion
+			FROM Configuracion.parametros WHERE parametro = 'AL_Aus_Marcaje';
+		--Insert en notificaciones consolidadas
+		INSERT INTO Avisos.notificacionesConsolidadas (estado, origen, spOrigen, asunto, descripcionHtml, destinatarios, periodoInicio, periodoFin, descripcion, prioridad, categoria, mensajeError)
+		VALUES ('E', 'AL_Aus_Marcaje', 'pa_errorAusenciaMarcaje', @asunto, NULL, @destinatarios, NULL, NULL, 'Error Proceso', 'Baja', 'PRT - HORARIOS Y MARCACIONES', ERROR_MESSAGE());
+	END CATCH
 END
