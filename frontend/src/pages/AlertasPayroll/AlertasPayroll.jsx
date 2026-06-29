@@ -6,11 +6,13 @@ import {
   ArrowUp,
   ArrowUpDown,
   Calendar,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   Clock,
+  Layers,
   Download,
   Eye,
   Filter,
@@ -65,6 +67,9 @@ const ESTADO_LABELS = {
   C: 'Cerrada',
   E: 'Error',
 };
+
+// Estados que se consideran "finalizados" (van a la sub-pestaña Finalizadas).
+const ESTADOS_FINALIZADOS = ['R', 'C'];
 
 const PRIORIDAD_LABELS = {
   critica: 'Crítica',
@@ -348,11 +353,16 @@ const DonutChart = ({ segments, centerLabel = 'Total', showPercent = false }) =>
 };
 
 /* ========================================
-   Horizontal Bar Chart
+   Horizontal Bar Chart (apilado por descripción)
+   --------------------------------------------------------------
+   Cada fila es una categoría; la barra se divide en segmentos
+   coloreados según el tipo de descripción (con novedad, sin
+   novedad, reportería, error proceso). El ancho total de la barra
+   es proporcional al total de la categoría con más alertas.
    ======================================== */
 const HorizontalBar = ({ items, maxItems = 8 }) => {
-  const sorted = [...items].sort((a, b) => b.value - a.value).slice(0, maxItems);
-  const max = sorted[0]?.value || 1;
+  const sorted = [...items].sort((a, b) => b.total - a.total).slice(0, maxItems);
+  const max = sorted[0]?.total || 1;
 
   return (
     <div className="payroll-hbar">
@@ -361,14 +371,24 @@ const HorizontalBar = ({ items, maxItems = 8 }) => {
           <span className="payroll-hbar__label" title={item.label}>{item.label}</span>
           <div className="payroll-hbar__bar-col">
             <div
-              className="payroll-hbar__bar"
-              style={{
-                width: `${(item.value / max) * 100}%`,
-                background: item.color,
-              }}
-            />
+              className="payroll-hbar__stack"
+              style={{ width: `${(item.total / max) * 100}%` }}
+            >
+              {item.segments.map((seg) => (
+                <div
+                  key={seg.key}
+                  className="payroll-hbar__seg"
+                  style={{
+                    width: `${(seg.value / item.total) * 100}%`,
+                    background: seg.color,
+                  }}
+                  title={`${seg.label}: ${seg.value}`}
+                  data-tooltip={`${seg.label}: ${seg.value}`}
+                />
+              ))}
+            </div>
           </div>
-          <span className="payroll-hbar__value">{item.value}</span>
+          <span className="payroll-hbar__value">{item.total}</span>
         </div>
       ))}
     </div>
@@ -1248,7 +1268,6 @@ const baseColumns = [
     filterValue: (row) => parseDestinatarios(row.destinatarios).join(', '),
     render: (row) => parseDestinatarios(row.destinatarios).join(', '),
   },
-  { key: 'origen', header: 'Origen', type: 'text' },
   {
     key: 'fechaModificacion',
     header: 'Fecha Resolución',
@@ -1269,6 +1288,7 @@ const baseColumns = [
     filterValue: (row) => row.notasResolucion || '',
     render: (row) => truncate(row.notasResolucion, 60),
   },
+  { key: 'origen', header: 'Origen', type: 'text' },
 ];
 
 /* ========================================
@@ -1810,6 +1830,13 @@ const AlertasPayroll = () => {
   const [openFilter, setOpenFilter] = useState(null);
 
   const [activeTab, setActiveTab] = useState(() => (isPrivilegedUser(user) ? 'dashboard' : 'listado'));
+  // Sub-pestaña de la tabla del Listado: 'pendientes' (A/P/E) | 'finalizadas' (R/C)
+  const [tableTab, setTableTab] = useState('pendientes');
+  // Modo de la tabla del Listado: 'lista' (plana paginada) | 'agrupado' (por categoría).
+  // Por defecto arranca agrupado; el usuario puede cambiar a lista.
+  const [viewMode, setViewMode] = useState('agrupado');
+  // Categorías expandidas en modo agrupado (arrancan todas contraídas).
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set());
   const [catDescFilter, setCatDescFilter] = useState(() => new Set(DESC_KEYS));
 
   const [filterDateFrom, setFilterDateFrom] = useState(null);
@@ -2119,6 +2146,13 @@ const AlertasPayroll = () => {
   const filteredSorted = useMemo(() => {
     let rows = dateFilteredData;
 
+    // Sub-pestaña de la tabla: 'finalizadas' = Resueltas (R) + Cerradas (C);
+    // 'pendientes' = el resto (Activa/En Proceso/Error).
+    rows = rows.filter((row) => {
+      const finalizada = ESTADOS_FINALIZADOS.includes(row.estado);
+      return tableTab === 'finalizadas' ? finalizada : !finalizada;
+    });
+
     const g = globalFilter.trim().toLowerCase();
     if (g) {
       rows = rows.filter((row) =>
@@ -2160,7 +2194,7 @@ const AlertasPayroll = () => {
     });
 
     return rows;
-  }, [dateFilteredData, globalFilter, columnFilters, sort, columns]);
+  }, [dateFilteredData, globalFilter, columnFilters, sort, columns, tableTab]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -2170,9 +2204,37 @@ const AlertasPayroll = () => {
     return filteredSorted.slice(start, start + pageSize);
   }, [filteredSorted, safePage, pageSize]);
 
+  // Agrupación por categoría (modo 'agrupado'). Respeta TODOS los filtros previos
+  // (parte de filteredSorted) y conserva el orden de fila dentro de cada grupo.
+  // Los grupos se ordenan por cantidad de alertas (desc).
+  const groupedData = useMemo(() => {
+    const map = new Map();
+    filteredSorted.forEach((row) => {
+      const cat = row.categoria || 'Sin categoría';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat).push(row);
+    });
+    return Array.from(map.entries())
+      .map(([categoria, rows]) => ({ categoria, rows }))
+      .sort((a, b) => b.rows.length - a.rows.length);
+  }, [filteredSorted]);
+
+  const toggleGroup = (categoria) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoria)) next.delete(categoria);
+      else next.add(categoria);
+      return next;
+    });
+  };
+
+  const expandAllGroups = () => setExpandedGroups(new Set(groupedData.map((g) => g.categoria)));
+  const collapseAllGroups = () => setExpandedGroups(new Set());
+  const allGroupsExpanded = groupedData.length > 0 && expandedGroups.size === groupedData.length;
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [globalFilter, columnFilters, filterDateFrom, filterDateTo, pageSize]);
+  }, [globalFilter, columnFilters, filterDateFrom, filterDateTo, pageSize, tableTab]);
 
   const handleDownloadTabla = () => {
     const stamp = new Date().toISOString().slice(0, 10);
@@ -2189,18 +2251,28 @@ const AlertasPayroll = () => {
   }), [dateFilteredData]);
 
   const categoriaItems = useMemo(() => {
+    // Por cada categoría se acumula el conteo por tipo de descripción
+    // (con novedad / sin novedad / reportería / error proceso) para pintar
+    // barras apiladas con el color de cada descripción.
     const map = new Map();
     dateFilteredData.forEach((n) => {
       const descKey = classifyDescripcion(n.descripcion);
       if (!descKey || !catDescFilter.has(descKey)) return;
       const cat = n.categoria || 'Sin categoría';
-      map.set(cat, (map.get(cat) || 0) + 1);
+      if (!map.has(cat)) {
+        map.set(cat, { con_novedad: 0, sin_novedad: 0, reporteria: 0, error_proceso: 0 });
+      }
+      map.get(cat)[descKey] += 1;
     });
-    return Array.from(map, ([label, value], i) => ({
-      label,
-      value,
-      color: ORIGIN_COLORS[i % ORIGIN_COLORS.length],
-    })).sort((a, b) => b.value - a.value);
+    return Array.from(map, ([label, counts]) => {
+      const segments = DESC_KEYS
+        .filter((k) => catDescFilter.has(k) && counts[k] > 0)
+        .map((k) => ({ key: k, label: DESC_LABELS[k], value: counts[k], color: DESC_COLORS[k] }));
+      const total = segments.reduce((s, seg) => s + seg.value, 0);
+      return { label, total, segments };
+    })
+      .filter((item) => item.total > 0)
+      .sort((a, b) => b.total - a.total);
   }, [dateFilteredData, catDescFilter]);
 
   const toggleCatDesc = (key) => {
@@ -2389,9 +2461,41 @@ const AlertasPayroll = () => {
           {/* Alertas Table */}
           <div className="card">
             <div className="card__header">
-              <h2 className="card__title">Alertas</h2>
+              <h2 className="card__title">
+                Alertas
+                <span className="payroll-title-count" aria-live="polite">
+                  {filteredSorted.length} de {data.length}
+                </span>
+              </h2>
             </div>
             <div className="card__body">
+              <div className="payroll-subtabs" role="tablist" aria-label="Estado de las alertas">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tableTab === 'pendientes'}
+                  className={`payroll-subtab ${tableTab === 'pendientes' ? 'is-active' : ''}`}
+                  onClick={() => setTableTab('pendientes')}
+                >
+                  Pendientes
+                  <span className="payroll-subtab__count">
+                    {stats.activas + stats.enProceso + stats.error}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tableTab === 'finalizadas'}
+                  className={`payroll-subtab ${tableTab === 'finalizadas' ? 'is-active' : ''}`}
+                  onClick={() => setTableTab('finalizadas')}
+                >
+                  Finalizadas
+                  <span className="payroll-subtab__count">
+                    {stats.resueltas + stats.cerradas}
+                  </span>
+                </button>
+              </div>
+
               <div className="payroll-toolbar">
                 <div className="payroll-toolbar__search">
                   <Search size={16} aria-hidden="true" className="payroll-toolbar__search-icon" />
@@ -2499,9 +2603,37 @@ const AlertasPayroll = () => {
                   Limpiar filtros
                 </button>
 
-                <span className="payroll-toolbar__count" aria-live="polite">
-                  {filteredSorted.length} de {data.length}
-                </span>
+                <div className="payroll-viewmode" role="group" aria-label="Modo de vista">
+                  <button
+                    type="button"
+                    className={`payroll-viewmode__btn${viewMode === 'lista' ? ' is-active' : ''}`}
+                    onClick={() => setViewMode('lista')}
+                    aria-pressed={viewMode === 'lista'}
+                    data-tooltip="Vista de lista"
+                  >
+                    Lista
+                  </button>
+                  <button
+                    type="button"
+                    className={`payroll-viewmode__btn${viewMode === 'agrupado' ? ' is-active' : ''}`}
+                    onClick={() => setViewMode('agrupado')}
+                    aria-pressed={viewMode === 'agrupado'}
+                    data-tooltip="Agrupar por categoría"
+                  >
+                    <Layers size={14} aria-hidden="true" /> Agrupado
+                  </button>
+                </div>
+
+                {viewMode === 'agrupado' && (
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--sm"
+                    onClick={allGroupsExpanded ? collapseAllGroups : expandAllGroups}
+                    disabled={groupedData.length === 0}
+                  >
+                    {allGroupsExpanded ? 'Contraer todo' : 'Expandir todo'}
+                  </button>
+                )}
               </div>
 
               <div className="table-container payroll-sticky-table">
@@ -2571,8 +2703,8 @@ const AlertasPayroll = () => {
                       })}
                     </tr>
                   </thead>
-                  <tbody>
-                    {filteredSorted.length === 0 ? (
+                  {filteredSorted.length === 0 ? (
+                    <tbody>
                       <tr>
                         <td colSpan={columns.length} className="text-center p-6 text-secondary">
                           {data.length === 0
@@ -2580,8 +2712,48 @@ const AlertasPayroll = () => {
                             : 'Sin coincidencias con los filtros actuales'}
                         </td>
                       </tr>
-                    ) : (
-                      paginatedRows.map((row) => (
+                    </tbody>
+                  ) : viewMode === 'agrupado' ? (
+                    groupedData.map((group) => {
+                      const isExpanded = expandedGroups.has(group.categoria);
+                      return (
+                        <tbody key={group.categoria} className="payroll-group">
+                          <tr className="payroll-group__header">
+                            <td colSpan={columns.length}>
+                              <button
+                                type="button"
+                                className="payroll-group__toggle"
+                                onClick={() => toggleGroup(group.categoria)}
+                                aria-expanded={isExpanded}
+                              >
+                                {isExpanded
+                                  ? <ChevronDown size={16} aria-hidden="true" />
+                                  : <ChevronRight size={16} aria-hidden="true" />}
+                                <span className="payroll-group__name">{group.categoria}</span>
+                                <span className="payroll-group__count">{group.rows.length}</span>
+                              </button>
+                            </td>
+                          </tr>
+                          {isExpanded && group.rows.map((row) => (
+                            <tr
+                              key={row.idNotificacion}
+                              className={isCriticalRow(row) ? 'payroll-row--critical' : ''}
+                            >
+                              {columns.map((col) => (
+                                <td key={col.key}>
+                                  {col.render
+                                    ? col.render(row)
+                                    : String(row[col.key] ?? '')}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      );
+                    })
+                  ) : (
+                    <tbody>
+                      {paginatedRows.map((row) => (
                         <tr
                           key={row.idNotificacion}
                           className={isCriticalRow(row) ? 'payroll-row--critical' : ''}
@@ -2594,12 +2766,13 @@ const AlertasPayroll = () => {
                             </td>
                           ))}
                         </tr>
-                      ))
-                    )}
-                  </tbody>
+                      ))}
+                    </tbody>
+                  )}
                 </table>
               </div>
 
+              {viewMode === 'lista' && (
               <div className="payroll-pagination">
                 <div className="payroll-pagination__size">
                   <label htmlFor="payroll-page-size">Filas por página:</label>
@@ -2661,6 +2834,7 @@ const AlertasPayroll = () => {
                   </button>
                 </div>
               </div>
+              )}
             </div>
           </div>
         </>

@@ -591,6 +591,21 @@ const TaskModal = ({
   };
 
   const handleRemoveExistingFile = async (fileId, fileType) => {
+    // No permitir quedarse sin evidencia: bloquear la eliminación del último
+    // archivo de evidencia si no hay otro (nuevo o ya guardado) que lo reemplace.
+    if (fileType === 'evidence') {
+      const remainingExisting = existingEvidenceFiles.filter((f) => f.id !== fileId).length;
+      if (remainingExisting === 0 && evidenceFiles.length === 0) {
+        Swal.fire({
+          title: 'Evidencia requerida',
+          text: 'No puede eliminar el único archivo de evidencia. Si desea reemplazarlo, adjunte primero el nuevo archivo.',
+          icon: 'warning',
+          confirmButtonColor: '#E31837',
+        });
+        return;
+      }
+    }
+
     const confirm = await Swal.fire({
       title: 'Eliminar archivo',
       text: '¿Esta seguro de eliminar este archivo?',
@@ -689,6 +704,18 @@ const TaskModal = ({
 
     /* SweetAlert confirmation */
     if (isColaborador) {
+      // No permitir guardar sin evidencia adjunta (nueva o ya guardada).
+      const hasEvidence = evidenceFiles.length > 0 || existingEvidenceFiles.length > 0;
+      if (!hasEvidence) {
+        Swal.fire({
+          title: 'Evidencia requerida',
+          text: 'Debe adjuntar al menos un archivo de evidencia para guardar.',
+          icon: 'warning',
+          confirmButtonColor: '#E31837',
+        });
+        return;
+      }
+
       const confirm = await Swal.fire({
         title: 'Guardar evidencia',
         text: '¿Desea guardar la evidencia para esta tarea?',
@@ -1234,6 +1261,20 @@ const TaskModal = ({
                       padding: '6px 10px',
                     }}
                     onClick={async () => {
+                      // El colaborador no puede enviar a validación sin evidencia adjunta
+                      // (cuenta tanto la evidencia recién añadida como la ya guardada).
+                      if (isColaborador && btn.status === 'Completa - Por Validar') {
+                        const hasEvidence = evidenceFiles.length > 0 || existingEvidenceFiles.length > 0;
+                        if (!hasEvidence) {
+                          Swal.fire({
+                            title: 'Evidencia requerida',
+                            text: 'Debe adjuntar al menos un archivo de evidencia antes de enviar la tarea a validación.',
+                            icon: 'warning',
+                            confirmButtonColor: '#E31837',
+                          });
+                          return;
+                        }
+                      }
                       if (isColaborador && onUploadEvidence) {
                         try {
                           await onUploadEvidence(task.id, evidenceFiles, formData.evidenceText, formData.observations);
