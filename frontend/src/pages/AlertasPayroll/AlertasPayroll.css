@@ -737,20 +737,183 @@
   border-bottom: 0;
 }
 
-/* Filter row sticky justo debajo del header row */
-.payroll-sticky-table .table thead tr.payroll-filters-row th {
-  position: sticky;
-  top: var(--payroll-header-h);
-  z-index: 2;
-  background-color: var(--color-bg-main);
-  box-shadow: inset 0 -1px 0 var(--color-border-light);
-  border-bottom: 0;
-  height: var(--payroll-filter-h);
-  padding: 4px var(--spacing-2);
+/* Contenedor interno del <th>: etiqueta/sort + botón de embudo */
+.payroll-th__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  position: relative;
+}
+
+.payroll-th__label {
+  white-space: nowrap;
 }
 
 .payroll-th--sortable:hover {
   background-color: var(--color-bg-paper);
+}
+
+/* Botón de embudo (filtro estilo Excel) */
+.payroll-th__filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  opacity: 0.55;
+  cursor: pointer;
+  transition: background-color 0.15s, opacity 0.15s, color 0.15s;
+}
+
+.payroll-th__filter-btn:hover {
+  background-color: var(--color-bg-paper);
+  opacity: 1;
+}
+
+.payroll-th__filter-btn.is-active {
+  color: var(--color-primary, #2563EB);
+  opacity: 1;
+  background-color: rgba(37, 99, 235, 0.12);
+}
+
+.payroll-th__filter-btn:focus-visible {
+  outline: 2px solid var(--color-primary, #2563EB);
+  outline-offset: 1px;
+}
+
+/* ==========================================================================
+   Menú de filtro por columna (estilo Excel)
+   ========================================================================== */
+.payroll-filter-menu {
+  position: fixed;
+  z-index: 1200;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-paper, #fff);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  font-weight: 400;
+  color: var(--color-text-primary);
+  overflow: hidden;
+}
+
+.payroll-filter-menu__sort {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 4px;
+}
+
+.payroll-filter-menu__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.payroll-filter-menu__sort-btn:hover {
+  background-color: var(--color-bg-main);
+}
+
+.payroll-filter-menu__sort-btn.is-active {
+  color: var(--color-primary, #2563EB);
+  font-weight: 600;
+}
+
+.payroll-filter-menu__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text-secondary);
+}
+
+.payroll-filter-menu__search input {
+  flex: 1;
+  height: 28px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-main);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+}
+
+.payroll-filter-menu__search input:focus {
+  outline: none;
+  border-color: var(--color-primary, #2563EB);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.payroll-filter-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  user-select: none;
+}
+
+.payroll-filter-menu__item:hover {
+  background-color: var(--color-bg-main);
+}
+
+.payroll-filter-menu__item input[type='checkbox'] {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.payroll-filter-menu__item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payroll-filter-menu__item--all {
+  border-bottom: 1px solid var(--color-border-light);
+  font-weight: 600;
+}
+
+.payroll-filter-menu__list {
+  flex: 1 1 auto;
+  min-height: 48px;
+  overflow-y: auto;
+}
+
+.payroll-filter-menu__empty {
+  padding: 12px 10px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.payroll-filter-menu__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-bg-main);
 }
 
 .payroll-th__sort-btn {
@@ -774,23 +937,6 @@
 
 .payroll-sort-icon--neutral {
   opacity: 0.4;
-}
-
-.payroll-filter-input {
-  width: 100%;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-paper);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-primary);
-}
-
-.payroll-filter-input:focus {
-  outline: none;
-  border-color: var(--color-primary, #2563EB);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .payroll-table tbody tr:last-child td {

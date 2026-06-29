@@ -1,4 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   ArrowDown,
@@ -12,6 +13,7 @@ import {
   Clock,
   Download,
   Eye,
+  Filter,
   Loader2,
   RefreshCw,
   Search,
@@ -41,6 +43,20 @@ import Modal from '../../components/common/Modal';
 import './AlertasPayroll.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, ChartTooltip, ChartLegend, ChartTitle);
+
+// Roles que pueden ver la pestaña Dashboard. Comparación case-insensitive + trim.
+const PRIVILEGED_ROLES = ['Administrador', 'Gerente', 'Soporte Alertas'];
+
+function isPrivilegedUser(user) {
+  if (!user) return false;
+  const allowed = new Set(PRIVILEGED_ROLES.map((r) => r.trim().toLowerCase()));
+  const candidates = [];
+  if (user.role) candidates.push(user.role);
+  if (Array.isArray(user.roles)) candidates.push(...user.roles);
+  return candidates.some(
+    (r) => typeof r === 'string' && allowed.has(r.trim().toLowerCase())
+  );
+}
 
 const ESTADO_LABELS = {
   A: 'Activa',
@@ -366,6 +382,191 @@ const SortIndicator = ({ dir }) => {
   if (dir === 'asc') return <ArrowUp size={14} aria-hidden="true" />;
   if (dir === 'desc') return <ArrowDown size={14} aria-hidden="true" />;
   return <ArrowUpDown size={14} aria-hidden="true" className="payroll-sort-icon--neutral" />;
+};
+
+/* ========================================
+   Menú de filtro por columna (estilo Excel)
+   --------------------------------------------------------------
+   Embudo en el encabezado → panel con orden A→Z / Z→A, buscador
+   y lista de valores únicos con casillas (incluye "Seleccionar
+   todo"). Aplica al pulsar "Aceptar"; "Limpiar" quita el filtro
+   de esa columna.
+   ======================================== */
+const labelForValue = (v) => (v === '' || v == null ? '(Vacías)' : String(v));
+
+const FILTER_MENU_WIDTH = 248;
+
+const ColumnFilterMenu = ({ col, anchorRect, options, selected, sortDir, onApply, onSort, onClose }) => {
+  const ref = useRef(null);
+  const [search, setSearch] = useState('');
+  const [checked, setChecked] = useState(() => new Set(selected ?? options));
+
+  useEffect(() => {
+    const handleOutside = (e) => {
+      // Ignorar clics en el propio botón de embudo (él gestiona el toggle)
+      if (e.target.closest && e.target.closest('.payroll-th__filter-btn')) return;
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    // Cerrar al hacer scroll FUERA del menú (p. ej. la tabla), ya que el menú
+    // usa coordenadas fijas calculadas al abrir. El scroll interno de la lista
+    // de valores no debe cerrarlo.
+    const handleScroll = (e) => {
+      if (ref.current && ref.current.contains(e.target)) return;
+      onClose();
+    };
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('keydown', handleEsc);
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', onClose);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('keydown', handleEsc);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', onClose);
+    };
+  }, [onClose]);
+
+  // ── Posicionamiento (portal con position:fixed) ──────────────────────────
+  // Se calcula el espacio disponible debajo/encima del botón. Si abajo no
+  // cabe, el menú se abre hacia arriba. Además se limita la altura (maxHeight)
+  // para que la lista tenga scroll y el footer (Limpiar/Aceptar) SIEMPRE se vea.
+  const margin = 8;
+  let left = anchorRect ? anchorRect.right - FILTER_MENU_WIDTH : margin;
+  left = Math.max(margin, Math.min(left, window.innerWidth - margin - FILTER_MENU_WIDTH));
+
+  const spaceBelow = anchorRect ? window.innerHeight - anchorRect.bottom - margin : window.innerHeight;
+  const spaceAbove = anchorRect ? anchorRect.top - margin : window.innerHeight;
+  const openUp = !!anchorRect && spaceBelow < 280 && spaceAbove > spaceBelow;
+  const maxHeight = Math.max(200, openUp ? spaceAbove : spaceBelow);
+  const positionStyle = openUp
+    ? { bottom: window.innerHeight - anchorRect.top + 6, left }
+    : { top: anchorRect ? anchorRect.bottom + 6 : margin, left };
+
+  const term = search.trim().toLowerCase();
+  const visibleOptions = term
+    ? options.filter((o) => labelForValue(o).toLowerCase().includes(term))
+    : options;
+  const allVisibleChecked = visibleOptions.length > 0
+    && visibleOptions.every((o) => checked.has(o));
+  const allSelected = options.length > 0 && options.every((o) => checked.has(o));
+
+  const toggle = (val) => {
+    setChecked((prev) => {
+      // Si estaban TODOS seleccionados (estado por defecto) y el usuario empieza
+      // a elegir entre resultados de búsqueda, arrancamos selección limpia para
+      // poder filtrar SOLO por lo elegido (si no, "todo seleccionado" = sin filtro).
+      if (term && options.length > 0 && options.every((o) => prev.has(o))) {
+        return new Set([val]);
+      }
+      const next = new Set(prev);
+      if (next.has(val)) next.delete(val); else next.add(val);
+      return next;
+    });
+  };
+
+  const toggleAllVisible = () => {
+    setChecked((prev) => {
+      // Con búsqueda activa, "(Seleccionar todo)" significa "solo los resultados":
+      // aísla la selección a lo visible (o la limpia si ya está exactamente así).
+      if (term) {
+        const exactlyVisible = prev.size === visibleOptions.length
+          && visibleOptions.every((o) => prev.has(o));
+        return exactlyVisible ? new Set() : new Set(visibleOptions);
+      }
+      const next = new Set(prev);
+      if (allVisibleChecked) visibleOptions.forEach((o) => next.delete(o));
+      else visibleOptions.forEach((o) => next.add(o));
+      return next;
+    });
+  };
+
+  const apply = () => {
+    onApply(col.key, allSelected ? null : Array.from(checked));
+    onClose();
+  };
+
+  const clear = () => {
+    onApply(col.key, null);
+    onClose();
+  };
+
+  return createPortal(
+    <div
+      className="payroll-filter-menu"
+      ref={ref}
+      role="dialog"
+      aria-label={`Filtrar ${col.header}`}
+      style={{ ...positionStyle, width: FILTER_MENU_WIDTH, maxHeight }}
+    >
+      <div className="payroll-filter-menu__sort">
+        <button
+          type="button"
+          className={`payroll-filter-menu__sort-btn${sortDir === 'asc' ? ' is-active' : ''}`}
+          onClick={() => onSort(col.key, 'asc')}
+        >
+          <ArrowUp size={14} aria-hidden="true" /> Ordenar A → Z
+        </button>
+        <button
+          type="button"
+          className={`payroll-filter-menu__sort-btn${sortDir === 'desc' ? ' is-active' : ''}`}
+          onClick={() => onSort(col.key, 'desc')}
+        >
+          <ArrowDown size={14} aria-hidden="true" /> Ordenar Z → A
+        </button>
+      </div>
+
+      <div className="payroll-filter-menu__search">
+        <Search size={14} aria-hidden="true" />
+        <input
+          type="text"
+          autoFocus
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar..."
+          aria-label="Buscar valores"
+        />
+      </div>
+
+      <label className="payroll-filter-menu__item payroll-filter-menu__item--all">
+        <input
+          type="checkbox"
+          checked={allVisibleChecked}
+          onChange={toggleAllVisible}
+        />
+        <span>(Seleccionar todo)</span>
+      </label>
+
+      <div className="payroll-filter-menu__list">
+        {visibleOptions.length === 0 ? (
+          <div className="payroll-filter-menu__empty">Sin valores</div>
+        ) : (
+          visibleOptions.map((opt) => (
+            <label key={opt} className="payroll-filter-menu__item">
+              <input
+                type="checkbox"
+                checked={checked.has(opt)}
+                onChange={() => toggle(opt)}
+              />
+              <span title={labelForValue(opt)}>{labelForValue(opt)}</span>
+            </label>
+          ))
+        )}
+      </div>
+
+      <div className="payroll-filter-menu__actions">
+        <button type="button" className="btn btn--sm btn--ghost" onClick={clear}>
+          Limpiar
+        </button>
+        <button type="button" className="btn btn--sm btn--primary" onClick={apply}>
+          Aceptar
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
 };
 
 /* ========================================
@@ -1577,6 +1778,7 @@ const AlertasDashboard = ({ data }) => {
    ======================================== */
 const AlertasPayroll = () => {
   const { user } = useContext(SessionContext);
+  const isPrivileged = useMemo(() => isPrivilegedUser(user), [user]);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1602,9 +1804,12 @@ const AlertasPayroll = () => {
 
   const [sort, setSort] = useState({ key: null, dir: null });
   const [globalFilter, setGlobalFilter] = useState('');
+  // columnFilters: { [key]: string[] } — valores seleccionados; sin entrada = sin filtro
   const [columnFilters, setColumnFilters] = useState({});
+  // openFilter: null o { key, rect } — columna con menú abierto y posición del botón
+  const [openFilter, setOpenFilter] = useState(null);
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => (isPrivilegedUser(user) ? 'dashboard' : 'listado'));
   const [catDescFilter, setCatDescFilter] = useState(() => new Set(DESC_KEYS));
 
   const [filterDateFrom, setFilterDateFrom] = useState(null);
@@ -1625,6 +1830,14 @@ const AlertasPayroll = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Si el usuario no es privilegiado, nunca debe quedar en la pestaña Dashboard
+  // (p. ej. tras cambiar de rol con switchRole).
+  useEffect(() => {
+    if (!isPrivileged && activeTab === 'dashboard') {
+      setActiveTab('listado');
+    }
+  }, [isPrivileged, activeTab]);
 
   const usuarioSesion = user?.email || user?.name || user?.id || '';
   // usuarioRol ya no se envia al backend (lo extrae del JWT) — se mantenia solo para
@@ -1840,8 +2053,53 @@ const AlertasPayroll = () => {
     setFilterDateTo(null);
   };
 
+  // Aplica/quita el filtro de una columna (vals null o vacío = sin filtro)
+  const applyColumnFilter = (key, vals) => {
+    setColumnFilters((f) => {
+      const next = { ...f };
+      if (!vals || !vals.length) delete next[key];
+      else next[key] = vals;
+      return next;
+    });
+  };
+
+  const applyColumnSort = (key, dir) => setSort({ key, dir });
+
+  // Valores únicos disponibles para una columna, respetando los demás
+  // filtros activos (búsqueda global, fechas y otras columnas) — como Excel.
+  const getColumnOptions = (colKey) => {
+    const col = columns.find((c) => c.key === colKey);
+    if (!col) return [];
+    let rows = dateFilteredData;
+    const g = globalFilter.trim().toLowerCase();
+    if (g) {
+      rows = rows.filter((row) =>
+        columns.some(
+          (c) => c.filterable !== false && getFilterText(c, row).toLowerCase().includes(g),
+        ),
+      );
+    }
+    const others = Object.entries(columnFilters).filter(
+      ([k, v]) => k !== colKey && Array.isArray(v) && v.length,
+    );
+    if (others.length) {
+      rows = rows.filter((row) =>
+        others.every(([k, vals]) => {
+          const c = columns.find((x) => x.key === k);
+          if (!c) return true;
+          return vals.includes(getFilterText(c, row));
+        }),
+      );
+    }
+    const set = new Set();
+    rows.forEach((row) => set.add(getFilterText(col, row)));
+    return Array.from(set).sort((a, b) =>
+      labelForValue(a).localeCompare(labelForValue(b), 'es', { sensitivity: 'base', numeric: true }),
+    );
+  };
+
   const hasFilters = globalFilter.trim() !== ''
-    || Object.values(columnFilters).some((v) => v && v.trim() !== '')
+    || Object.values(columnFilters).some((v) => Array.isArray(v) && v.length > 0)
     || !!filterDateFrom || !!filterDateTo;
 
   const dateFilteredData = useMemo(() => {
@@ -1871,13 +2129,13 @@ const AlertasPayroll = () => {
     }
 
     const activeColFilters = Object.entries(columnFilters)
-      .filter(([, v]) => v && v.trim() !== '');
+      .filter(([, v]) => Array.isArray(v) && v.length > 0);
     if (activeColFilters.length) {
       rows = rows.filter((row) =>
-        activeColFilters.every(([key, val]) => {
+        activeColFilters.every(([key, vals]) => {
           const col = columns.find((c) => c.key === key);
           if (!col) return true;
-          return getFilterText(col, row).toLowerCase().includes(val.trim().toLowerCase());
+          return vals.includes(getFilterText(col, row));
         }),
       );
     }
@@ -2000,15 +2258,17 @@ const AlertasPayroll = () => {
       ) : (
         <>
           <div className="payroll-tabs" role="tablist" aria-label="Vistas de Alertas Payroll">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'dashboard'}
-              className={`payroll-tab ${activeTab === 'dashboard' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              Dashboard
-            </button>
+            {isPrivileged && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'dashboard'}
+                className={`payroll-tab ${activeTab === 'dashboard' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('dashboard')}
+              >
+                Dashboard
+              </button>
+            )}
             <button
               type="button"
               role="tab"
@@ -2020,7 +2280,7 @@ const AlertasPayroll = () => {
             </button>
           </div>
 
-          {activeTab === 'dashboard' && (
+          {isPrivileged && activeTab === 'dashboard' && (
             <AlertasDashboard data={data} />
           )}
 
@@ -2250,50 +2510,62 @@ const AlertasPayroll = () => {
                     <tr className="payroll-header-row">
                       {columns.map((col) => {
                         const sortable = col.sortable !== false;
+                        const filterable = col.filterable !== false;
                         const isSorted = sortable && sort.key === col.key;
                         const ariaSort = sortable
                           ? (isSorted ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none')
                           : undefined;
+                        const colFilterActive = Array.isArray(columnFilters[col.key])
+                          && columnFilters[col.key].length > 0;
                         return (
                           <th
                             key={col.key}
                             aria-sort={ariaSort}
                             className={sortable ? 'payroll-th payroll-th--sortable' : 'payroll-th'}
                           >
-                            {sortable ? (
-                              <button
-                                type="button"
-                                className="payroll-th__sort-btn"
-                                onClick={() => toggleSort(col.key)}
-                                aria-label={`Ordenar por ${col.header}`}
-                              >
-                                <span>{col.header}</span>
-                                <SortIndicator dir={isSorted ? sort.dir : null} />
-                              </button>
-                            ) : (
-                              <span>{col.header}</span>
-                            )}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                    <tr className="payroll-filters-row">
-                      {columns.map((col) => {
-                        const filterable = col.filterable !== false;
-                        return (
-                          <th key={col.key} className="payroll-th-filter">
-                            {filterable ? (
-                              <input
-                                type="text"
-                                className="payroll-filter-input"
-                                placeholder="Filtrar..."
-                                value={columnFilters[col.key] || ''}
-                                onChange={(e) =>
-                                  setColumnFilters((f) => ({ ...f, [col.key]: e.target.value }))
-                                }
-                                aria-label={`Filtrar columna ${col.header}`}
-                              />
-                            ) : null}
+                            <div className="payroll-th__inner">
+                              {sortable ? (
+                                <button
+                                  type="button"
+                                  className="payroll-th__sort-btn"
+                                  onClick={() => toggleSort(col.key)}
+                                  aria-label={`Ordenar por ${col.header}`}
+                                >
+                                  <span>{col.header}</span>
+                                  <SortIndicator dir={isSorted ? sort.dir : null} />
+                                </button>
+                              ) : (
+                                <span className="payroll-th__label">{col.header}</span>
+                              )}
+                              {filterable && (
+                                <button
+                                  type="button"
+                                  className={`payroll-th__filter-btn${colFilterActive ? ' is-active' : ''}`}
+                                  onClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setOpenFilter((cur) =>
+                                      cur && cur.key === col.key ? null : { key: col.key, rect });
+                                  }}
+                                  aria-label={`Filtrar ${col.header}`}
+                                  aria-expanded={openFilter?.key === col.key}
+                                  data-tooltip={colFilterActive ? 'Filtro activo' : 'Filtrar'}
+                                >
+                                  <Filter size={13} aria-hidden="true" />
+                                </button>
+                              )}
+                              {filterable && openFilter?.key === col.key && (
+                                <ColumnFilterMenu
+                                  col={col}
+                                  anchorRect={openFilter.rect}
+                                  options={getColumnOptions(col.key)}
+                                  selected={columnFilters[col.key] ?? null}
+                                  sortDir={isSorted ? sort.dir : null}
+                                  onApply={applyColumnFilter}
+                                  onSort={applyColumnSort}
+                                  onClose={() => setOpenFilter(null)}
+                                />
+                              )}
+                            </div>
                           </th>
                         );
                       })}

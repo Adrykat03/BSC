@@ -1,6 +1,7 @@
 import * as XLSX from '@e965/xlsx';
 
-const DAB_API_BASE = '/dab';
+import { apiClient } from './api';
+
 const BSC_API_BASE = '/api';
 const TOKEN_KEY = 'fp_token';
 
@@ -136,48 +137,17 @@ async function fetchAdjuntoBlob({ rutaAdjunto, nombreAdjunto }) {
 
 export const payrollService = {
   async getNotificaciones() {
-    const all = [];
-    let url = `${DAB_API_BASE}/NotificacionesConsolidadas?$orderby=fechaCreacion desc&$first=100`;
-    let safety = 100;
-    while (url && safety > 0) {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      const data = await response.json();
-      if (Array.isArray(data.value)) all.push(...data.value);
-      const next = data.nextLink || data['@odata.nextLink'] || null;
-      if (!next) {
-        url = null;
-      } else if (/^https?:\/\//i.test(next)) {
-        const u = new URL(next);
-        url = `${DAB_API_BASE}${u.pathname.replace(/^.*?(\/NotificacionesConsolidadas)/, '$1')}${u.search}`;
-      } else {
-        url = next.startsWith('/') ? next : `${DAB_API_BASE}/${next}`;
-      }
-      safety -= 1;
-    }
-    return all.map((row) => ({
+    // Endpoint backend seguro (JWT inyectado por apiClient). El backend ya
+    // filtra las filas según el rol/email del usuario y responde con la
+    // forma ApiResponse<T> = { success, message, data, errors } donde `data`
+    // es el array de notificaciones (passthrough de los campos de DAB).
+    const response = await apiClient.get('/alertas-payroll/notificaciones');
+    const rows = Array.isArray(response?.data) ? response.data : [];
+    return rows.map((row) => ({
       ...row,
       prioridad: row.Prioridad ?? row.prioridad ?? null,
       categoria: row.Categoria ?? row.categoria ?? null,
     }));
-  },
-
-  async updateResolucion(idNotificacion, { estado, notasResolucion, usuarioResolucion, fechaModificacion }) {
-    const response = await fetch(
-      `${DAB_API_BASE}/NotificacionesConsolidadas/idNotificacion/${idNotificacion}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado, notasResolucion, usuarioResolucion, fechaModificacion }),
-      }
-    );
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      throw new Error(`Error ${response.status}: ${errText || response.statusText}`);
-    }
-    return response.json().catch(() => null);
   },
 
   async descargarAdjunto({ rutaAdjunto, nombreAdjunto }) {
