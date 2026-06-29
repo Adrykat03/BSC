@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using BSC.Application.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -95,6 +96,77 @@ public class DabAlertasClient : IDabAlertasClient
             throw new HttpRequestException(
                 $"DAB respondio {(int)response.StatusCode} al actualizar notificacion {idNotificacion}.");
         }
+    }
+
+    public async Task<IReadOnlyList<JsonObject>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        const int maxPages = 100;
+        var rows = new List<JsonObject>();
+
+        // Primera pagina. DAB acepta $orderby + $first; las siguientes vienen por nextLink.
+        string? nextUrl = $"{EntityPath}?$orderby=fechaCreacion desc&$first=100";
+
+        for (var page = 0; page < maxPages && !string.IsNullOrEmpty(nextUrl); page++)
+        {
+            using var response = await _httpClient.GetAsync(nextUrl, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("DAB GET (lista) fallo. Status={Status} Url={Url} Body={Body}",
+                    response.StatusCode, nextUrl, Truncate(body, 500));
+                throw new HttpRequestException(
+                    $"DAB respondio {(int)response.StatusCode} al listar notificaciones.");
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var envelope = await JsonNode.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            if (envelope is JsonObject envObj)
+            {
+                if (envObj["value"] is JsonArray valueArray)
+                {
+                    foreach (var item in valueArray)
+                    {
+                        // Clonamos para desacoplar del documento padre (que se descarta al iterar).
+                        if (item is JsonObject rowObj)
+                        {
+                            rows.Add((JsonObject)rowObj.DeepClone());
+                        }
+                    }
+                }
+
+                // DAB pagina con nextLink o @odata.nextLink. Puede venir absoluto o relativo.
+                nextUrl = NormalizeNextLink(
+                    envObj["nextLink"]?.GetValue<string>()
+                    ?? envObj["@odata.nextLink"]?.GetValue<string>());
+            }
+            else
+            {
+                nextUrl = null;
+            }
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// Normaliza el nextLink de DAB a una ruta utilizable por el HttpClient (cuya BaseAddress
+    /// es la interna http://bsc_dab:5000/). Si DAB devuelve un host distinto (p. ej. localhost
+    /// porque ve el X-Forwarded-Host), reescribimos a path+query relativo al EntityPath.
+    /// </summary>
+    private static string? NormalizeNextLink(string? rawNextLink)
+    {
+        if (string.IsNullOrWhiteSpace(rawNextLink)) return null;
+
+        if (Uri.TryCreate(rawNextLink, UriKind.Absolute, out var abs))
+        {
+            // Devolvemos path + query sin el leading '/' para que concatene con BaseAddress.
+            return (abs.AbsolutePath.TrimStart('/') + abs.Query);
+        }
+
+        // Relativo: quitamos el leading '/' si lo trae.
+        return rawNextLink.TrimStart('/');
     }
 
     private static string Truncate(string s, int max) =>

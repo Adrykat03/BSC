@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace BSC.Application.Interfaces;
 
 /// <summary>
@@ -50,4 +52,12 @@ public interface IDabAlertasClient
     /// PATCH a la notificacion via DAB. Lanza HttpRequestException si DAB falla.
     /// </summary>
     Task ActualizarAsync(long idNotificacion, ActualizarNotificacionRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lee TODAS las notificaciones de DAB paginando hasta agotar los resultados,
+    /// ordenadas por fechaCreacion desc. Devuelve las filas COMPLETAS (passthrough):
+    /// cada fila es un <see cref="JsonObject"/> con todos los campos originales de DAB.
+    /// Lanza HttpRequestException si DAB falla.
+    /// </summary>
+    Task<IReadOnlyList<JsonObject>> GetAllAsync(CancellationToken cancellationToken = default);
 }

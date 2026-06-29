@@ -87,8 +87,6 @@ services:
       - ./dab/.env
     volumes:
       - ./dab/dab-config.json:/App/dab-config.json:ro
-    ports:
-      - "5555:5000"
     networks:
       bsc_net:
         ipv4_address: 19.168.78.14
