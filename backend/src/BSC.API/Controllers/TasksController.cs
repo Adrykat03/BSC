@@ -12,6 +12,7 @@ using BSC.Application.Commands.RevertTaskStatus;
 using BSC.Application.Commands.UpdateTaskItem;
 using BSC.Application.Commands.UploadEvidence;
 using BSC.Application.DTOs;
+using BSC.Application.Features.Colaboradores.Queries.GetAll;
 using BSC.Application.Queries.GetDashboard;
 using BSC.Application.Queries.GetTaskItemById;
 using BSC.Application.Queries.GetTaskItems;
@@ -55,6 +56,19 @@ public class TasksController : ControllerBase
         // El rol activo es el claim que NO es un JSON array.
         var allRoles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
         return allRoles.FirstOrDefault(v => !v.TrimStart().StartsWith("[")) ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Lista de usuarios asignables (colaboradores y lideres) para el selector de
+    /// asignacion de tareas. Reutiliza la consulta de colaboradores pero protegida por
+    /// el modulo "tareas": Gerente/Lider pueden asignar sin tener el modulo "colaboradores".
+    /// </summary>
+    [HttpGet("assignees")]
+    [ProducesResponseType(typeof(ApiResponse<List<ColaboradorDto>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<List<ColaboradorDto>>>> GetAssignees()
+    {
+        var result = await _mediator.Send(new GetAllColaboradoresQuery());
+        return Ok(result);
     }
 
     /// <summary>

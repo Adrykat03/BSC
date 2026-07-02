@@ -10,7 +10,6 @@ import toast, { Toaster } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { tasksService } from '../../services/tasksService';
-import { colaboradorService } from '../../services/colaboradorService';
 import SessionContext from '../../context/SessionContext';
 import TaskModal from './TaskModal';
 import ColumnFilterDropdown from './ColumnFilterDropdown';
@@ -572,7 +571,7 @@ const Tasks = () => {
     setAssignModalOpen(true);
     try {
       setLoadingColaboradores(true);
-      const data = await colaboradorService.getAll();
+      const data = await tasksService.getAssignees();
       // Gerente assigns to Lider first, then Lider to Colaborador
       let targetRole = '';
       if (isGerente) {
@@ -831,7 +830,7 @@ const Tasks = () => {
       wsTemplate.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
 
       // Sheet 2: lista de colaboradores
-      const allColabs = await colaboradorService.getAll();
+      const allColabs = await tasksService.getAssignees();
       const colabRows = allColabs.map((c) => ({
         'Nombre completo': c.nombreCompleto || '',
         'Correo': c.correo || '',

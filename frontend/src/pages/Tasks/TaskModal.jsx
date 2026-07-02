@@ -3,7 +3,6 @@ import { X, Upload, FileText, Download, Eye, Trash2, CheckCircle, CornerDownLeft
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
 import { tasksService } from '../../services/tasksService';
-import { colaboradorService } from '../../services/colaboradorService';
 import './TaskModal.css';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -498,7 +497,7 @@ const TaskModal = ({
     if (!isOpen || isColaborador) return;
     setLoadingAssignees(true);
     const targetRole = getAssignTarget();
-    colaboradorService.getAll()
+    tasksService.getAssignees()
       .then((data) => {
         const filtered = targetRole
           ? data.filter((c) => {

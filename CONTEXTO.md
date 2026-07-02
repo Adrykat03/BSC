@@ -369,6 +369,48 @@
 
 ---
 
+### [FUNC-027] Alertas Payroll — Listado: Finalizadas, agrupación por categoría y gráfico apilado
+- **Estado:** Completada
+- **Fecha:** 2026-06-29
+- **Descripcion:** Conjunto de mejoras al Listado de Alertas. (1) Sub-pestaña "Finalizadas" (estados Resuelta R + Cerrada C) separada de "Pendientes" (A/P/E), cada una con su contador. (2) Vista agrupada por categoría con cabeceras colapsables; modo agrupado por defecto + toggle Lista/Agrupado y botón Expandir/Contraer todo; la cabecera de categoría queda fija (sticky) al hacer scroll, debajo del encabezado de columnas. (3) Columna "Origen" movida al final de la tabla. (4) Contador de totales (X de Y) reubicado junto al título "Alertas". (5) Gráfico "Alertas por Categoría" cambiado de barra simple a barras apiladas coloreadas por tipo de descripción (con novedad/sin novedad/reportería/error proceso), respetando los chips de filtro.
+- **Backend:** Sin cambios.
+- **Frontend:**
+  - `AlertasPayroll.jsx` — estados `viewMode`/`expandedGroups`; `groupedData` (agrupa `filteredSorted` por categoría, orden por cantidad desc); sub-pestaña Finalizadas (`ESTADOS_FINALIZADOS=['R','C']`); render de `<tbody>` por grupo con fila-cabecera clickeable (reutiliza `col.render`); paginación oculta en modo agrupado; `categoriaItems` reescrito a desglose por descripción; `HorizontalBar` reescrito a segmentos apilados; columna `origen` al final; contador en el `card__title`.
+  - `AlertasPayroll.css` — `.payroll-viewmode*` (toggle), `.payroll-group*` (cabecera de grupo + sticky `top: var(--payroll-header-h)`), `.payroll-hbar__stack/__seg` (barra apilada), `.payroll-title-count`.
+- **Security:** Sin cambios de superficie (solo UI).
+
+---
+
+### [FUNC-028] Tareas — Evidencia adjunta obligatoria para Colaborador
+- **Estado:** Completada
+- **Fecha:** 2026-06-29
+- **Descripcion:** El Colaborador no puede dejar una tarea sin evidencia por ninguna vía: (1) no puede "Enviar a validación" sin al menos un archivo de evidencia (nuevo o ya guardado); (2) no puede "Guardar evidencia" sin adjunto; (3) no puede eliminar el último archivo de evidencia (permite reemplazo si primero adjunta el nuevo). Validación de frontend; pendiente blindarlo también en backend.
+- **Backend:** Sin cambios (recomendado reforzar en el endpoint de cambio de estado/upload).
+- **Frontend:** `pages/Tasks/TaskModal.jsx` — guardas en el `onClick` de la transición "Completa - Por Validar", en `handleSubmit` (rama Colaborador) y en `handleRemoveExistingFile` (tipo evidence).
+- **Security:** Sin cambios de superficie (validación de UX/cliente).
+
+---
+
+### [FIX-029] Despliegue a producción + fix nginx Host (AllowedHosts)
+- **Estado:** Completada
+- **Fecha:** 2026-06-29
+- **Descripcion:** Release acumulado desplegado al servidor (cx@192.168.100.9, ~/BSC): git pull (fast-forward), migración idempotente `seeds/migrate_roles_modules.js`, rebuild de `bsc_backend`, build local del frontend copiado a `html/` y restart de `bsc_frontend`. Tras el deploy, el login fallaba con "Unexpected token '<' ... is not valid JSON": el backend rechazaba el acceso por IP pública con 400 "Invalid Hostname" porque `AllowedHosts=localhost;bsc_backend;bsc-backend` y nginx reenviaba `Host $host`. Fix: `config/nginx/default.conf` `/api/` usa `proxy_set_header Host bsc-backend;`.
+- **Backend:** Sin cambios (solo redeploy).
+- **Frontend/Infra:** `config/nginx/default.conf` — Host fijo a `bsc-backend` con comentario. Commit `f0dfffc`.
+- **Security:** El blindaje de DAB (eliminación del bloque `/dab/` del proxy) quedó activo en producción tras este deploy.
+
+---
+
+### [FIX-030] Tareas — restaurar selector de asignables (regresión por permisos por módulo)
+- **Estado:** Completada
+- **Fecha:** 2026-07-02
+- **Descripcion:** Tras FUNC-025, al crear/asignar tareas no aparecían colaboradores ni líderes en el selector. Causa: el modal de tareas poblaba la lista con `GET /api/colaboradores`, endpoint que quedó protegido por `[RequireModule(colaboradores)]`; Gerente y Líder no tienen ese módulo (solo Administrador), por lo que recibían 403 y la lista quedaba vacía. La asignación en sí (`PUT /api/tasks/{id}/assign`) y el reflejo de tareas a cada usuario nunca se rompieron (van por el módulo `tareas`). Solo fallaba el lookup de nombres.
+- **Backend:** `TasksController` — nuevo `GET /api/tasks/assignees` protegido por el módulo `tareas`, que reutiliza `GetAllColaboradoresQuery` (mismo `ColaboradorDto`, sin duplicar lógica). Así Gerente/Líder listan asignables sin necesitar el módulo `colaboradores`.
+- **Frontend:** `tasksService.getAssignees()` nuevo; los 3 puntos que usaban `colaboradorService.getAll()` para asignación pasan a `tasksService.getAssignees()` (`TaskModal.jsx`, `Tasks.jsx` modal de asignar y plantilla Excel). Import de `colaboradorService` removido donde quedó sin uso. El filtrado por rol (Lider/Colaborador) del selector se mantiene igual.
+- **Security:** Sin relajar permisos: la gestión de Colaboradores sigue exigiendo el módulo `colaboradores`; solo el lookup de asignación se habilita bajo `tareas`.
+
+---
+
 <!--
 Plantilla para nuevas funcionalidades:
 

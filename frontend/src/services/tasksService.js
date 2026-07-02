@@ -59,6 +59,13 @@ export const tasksService = {
     return response.data;
   },
 
+  // Lista de asignables (colaboradores y lideres) para el selector de tareas.
+  // Protegido por el modulo "tareas" (no requiere el modulo "colaboradores").
+  async getAssignees() {
+    const response = await apiClient.get(`${ENDPOINT}/assignees`);
+    return response.data ?? [];
+  },
+
   async create(formData) {
     const response = await fetch(`${API_BASE_URL}${ENDPOINT}`, {
       method: 'POST',
