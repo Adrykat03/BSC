@@ -411,6 +411,16 @@
 
 ---
 
+### [FIX-031] Visor de alertas: HTML mal formado (blanco) + corrección de SP de correos
+- **Estado:** Completada
+- **Fecha:** 2026-07-03
+- **Descripcion:** Alertas con HTML (ej. "Reporte Correos en más de un trabajador", avisos de Jerarquías/vacaciones) salían **en blanco** en el visor. Causa raíz: los correos generados por SP de Nómina traían un `<style>` **sin cerrar** (`</style>` faltante antes de `</head>`) — el navegador se traga todo el resto del documento como CSS. Doble corrección: (a) visor resiliente que repara el `<style>` al vuelo (cubre alertas **ya guardadas**); (b) corrección de los SP en la raíz (para alertas **nuevas**). De paso se corrigieron textos de `<H1>` copiados por error y un `<p>` que usaba un `@msg` desfasado.
+- **Frontend:** `AlertasPayroll.jsx` — nueva `repairUnclosedStyle()` (inserta el `</style>` faltante antes de `</head>`/`<body>`, sin tocar los ya cerrados) usada en `buildPreviewDocument`. Desplegado a prod vía copia de `html/` (sin rebuild de backend).
+- **SP (schema Avisos, DB_NOMKFC/ADAM):** 12 archivos con `<style>` sin cerrar corregidos: `pa_aviso_CorreosProblemas.sql` + 11 de avisos de vacaciones/nómina (`pa_avisoVacDisfnoProgramacion`, `pa_aviso_vac_E01`, `sp_fpv_aviso_vacaciones_*`). En `pa_aviso_CorreosProblemas` además: 3 `<H1>` con texto equivocado corregidos (bloques "no tienen correo", "vacío el valor de correo", "empresa de baja correo") y reordenado `SET @asunto/@msg/@saludos` antes del `SELECT @html` en el bloque "no tienen correo" (el `<p>` usaba el mensaje del bloque anterior). **Requiere ejecutar los `ALTER PROCEDURE` en el SQL Server** para que aplique a alertas nuevas; las viejas quedan cubiertas por el fix del visor.
+- **Security:** Sin impacto.
+
+---
+
 <!--
 Plantilla para nuevas funcionalidades:
 

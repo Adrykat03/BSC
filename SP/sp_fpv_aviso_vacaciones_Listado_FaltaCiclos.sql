@@ -97,7 +97,7 @@ set @msg = ' Le adjuntamos un listado de los trabajadores que el ultimo ciclo, e
 
 set @saludos = 'Buenos dias'
 
-      select @html = '<head> <title></title> <style type="text/css">.style10 { width: 153px; text-align: center;   } .style12 { color: #800000;text-decoration: underline;   }   </head>' +
+      select @html = '<head> <title></title> <style type="text/css">.style10 { width: 153px; text-align: center;   } .style12 { color: #800000;text-decoration: underline;   }   </style></head>' +
         N'<body><H1 style="font-family: ''Calibri''; font-size: medium; font-weight: bold; font-style: normal; color: #993300">'+ @saludos + '</H1>' +
         N'</b> ' +
         N'<p> ' +   @msg  +  '</p> ' +
@@ -179,7 +179,7 @@ set @msg = ' Le adjuntamos un listado de los trabajadores que no tienen ningun c
                         ' , por favor revisar.  '
 
 
-      select @html = '<head> <title></title> <style type="text/css">.style10 { width: 153px; text-align: center;   } .style12 { color: #800000;text-decoration: underline;   }   </head>' +
+      select @html = '<head> <title></title> <style type="text/css">.style10 { width: 153px; text-align: center;   } .style12 { color: #800000;text-decoration: underline;   }   </style></head>' +
         N'<body><H1 style="font-family: ''Calibri''; font-size: medium; font-weight: bold; font-style: normal; color: #993300">'+ @saludos + '</H1>' +
         N'</b> ' +
         N'<p> ' +   @msg  +  '</p> ' +

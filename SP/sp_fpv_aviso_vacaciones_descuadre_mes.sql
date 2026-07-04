@@ -145,7 +145,7 @@ BEGIN
                 SET @asunto = 'Punto A.2: Error de descuadre en el mes de inicio de vacaciones. Con el trabajador: ' + @nombreTrab
                 SET @saludos = 'Buenos Dias'
 
-                SELECT @html = '<head> <title></title> <style type="text/css">.style10 { width: 153px; text-align: center;  } .style12 { color: #800000;text-decoration: underline;  }  </head>' + N'<body><H1  style="font-family: ''Trebuchet MS''; font-size: medium; font-weight: bold; font-style: normal; color: #993300">' + @saludos + '</H1>' + N'<b></b> ' + N'<p> ' + @mensaje + '</p> ' + N'<br/> <br/> <br/><br/><br/>' + ' </body>';
+                SELECT @html = '<head> <title></title> <style type="text/css">.style10 { width: 153px; text-align: center;  } .style12 { color: #800000;text-decoration: underline;  }  </style></head>' + N'<body><H1  style="font-family: ''Trebuchet MS''; font-size: medium; font-weight: bold; font-style: normal; color: #993300">' + @saludos + '</H1>' + N'<b></b> ' + N'<p> ' + @mensaje + '</p> ' + N'<br/> <br/> <br/><br/><br/>' + ' </body>';
 
                 EXEC msdb.dbo.Sp_send_dbmail
 			           @profile_name = 'Informacion_Nomina'

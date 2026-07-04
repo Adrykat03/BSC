@@ -186,14 +186,26 @@ function parseDestinatarios(raw) {
     .filter(Boolean);
 }
 
+// Repara un bug común en los correos de Nómina: un <style ...> sin su </style>
+// antes de </head> (o de <body>). El navegador se traga todo el resto del
+// documento como CSS y la vista queda EN BLANCO. Insertamos el </style> faltante.
+// Solo actúa sobre <style> realmente sin cerrar (los ya cerrados no se tocan).
+function repairUnclosedStyle(html) {
+  return html.replace(
+    /(<style\b[^>]*>)((?:(?!<\/style>)[\s\S])*?)(<\/head>|<body[\s>])/gi,
+    (_m, open, inner, next) => `${open}${inner}</style>${next}`,
+  );
+}
+
 function buildPreviewDocument(html) {
   if (!html) return '';
-  const looksComplete = /<html[\s>]/i.test(html);
-  if (looksComplete) return html;
+  const repaired = repairUnclosedStyle(html);
+  const looksComplete = /<html[\s>]/i.test(repaired);
+  if (looksComplete) return repaired;
   return `<!DOCTYPE html><html><head><meta charset="utf-8">` +
     `<style>body{font-family:Arial,Helvetica,sans-serif;margin:16px;color:#111;font-size:14px;line-height:1.5;}` +
     `table{border-collapse:collapse;}img{max-width:100%;height:auto;}</style>` +
-    `</head><body>${html}</body></html>`;
+    `</head><body>${repaired}</body></html>`;
 }
 
 function getFilterText(col, row) {

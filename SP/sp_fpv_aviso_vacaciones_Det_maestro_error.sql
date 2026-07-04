@@ -176,7 +176,7 @@ Set @asunto =  'Punto E-4: Trabajadores que tienen en el detalle las vacaciones 
 
 set @mensaje =  'Se adjunta listado en formato csv de trabajadores con este problema. Pueden abrir con Excel, el separador de columnas es la coma(,).'
 
-select @html =  '<head> <title></title> <style type="text/css">.style10 {  width: 153px; text-align: center;   } .style12 {  color: #800000;text-decoration: underline;   }  </head>' +
+select @html =  '<head> <title></title> <style type="text/css">.style10 {  width: 153px; text-align: center;   } .style12 {  color: #800000;text-decoration: underline;   }  </style></head>' +
         N'<body><H1   style="font-family: ''Trebuchet MS''; font-size: medium; font-weight: bold; font-style: normal; color: #993300">'+ @saludos +'</H1>' +
         N'<b></b> '+
         N'<p> '+  @mensaje+  '</p> ' +
@@ -303,7 +303,7 @@ Set @asunto =  'Punto E-2: Trabajadores que tienen en el detalle las vacaciones 
 
 set @mensaje =  'Se adjunta listado en formato csv de trabajadores con este problema. Pueden abrir con Excel, el separador de columnas es la coma(,).'
 
-select @html =  '<head> <title></title> <style type="text/css">.style10 {  width: 153px; text-align: center;   } .style12 {  color: #800000;text-decoration: underline;   }  </head>' +
+select @html =  '<head> <title></title> <style type="text/css">.style10 {  width: 153px; text-align: center;   } .style12 {  color: #800000;text-decoration: underline;   }  </style></head>' +
         N'<body><H1   style="font-family: ''Trebuchet MS''; font-size: medium; font-weight: bold; font-style: normal; color: #993300">'+ @saludos +'</H1>' +
         N'<b></b> '+
         N'<p> '+  @mensaje+  '</p> ' +
