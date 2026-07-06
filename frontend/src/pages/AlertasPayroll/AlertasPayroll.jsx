@@ -516,7 +516,15 @@ const ColumnFilterMenu = ({ col, anchorRect, options, selected, sortDir, onApply
   };
 
   const apply = () => {
-    onApply(col.key, allSelected ? null : Array.from(checked));
+    // Con búsqueda activa y todo aún marcado (no se tocó la selección), "Aceptar"
+    // filtra por los resultados de la búsqueda. Así no hay que deseleccionar y
+    // volver a seleccionar para filtrar por lo que se buscó. Si el usuario ya
+    // marcó/desmarcó casillas, se respeta su selección (comportamiento normal).
+    if (term && allSelected) {
+      onApply(col.key, visibleOptions.length ? Array.from(visibleOptions) : null);
+    } else {
+      onApply(col.key, allSelected ? null : Array.from(checked));
+    }
     onClose();
   };
 
@@ -745,6 +753,35 @@ const AlertaModal = ({
   });
   const scrollRef = useRef(null);
   const closeBtnRef = useRef(null);
+  const previewIframeRef = useRef(null);
+  // Tamaño de la "página" del correo. Arranca en el base y se ajusta al tamaño
+  // real del contenido tras cargar el iframe: así los reportes largos no se
+  // recortan (alto) y las tablas anchas no generan scroll interno (ancho). De
+  // este modo solo queda UN scroll: el del visor (.preview-modal__scroll).
+  const [contentHeight, setContentHeight] = useState(PREVIEW_BASE_H);
+  const [contentWidth, setContentWidth] = useState(PREVIEW_BASE_W);
+
+  // Mide el tamaño real del contenido del iframe y ajusta la página. Requiere
+  // allow-same-origin en el sandbox (el correo no ejecuta scripts, es seguro).
+  const measurePreviewSize = () => {
+    try {
+      const doc = previewIframeRef.current?.contentDocument;
+      if (!doc) return;
+      const h = Math.max(
+        doc.documentElement?.scrollHeight || 0,
+        doc.body?.scrollHeight || 0,
+      );
+      const w = Math.max(
+        doc.documentElement?.scrollWidth || 0,
+        doc.body?.scrollWidth || 0,
+      );
+      if (h > 0) setContentHeight(Math.min(Math.max(h + 8, 300), 50000));
+      // El ancho nunca baja del base (800), solo crece si el contenido es más ancho.
+      if (w > 0) setContentWidth(Math.min(Math.max(w + 4, PREVIEW_BASE_W), 20000));
+    } catch {
+      // Sin acceso (cross-origin): se mantiene el tamaño por defecto.
+    }
+  };
 
   const tieneAdjunto = !!row?.rutaAdjunto;
   const nombreAdjunto = row?.nombreAdjunto || row?.rutaAdjunto?.split('/').pop() || '';
@@ -800,6 +837,8 @@ const AlertaModal = ({
 
   useEffect(() => {
     setZoom(100);
+    setContentHeight(PREVIEW_BASE_H);
+    setContentWidth(PREVIEW_BASE_W);
     setEditEstado(['P', 'R', 'E'].includes(row?.estado) ? row.estado : 'P');
     setEditNotas(row?.notasResolucion || '');
     setPreviewMode('correo');
@@ -941,16 +980,19 @@ const AlertaModal = ({
                 {doc ? (
                   <div
                     className="preview-modal__stage"
-                    style={{ width: PREVIEW_BASE_W * scale, height: PREVIEW_BASE_H * scale }}
+                    style={{ width: contentWidth * scale, height: contentHeight * scale }}
                   >
                     <iframe
+                      ref={previewIframeRef}
                       title="Previsualización del correo"
                       className="preview-modal__iframe"
-                      sandbox="allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+                      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
                       srcDoc={doc}
+                      scrolling="no"
+                      onLoad={measurePreviewSize}
                       style={{
-                        width: PREVIEW_BASE_W,
-                        height: PREVIEW_BASE_H,
+                        width: contentWidth,
+                        height: contentHeight,
                         transform: `scale(${scale})`,
                         transformOrigin: 'top left',
                       }}

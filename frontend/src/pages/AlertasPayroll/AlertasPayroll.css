@@ -846,6 +846,14 @@
   z-index: 20;
 }
 
+/* El calendario de react-datepicker se renderiza en #datepicker-portal (body)
+   con z-index:1 por defecto, y queda TAPADO detrás del encabezado sticky de la
+   tabla (z-index:3) y las cabeceras de grupo (z-index:2) — por eso "no se abre"
+   en el Listado (sobre todo agrupado). Lo elevamos por encima de la tabla. */
+.react-datepicker-popper {
+  z-index: 1300 !important;
+}
+
 /* Pagination footer */
 .payroll-pagination {
   display: flex;

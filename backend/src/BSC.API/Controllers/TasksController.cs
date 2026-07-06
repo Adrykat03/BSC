@@ -153,14 +153,15 @@ public class TasksController : ControllerBase
 
         var tasks = await _taskItemRepository.GetForDashboardByAssigneeAsync(email, null, null);
 
-        // Filtrar tareas cuya primera entrega (CPV) fue en el mes actual y tienen rating
+        // La tarea pertenece al mes de su fecha de entrega (DueDate); si no la tiene,
+        // se usa la fecha de creacion como respaldo. Asi una tarea enviada tarde (en
+        // otro mes) sigue promediandose en el mes al que corresponde, no en el mes en
+        // que se envio a validacion. Coherente con el filtro por DueDate del Dashboard.
         var monthlyRated = tasks.Where(t =>
         {
             if (!t.Rating.HasValue) return false;
-            var firstCpv = t.StatusHistory?
-                .FirstOrDefault(h => h.ToStatus == "Completa - Por Validar");
-            if (firstCpv == null) return false;
-            return firstCpv.ChangedAt >= monthStart && firstCpv.ChangedAt < monthEnd;
+            var periodo = t.DueDate ?? t.CreatedAt;
+            return periodo >= monthStart && periodo < monthEnd;
         }).ToList();
 
         // Excluir tareas BSC para colaboradores configurados
@@ -199,15 +200,14 @@ public class TasksController : ControllerBase
 
         var tasks = await _taskItemRepository.GetForDashboardByAssigneeAsync(email, null, null);
 
-        // Filtrar tareas cuya primera entrega (CPV) fue en el mes actual, tienen rating y coinciden con el patron BSC
+        // Mismo criterio que monthly-stars: la tarea pertenece al mes de su fecha de
+        // entrega (DueDate), con la fecha de creacion como respaldo.
         var monthlyRated = tasks.Where(t =>
         {
             if (!t.Rating.HasValue) return false;
             if (t.Title.IndexOf(bscConfig.TaskTitlePattern, StringComparison.OrdinalIgnoreCase) < 0) return false;
-            var firstCpv = t.StatusHistory?
-                .FirstOrDefault(h => h.ToStatus == "Completa - Por Validar");
-            if (firstCpv == null) return false;
-            return firstCpv.ChangedAt >= monthStart && firstCpv.ChangedAt < monthEnd;
+            var periodo = t.DueDate ?? t.CreatedAt;
+            return periodo >= monthStart && periodo < monthEnd;
         }).ToList();
 
         var result = CalculateMonthlyStarsFromTasks(monthlyRated, now, monthStart);

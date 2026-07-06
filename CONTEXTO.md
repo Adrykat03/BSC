@@ -421,6 +421,16 @@
 
 ---
 
+### [FIX-032] Tareas: promedio mensual por fecha de entrega + mejoras del visor y filtros de Alertas
+- **Estado:** Completada
+- **Fecha:** 2026-07-06
+- **Descripcion:** Varios ajustes de la sesión. (1) **Promedio mensual de Tareas** (estrella del mes): agrupaba cada tarea por la fecha de ENVÍO a validación (`firstCpv.ChangedAt`), así una tarea entregada tarde en otro mes se promediaba en el mes equivocado. Ahora agrupa por el mes de **`DueDate`** (fecha de entrega), con `CreatedAt` como respaldo — coherente con el filtro por DueDate del Dashboard. (2) **Visor de alertas**: el calendario de filtro por fecha no se abría en el Listado (quedaba tapado detrás del encabezado sticky de la tabla → z-index). (3) **Visor de correo**: se hizo el tamaño de la "página" **dinámico** (alto y ancho medidos del contenido) para que reportes largos/anchos se vean completos con **un solo scroll** (el del visor), en vez de recortarse a 1100px o mostrar doble scroll. (4) **Filtro de columna tipo Excel**: al buscar un valor y dar "Aceptar", no filtraba (quedaba "todo marcado" = sin filtro); ahora con búsqueda activa "Aceptar" filtra por los resultados de la búsqueda.
+- **Backend:** `TasksController.cs` — `monthly-stars` y `bsc-monthly-stars` agrupan por `DueDate ?? CreatedAt` en vez de `firstCpv.ChangedAt`.
+- **Frontend:** `AlertasPayroll.css` — `z-index` del `.react-datepicker-popper` elevado sobre la tabla sticky. `AlertasPayroll.jsx` — `buildPreviewDocument`/iframe con medición dinámica de alto y ancho (`allow-same-origin` en sandbox, sin `allow-scripts`; `scrolling="no"`) para un solo scroll; `apply` del `ColumnFilterMenu` filtra por resultados de búsqueda cuando hay término activo.
+- **Security:** `allow-same-origin` en el iframe del correo es seguro (no hay `allow-scripts`, el correo no ejecuta JS); solo permite medir el contenido.
+
+---
+
 <!--
 Plantilla para nuevas funcionalidades:
 
