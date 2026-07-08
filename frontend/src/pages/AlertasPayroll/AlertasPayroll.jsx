@@ -15,10 +15,14 @@ import {
   Layers,
   Download,
   Eye,
+  FileText,
   Filter,
   Loader2,
+  Paperclip,
   RefreshCw,
   Search,
+  Trash2,
+  Upload,
   X,
   ZoomIn,
   ZoomOut,
@@ -304,7 +308,7 @@ const DescriptionBadge = ({ descripcion }) => {
 /* ========================================
    Donut Chart (SVG)
    ======================================== */
-const DonutChart = ({ segments, centerLabel = 'Total', showPercent = false }) => {
+const DonutChart = ({ segments, centerLabel = 'Total', showPercent = false, showLegend = true }) => {
   const total = segments.reduce((sum, s) => sum + s.value, 0);
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
@@ -345,6 +349,7 @@ const DonutChart = ({ segments, centerLabel = 'Total', showPercent = false }) =>
           <span className="payroll-donut__center-text">{centerLabel}</span>
         </div>
       </div>
+      {showLegend && (
       <div className="payroll-donut__legend">
         {segments.map((seg) => {
           const pct = total > 0 ? Math.round((seg.value / total) * 1000) / 10 : 0;
@@ -360,6 +365,7 @@ const DonutChart = ({ segments, centerLabel = 'Total', showPercent = false }) =>
           );
         })}
       </div>
+      )}
     </div>
   );
 };
@@ -728,6 +734,14 @@ const ZOOM_MIN = 25;
 const ZOOM_MAX = 300;
 const ZOOM_STEP = 25;
 
+// ¿El adjunto se puede previsualizar en el navegador (imagen o PDF)?
+function isImageOrPdf(mime, name) {
+  const m = (mime || '').toLowerCase();
+  if (m.startsWith('image/') || m === 'application/pdf') return true;
+  const ext = (name || '').toLowerCase().split('.').pop();
+  return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'pdf'].includes(ext);
+}
+
 const AlertaModal = ({
   row,
   usuarioSesion,
@@ -782,6 +796,15 @@ const AlertaModal = ({
       // Sin acceso (cross-origin): se mantiene el tamaño por defecto.
     }
   };
+
+  // Adjuntos de resolución (los sube quien resuelve; distintos del adjunto origen de la alerta).
+  const [existingAdjuntos, setExistingAdjuntos] = useState([]);
+  const [newAdjuntoFiles, setNewAdjuntoFiles] = useState([]);
+  const [adjuntosBusy, setAdjuntosBusy] = useState(false);
+  const [adjuntoPreview, setAdjuntoPreview] = useState(null); // { url, fileName, mimeType }
+  const [adjuntoZoom, setAdjuntoZoom] = useState(100);
+  const adjuntoInputRef = useRef(null);
+  const totalAdjuntos = existingAdjuntos.length + newAdjuntoFiles.length;
 
   const tieneAdjunto = !!row?.rutaAdjunto;
   const nombreAdjunto = row?.nombreAdjunto || row?.rutaAdjunto?.split('/').pop() || '';
@@ -885,8 +908,136 @@ const AlertaModal = ({
   const fechaTitle = row?.fechaCreacion ? formatDate(row.fechaCreacion) : null;
   const title = fechaTitle ? `${baseTitle} — ${fechaTitle}` : baseTitle;
 
-  const handleSubmit = () => {
-    if (saving) return;
+  // Cargar adjuntos de resolución al abrir/cambiar de alerta.
+  useEffect(() => {
+    if (!row?.idNotificacion) return undefined;
+    let cancelled = false;
+    setNewAdjuntoFiles([]);
+    alertasService.getAdjuntos(row.idNotificacion)
+      .then((list) => { if (!cancelled) setExistingAdjuntos(list); })
+      .catch(() => { if (!cancelled) setExistingAdjuntos([]); });
+    return () => { cancelled = true; };
+  }, [row?.idNotificacion]);
+
+  // Pegar imagen (Ctrl+V) → se agrega como adjunto de resolución.
+  useEffect(() => {
+    const onPaste = (e) => {
+      const cd = e.clipboardData;
+      if (!cd) return;
+      const raw = cd.files.length
+        ? Array.from(cd.files)
+        : Array.from(cd.items || []).filter((it) => it.kind === 'file').map((it) => it.getAsFile()).filter(Boolean);
+      const imgs = raw
+        .filter((f) => f && f.type.startsWith('image/'))
+        .map((f) => {
+          const ext = f.type.split('/')[1] || 'png';
+          const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          return new File([f], `imagen-${ts}.${ext}`, { type: f.type });
+        });
+      if (imgs.length > 0) {
+        e.preventDefault();
+        setNewAdjuntoFiles((prev) => [...prev, ...imgs]);
+      }
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, []);
+
+  const handleAdjuntoSelect = (e) => {
+    const selected = Array.from(e.target.files || []);
+    if (selected.length > 0) setNewAdjuntoFiles((prev) => [...prev, ...selected]);
+    e.target.value = '';
+  };
+
+  const handleRemoveNewAdjunto = (idx) => {
+    setNewAdjuntoFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleDownloadResolucionAdjunto = async (adjuntoId) => {
+    try {
+      await alertasService.downloadAdjunto(row.idNotificacion, adjuntoId);
+    } catch (err) {
+      Swal.fire({ title: 'No se pudo descargar', text: err.message || 'Error al descargar.', icon: 'error' });
+    }
+  };
+
+  const handleRemoveExistingAdjunto = async (adjuntoId) => {
+    const confirm = await Swal.fire({
+      title: 'Eliminar adjunto',
+      text: '¿Eliminar este adjunto de la resolución?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#E31837',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!confirm.isConfirmed) return;
+    try {
+      setAdjuntosBusy(true);
+      await alertasService.removeAdjunto(row.idNotificacion, adjuntoId);
+      setExistingAdjuntos((prev) => prev.filter((a) => a.id !== adjuntoId));
+    } catch (err) {
+      Swal.fire({ title: 'No se pudo eliminar', text: err.message || 'Error.', icon: 'error' });
+    } finally {
+      setAdjuntosBusy(false);
+    }
+  };
+
+  const handlePreviewExistingAdjunto = async (a) => {
+    try {
+      setAdjuntosBusy(true);
+      const { url, fileName, mimeType } = await alertasService.previewAdjunto(row.idNotificacion, a.id);
+      setAdjuntoZoom(100);
+      setAdjuntoPreview({ url, fileName, mimeType: mimeType || a.contentType });
+    } catch (err) {
+      Swal.fire({ title: 'No se pudo previsualizar', text: err.message || 'Error.', icon: 'error' });
+    } finally {
+      setAdjuntosBusy(false);
+    }
+  };
+
+  const handlePreviewNewAdjunto = (f) => {
+    setAdjuntoZoom(100);
+    setAdjuntoPreview({ url: URL.createObjectURL(f), fileName: f.name, mimeType: f.type });
+  };
+
+  const closeAdjuntoPreview = () => {
+    setAdjuntoPreview((prev) => {
+      if (prev?.url) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (saving || adjuntosBusy) return;
+
+    // Regla: el estado "Error" (E) exige al menos un adjunto de resolución.
+    if (editEstado === 'E' && totalAdjuntos === 0) {
+      Swal.fire({
+        title: 'Adjunto requerido',
+        text: 'Para marcar la alerta como "Error" debe adjuntar al menos un archivo.',
+        icon: 'warning',
+        confirmButtonColor: '#E31837',
+      });
+      return;
+    }
+
+    // Subir los archivos nuevos antes de guardar el cambio de estado.
+    if (newAdjuntoFiles.length > 0) {
+      try {
+        setAdjuntosBusy(true);
+        const subidos = await alertasService.uploadAdjuntos(row.idNotificacion, newAdjuntoFiles);
+        setExistingAdjuntos((prev) => [...prev, ...subidos]);
+        setNewAdjuntoFiles([]);
+      } catch (err) {
+        setAdjuntosBusy(false);
+        Swal.fire({ title: 'Error al subir adjuntos', text: err.message || 'No se pudieron subir los archivos.', icon: 'error' });
+        return;
+      }
+      setAdjuntosBusy(false);
+    }
+
     onSave({ estado: editEstado, notas: editNotas });
   };
 
@@ -1139,7 +1290,7 @@ const AlertaModal = ({
                 maxLength={500}
                 value={editNotas}
                 onChange={(e) => setEditNotas(e.target.value.slice(0, 500))}
-                placeholder="Ingrese observaciones sobre la resolución..."
+                placeholder="Ingrese observaciones sobre la resolución... o realiza Ctrl+V para pegar una imagen"
                 disabled={saving}
               />
               <small
@@ -1154,6 +1305,108 @@ const AlertaModal = ({
               >
                 {editNotas.length} / 500 caracteres
               </small>
+            </div>
+
+            <div className="preview-modal__side-section">
+              <h3 className="preview-modal__side-title">
+                <Paperclip size={14} aria-hidden="true" /> Adjuntos de resolución
+                {editEstado === 'E' && <span className="payroll-adjunto-req"> *</span>}
+              </h3>
+
+              <button
+                type="button"
+                className="payroll-adjunto-drop"
+                onClick={() => adjuntoInputRef.current?.click()}
+                disabled={saving || adjuntosBusy}
+              >
+                <Upload size={16} aria-hidden="true" />
+                <span>Adjuntar archivo o pegar imagen (Ctrl+V)</span>
+              </button>
+              <input
+                ref={adjuntoInputRef}
+                type="file"
+                multiple
+                onChange={handleAdjuntoSelect}
+                style={{ display: 'none' }}
+              />
+
+              {editEstado === 'E' && totalAdjuntos === 0 && (
+                <small className="payroll-adjunto-req-hint">
+                  Obligatorio para marcar la alerta como "Error".
+                </small>
+              )}
+
+              {(existingAdjuntos.length > 0 || newAdjuntoFiles.length > 0) && (
+                <ul className="payroll-adjunto-list">
+                  {existingAdjuntos.map((a) => (
+                    <li key={a.id} className="payroll-adjunto-item">
+                      <FileText size={14} aria-hidden="true" className="payroll-adjunto-icon" />
+                      <span className="payroll-adjunto-name" title={a.fileName}>{a.fileName}</span>
+                      {isImageOrPdf(a.contentType, a.fileName) && (
+                        <button
+                          type="button"
+                          className="btn btn--icon btn--sm btn--ghost"
+                          data-tooltip="Previsualizar"
+                          aria-label="Previsualizar adjunto"
+                          onClick={() => handlePreviewExistingAdjunto(a)}
+                          disabled={adjuntosBusy}
+                        >
+                          <Eye size={14} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn--icon btn--sm btn--ghost"
+                        data-tooltip="Descargar"
+                        aria-label="Descargar adjunto"
+                        onClick={() => handleDownloadResolucionAdjunto(a.id)}
+                        disabled={adjuntosBusy}
+                      >
+                        <Download size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn--icon btn--sm btn--ghost"
+                        data-tooltip="Eliminar"
+                        aria-label="Eliminar adjunto"
+                        onClick={() => handleRemoveExistingAdjunto(a.id)}
+                        disabled={adjuntosBusy || saving}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </li>
+                  ))}
+                  {newAdjuntoFiles.map((f, idx) => (
+                    <li key={`new-${idx}-${f.name}`} className="payroll-adjunto-item payroll-adjunto-item--new">
+                      <FileText size={14} aria-hidden="true" className="payroll-adjunto-icon" />
+                      <span className="payroll-adjunto-name" title={f.name}>{f.name}</span>
+                      <span className="payroll-adjunto-badge">nuevo</span>
+                      {isImageOrPdf(f.type, f.name) && (
+                        <button
+                          type="button"
+                          className="btn btn--icon btn--sm btn--ghost"
+                          data-tooltip="Previsualizar"
+                          aria-label="Previsualizar adjunto"
+                          onClick={() => handlePreviewNewAdjunto(f)}
+                          disabled={adjuntosBusy}
+                        >
+                          <Eye size={14} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn--icon btn--sm btn--ghost"
+                        data-tooltip="Quitar"
+                        aria-label="Quitar adjunto"
+                        onClick={() => handleRemoveNewAdjunto(idx)}
+                        disabled={adjuntosBusy || saving}
+                      >
+                        <X size={14} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="form-group">
@@ -1270,6 +1523,87 @@ const AlertaModal = ({
           </aside>
         </div>
       </div>
+
+      {adjuntoPreview && createPortal(
+        <div
+          className="preview-modal__overlay"
+          style={{ zIndex: 3000 }}
+          role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) closeAdjuntoPreview(); }}
+        >
+          <div className="payroll-adjunto-lightbox" role="dialog" aria-modal="true" aria-label={adjuntoPreview.fileName}>
+            <div className="payroll-adjunto-lightbox__header">
+              <span className="payroll-adjunto-lightbox__title" title={adjuntoPreview.fileName}>
+                {adjuntoPreview.fileName}
+              </span>
+              {(adjuntoPreview.mimeType || '').startsWith('image/') && (
+                <div className="preview-modal__zoom" role="group" aria-label="Controles de zoom">
+                  <button
+                    type="button"
+                    className="preview-modal__zoom-btn"
+                    onClick={() => setAdjuntoZoom((z) => Math.max(25, z - 25))}
+                    disabled={adjuntoZoom <= 25}
+                    aria-label="Alejar"
+                  >
+                    <ZoomOut size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="preview-modal__zoom-pct"
+                    onClick={() => setAdjuntoZoom(100)}
+                    title="Restablecer al 100%"
+                  >
+                    {adjuntoZoom}%
+                  </button>
+                  <button
+                    type="button"
+                    className="preview-modal__zoom-btn"
+                    onClick={() => setAdjuntoZoom((z) => Math.min(400, z + 25))}
+                    disabled={adjuntoZoom >= 400}
+                    aria-label="Acercar"
+                  >
+                    <ZoomIn size={16} />
+                  </button>
+                </div>
+              )}
+              <button
+                type="button"
+                className="preview-modal__close"
+                onClick={closeAdjuntoPreview}
+                aria-label="Cerrar"
+                title="Cerrar"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="payroll-adjunto-lightbox__body">
+              {(adjuntoPreview.mimeType || '').startsWith('image/') ? (
+                <div
+                  className="payroll-adjunto-lightbox__imgwrap"
+                  style={{ width: `${adjuntoZoom}%`, margin: adjuntoZoom <= 100 ? '0 auto' : '0' }}
+                >
+                  <img
+                    src={adjuntoPreview.url}
+                    alt={adjuntoPreview.fileName}
+                    className="payroll-adjunto-lightbox__img"
+                  />
+                </div>
+              ) : (adjuntoPreview.mimeType === 'application/pdf' || /\.pdf$/i.test(adjuntoPreview.fileName)) ? (
+                <iframe
+                  title={adjuntoPreview.fileName}
+                  src={adjuntoPreview.url}
+                  className="payroll-adjunto-lightbox__iframe"
+                />
+              ) : (
+                <div className="preview-modal__empty">
+                  No se puede previsualizar este tipo de archivo.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 };
@@ -2238,14 +2572,16 @@ const AlertasPayroll = () => {
       }
     }
 
-    // Pin al tope: las alertas Alta + Con novedad + Activas siempre primero.
-    // Array.sort es estable, así que se conserva el orden secundario (el sort
-    // de columna si está activo, u orden original) dentro de cada grupo.
-    rows = [...rows].sort((a, b) => {
-      const ap = isTopPriorityRow(a) ? 0 : 1;
-      const bp = isTopPriorityRow(b) ? 0 : 1;
-      return ap - bp;
-    });
+    // Pin al tope: las alertas Alta + Con novedad + Activas siempre primero,
+    // PERO solo en el orden por defecto. Si el usuario ordenó por una columna,
+    // se respeta ese orden para TODAS las filas (sin partir en dos grupos).
+    if (!sort.key || !sort.dir) {
+      rows = [...rows].sort((a, b) => {
+        const ap = isTopPriorityRow(a) ? 0 : 1;
+        const bp = isTopPriorityRow(b) ? 0 : 1;
+        return ap - bp;
+      });
+    }
 
     return rows;
   }, [dateFilteredData, globalFilter, columnFilters, sort, columns, tableTab]);
@@ -2290,9 +2626,18 @@ const AlertasPayroll = () => {
     setCurrentPage(1);
   }, [globalFilter, columnFilters, filterDateFrom, filterDateTo, pageSize, tableTab]);
 
-  const handleDownloadTabla = () => {
+  const handleDownloadTabla = async () => {
     const stamp = new Date().toISOString().slice(0, 10);
-    downloadAlertasXlsx(filteredSorted, `Alertas_${stamp}.xlsx`);
+    try {
+      await downloadAlertasXlsx(filteredSorted, `Alertas_${stamp}.xlsx`);
+    } catch (err) {
+      Swal.fire({
+        title: 'No se pudo generar el Excel',
+        text: err?.message
+          || 'Error al descargar. Recarga la página (Ctrl+Shift+R) e intenta de nuevo.',
+        icon: 'error',
+      });
+    }
   };
 
   const stats = useMemo(() => ({
@@ -2346,20 +2691,36 @@ const AlertasPayroll = () => {
   ];
 
   const pendientesSegments = useMemo(() => {
-    const counts = { alta: 0, media: 0, baja: 0 };
+    // Por cada prioridad (pendientes A/P/E): total + desglose por descripción
+    // (con novedad / reportería / error proceso) para mostrarlo en la leyenda.
+    const mk = () => ({ total: 0, con_novedad: 0, reporteria: 0, error_proceso: 0 });
+    const byPrio = { alta: mk(), media: mk(), baja: mk() };
     dateFilteredData.forEach((n) => {
       if (!['A', 'P', 'E'].includes(n.estado)) return;
       const p = String(n.prioridad || '').trim().toLowerCase();
-      if (p === 'alta') counts.alta += 1;
-      else if (p === 'baja') counts.baja += 1;
-      else counts.media += 1;
+      const key = p === 'alta' ? 'alta' : p === 'baja' ? 'baja' : 'media';
+      byPrio[key].total += 1;
+      const dk = classifyDescripcion(n.descripcion);
+      if (dk && byPrio[key][dk] !== undefined) byPrio[key][dk] += 1;
+    });
+    const mkSeg = (label, key, color) => ({
+      label,
+      value: byPrio[key].total,
+      color,
+      descCounts: {
+        con_novedad: byPrio[key].con_novedad,
+        reporteria: byPrio[key].reporteria,
+        error_proceso: byPrio[key].error_proceso,
+      },
     });
     return [
-      { label: 'Alta',  value: counts.alta,  color: '#ef4444' },
-      { label: 'Media', value: counts.media, color: '#eab308' },
-      { label: 'Baja',  value: counts.baja,  color: '#22c55e' },
+      mkSeg('Alta', 'alta', '#ef4444'),
+      mkSeg('Media', 'media', '#eab308'),
+      mkSeg('Baja', 'baja', '#22c55e'),
     ];
   }, [dateFilteredData]);
+
+  const pendientesTotal = pendientesSegments.reduce((s, x) => s + x.value, 0);
 
   return (
     <div>
@@ -2450,8 +2811,30 @@ const AlertasPayroll = () => {
                 <DonutChart
                   segments={pendientesSegments}
                   centerLabel="Pendientes"
-                  showPercent
+                  showLegend={false}
                 />
+                <div className="payroll-pend-lines">
+                  {pendientesSegments.map((seg) => (
+                    <div key={seg.label} className="payroll-pend-line">
+                      <span className="payroll-pend-line__prio">
+                        <span className="payroll-pend-line__dot" style={{ background: seg.color }} />
+                        {seg.label} <span className="payroll-pend-line__val">{seg.value}</span>
+                        {pendientesTotal > 0 && (
+                          <span className="payroll-pend-line__pct">
+                            ({Math.round((seg.value / pendientesTotal) * 1000) / 10}%)
+                          </span>
+                        )}
+                      </span>
+                      <span className="payroll-pend-line__divider" aria-hidden="true" />
+                      {['con_novedad', 'reporteria', 'error_proceso'].map((k) => (
+                        <span key={k} className="payroll-pend-line__cell">
+                          <span style={{ color: DESC_COLORS[k] }}>{DESC_LABELS[k]}</span>{' '}
+                          <span className="payroll-pend-line__val">{seg.descCounts[k]}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="card">
@@ -2706,6 +3089,7 @@ const AlertasPayroll = () => {
                         return (
                           <th
                             key={col.key}
+                            data-col={col.key}
                             aria-sort={ariaSort}
                             className={sortable ? 'payroll-th payroll-th--sortable' : 'payroll-th'}
                           >
@@ -2794,7 +3178,7 @@ const AlertasPayroll = () => {
                               className={isCriticalRow(row) ? 'payroll-row--critical' : ''}
                             >
                               {columns.map((col) => (
-                                <td key={col.key}>
+                                <td key={col.key} data-col={col.key}>
                                   {col.render
                                     ? col.render(row)
                                     : String(row[col.key] ?? '')}
@@ -2813,7 +3197,7 @@ const AlertasPayroll = () => {
                           className={isCriticalRow(row) ? 'payroll-row--critical' : ''}
                         >
                           {columns.map((col) => (
-                            <td key={col.key}>
+                            <td key={col.key} data-col={col.key}>
                               {col.render
                                 ? col.render(row)
                                 : String(row[col.key] ?? '')}

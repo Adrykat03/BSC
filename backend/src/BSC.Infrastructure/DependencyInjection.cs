@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IColaboradorRepository, ColaboradorRepository>();
         services.AddScoped<IBscDashboardConfigRepository, BscDashboardConfigRepository>();
         services.AddScoped<IAlertaHistorialRepository, AlertaHistorialRepository>();
+        services.AddScoped<IAlertaAdjuntoRepository, AlertaAdjuntoRepository>();
 
         // Services
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();

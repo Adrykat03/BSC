@@ -431,6 +431,16 @@
 
 ---
 
+### [FUNC-033] Alertas: adjuntos de resolución + varios ajustes de UI del módulo
+- **Estado:** Completada
+- **Fecha:** 2026-07-08
+- **Descripcion:** (1) **Adjuntos de resolución**: en el modal de resolución de una alerta se pueden adjuntar archivos y **pegar imágenes (Ctrl+V)**, igual que Tareas. Se suben al guardar el cambio de estado; se listan con **previsualizar** (lightbox con zoom + scroll para imágenes, visor para PDF), descargar y eliminar. **Regla:** el estado "Error" (E) exige al menos un adjunto. (2) Ajustes del Listado: al **ordenar por columna** ya ordena TODAS las filas (el pin de críticas al tope solo aplica en el orden por defecto); columna **Asunto** más ancha; fix de **descarga XLSX** (era caché de un chunk lazy de exceljs, no los campos). (3) Gráfico **"Pendientes por Resolver"**: bajo el donut, una línea por prioridad (Alta/Media/Baja) con su total, % y desglose de pendientes por tipo de descripción (Con novedad / Reportería / Error Proceso), en columnas alineadas con divisor.
+- **Backend (Mongo, SIN tocar SQL):** entidad `AlertaResolucionAdjunto` + `IAlertaAdjuntoRepository`/`AlertaAdjuntoRepository` (colección `alertasResolucionAdjuntos`). Endpoints en `AlertasController`: `POST/GET /alertas/{id}/adjuntos`, `GET/DELETE /alertas/{id}/adjuntos/{adjuntoId}`. Archivos en disco `/app/files/alertas-resolucion` (validación tamaño 20MB + magic bytes; descarga con protección de path traversal). DTO `AlertaAdjuntoDto`; repo registrado en DI.
+- **Frontend:** `alertasService` — métodos de adjuntos (upload multipart, list, preview, download, remove). `AlertasPayroll.jsx` — UI de adjuntos en el panel de resolución (drag/select + paste + lightbox con zoom), regla de "Error" obligatorio, orden sin pin al ordenar columna, desglose de "Pendientes por Resolver". `AlertasPayroll.css` — estilos de adjuntos, lightbox, ancho de Asunto, desglose de pendientes.
+- **Security:** Adjuntos gateados por el módulo `alertas-payroll` (como el resto del controlador); validación de tipo por magic bytes; sin exponer la ruta en disco al cliente.
+
+---
+
 <!--
 Plantilla para nuevas funcionalidades:
 

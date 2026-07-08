@@ -532,6 +532,72 @@
   text-align: right;
 }
 
+/* Desglose de pendientes por prioridad (una línea por prioridad, bajo el donut). */
+/* Grid ÚNICO compartido por todas las filas (prioridad | con novedad · reportería
+   · error proceso) para que las columnas queden alineadas entre filas.
+   Centrado (width fit-content + margin auto) y compacto. */
+.payroll-pend-lines {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto;
+  align-items: stretch;
+  column-gap: 14px;
+  row-gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin: var(--spacing-3) auto 0;
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--color-border-light);
+  font-size: var(--font-size-sm);
+  text-align: left;
+}
+
+/* Cada fila aporta sus celdas al grid del contenedor (columnas alineadas). */
+.payroll-pend-line {
+  display: contents;
+}
+
+.payroll-pend-line__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full, 50%);
+  flex-shrink: 0;
+}
+
+.payroll-pend-line__prio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  align-self: center;
+}
+
+/* Línea divisora vertical entre la prioridad y el desglose. */
+.payroll-pend-line__divider {
+  width: 1px;
+  align-self: stretch;
+  justify-self: center;
+  background: var(--color-border-main);
+}
+
+.payroll-pend-line__cell {
+  white-space: nowrap;
+  font-weight: var(--font-weight-medium);
+  align-self: center;
+}
+
+/* Los valores (números) en negro para diferenciarlos de las etiquetas de color. */
+.payroll-pend-line__val {
+  color: #111827;
+  font-weight: var(--font-weight-semibold);
+}
+
+.payroll-pend-line__pct {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
 /* Category filters (chips) */
 .payroll-cat-filters {
   display: flex;
@@ -1844,4 +1910,164 @@
    La lista hereda todo el resto del estilo de .payroll-historial__list. */
 .payroll-historial__list--popup {
   max-height: 60vh;
+}
+
+/* ==========================================================================
+   Adjuntos de resolución (panel lateral del modal de alerta)
+   ========================================================================== */
+.payroll-adjunto-req {
+  color: var(--color-error, #E31837);
+  font-weight: var(--font-weight-bold);
+}
+
+.payroll-adjunto-drop {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border: 1px dashed var(--color-border-main);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-main);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.payroll-adjunto-drop:hover:not(:disabled) {
+  border-color: var(--color-primary, #2563EB);
+  color: var(--color-text-primary);
+}
+
+.payroll-adjunto-drop:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.payroll-adjunto-req-hint {
+  display: block;
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-error, #E31837);
+}
+
+.payroll-adjunto-list {
+  list-style: none;
+  margin: var(--spacing-2) 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.payroll-adjunto-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-paper);
+}
+
+.payroll-adjunto-item--new {
+  border-style: dashed;
+  border-color: var(--color-primary, #2563EB);
+}
+
+.payroll-adjunto-icon {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.payroll-adjunto-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payroll-adjunto-badge {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary, #2563EB);
+  text-transform: uppercase;
+}
+
+/* Lightbox de previsualización de adjuntos de resolución */
+.payroll-adjunto-lightbox {
+  display: flex;
+  flex-direction: column;
+  width: min(90vw, 1000px);
+  height: min(90vh, 800px);
+  background: var(--color-bg-paper, #fff);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+
+.payroll-adjunto-lightbox__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--color-border-main);
+}
+
+.payroll-adjunto-lightbox__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.payroll-adjunto-lightbox__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #eef1f5;
+  padding: var(--spacing-3);
+}
+
+/* Contenedor de la imagen: su ancho = % de zoom. Al pasar del 100% aparecen los
+   scroll del body; bajo el 100% se centra (margin auto inline). */
+.payroll-adjunto-lightbox__imgwrap {
+  transition: width 120ms ease;
+}
+
+.payroll-adjunto-lightbox__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.payroll-adjunto-lightbox__zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.payroll-adjunto-lightbox__iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+/* Más espacio para la columna "Asunto" para que no se vea comprimida. */
+.payroll-sticky-table [data-col="asunto"] {
+  min-width: 280px;
+  max-width: 420px;
+  white-space: normal;
+  word-break: break-word;
 }
