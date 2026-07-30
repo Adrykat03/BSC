@@ -29,6 +29,15 @@
 | FUNC-024 | Ajuste visual gráfico Pendientes por Resolver (prioridad) | Completada | 2026-06-09 |
 | FUNC-025 | Permisos por módulo en roles (Fase 1: visibilidad) | Completada | 2026-06-12 |
 | FUNC-026 | Fix modal Colaborador: scroll footer + roles como botones | Completada | 2026-06-13 |
+| FUNC-027 | Alertas Payroll — Listado: Finalizadas, agrupación por categoría y gráfico apilado | Completada | 2026-06-29 |
+| FUNC-028 | Tareas — Evidencia adjunta obligatoria para Colaborador | Completada | 2026-06-29 |
+| FIX-029 | Despliegue a producción + fix nginx Host (AllowedHosts) | Completada | 2026-06-29 |
+| FIX-030 | Tareas — restaurar selector de asignables (regresión por permisos por módulo) | Completada | 2026-07-02 |
+| FIX-031 | Visor de alertas: HTML mal formado (blanco) + corrección de SP de correos | Completada | 2026-07-03 |
+| FIX-032 | Tareas: promedio mensual por fecha de entrega + mejoras del visor y filtros de Alertas | Completada | 2026-07-06 |
+| FUNC-033 | Alertas: adjuntos de resolución + varios ajustes de UI del módulo | Completada | 2026-07-08 |
+| FUNC-034 | Catálogo de Alertas del Monitor (reporte HTML standalone) | Completada | 2026-07-28 |
+| FUNC-035 | Tareas: columna "Cargado por" en export XLSX + script de consulta prod | Completada | 2026-07-30 |
 
 ---
 
@@ -438,6 +447,30 @@
 - **Backend (Mongo, SIN tocar SQL):** entidad `AlertaResolucionAdjunto` + `IAlertaAdjuntoRepository`/`AlertaAdjuntoRepository` (colección `alertasResolucionAdjuntos`). Endpoints en `AlertasController`: `POST/GET /alertas/{id}/adjuntos`, `GET/DELETE /alertas/{id}/adjuntos/{adjuntoId}`. Archivos en disco `/app/files/alertas-resolucion` (validación tamaño 20MB + magic bytes; descarga con protección de path traversal). DTO `AlertaAdjuntoDto`; repo registrado en DI.
 - **Frontend:** `alertasService` — métodos de adjuntos (upload multipart, list, preview, download, remove). `AlertasPayroll.jsx` — UI de adjuntos en el panel de resolución (drag/select + paste + lightbox con zoom), regla de "Error" obligatorio, orden sin pin al ordenar columna, desglose de "Pendientes por Resolver". `AlertasPayroll.css` — estilos de adjuntos, lightbox, ancho de Asunto, desglose de pendientes.
 - **Security:** Adjuntos gateados por el módulo `alertas-payroll` (como el resto del controlador); validación de tipo por magic bytes; sin exponer la ruta en disco al cliente.
+- **Despliegue:** Commit `7d11fa3` en `origin/main`; desplegado a producción (`cx@192.168.100.9`) el 2026-07-08 — backend recompilado, frontend reconstruido y `bsc_frontend` recreado (verificado: `/api/alertas/{id}/adjuntos` → 401 sin token, frontend HTTP 200). Sin migración BD (colección Mongo y `/app/files/alertas-resolucion` se autocrean).
+
+---
+
+### [FUNC-034] Catálogo de Alertas del Monitor (reporte HTML standalone)
+- **Estado:** Completada
+- **Fecha:** 2026-07-28
+- **Descripcion:** Reporte HTML **informativo, NO integrado en la aplicación** (documento aparte, mismo estilo visual que `SP/reporte_SP_nomina.html`) que cataloga las **119 alertas reales** actualmente registradas en `Avisos.notificacionesConsolidadas` — la tabla que alimenta el monitor Alertas Payroll. Por cada alerta: SP de origen (o clase .NET del backend de Nómina, cuando aplica), qué hace, categoría/prioridad, asunto y destinatarios del último envío real, y una vista previa del HTML de correo tal como quedó guardado. Ordenado por categoría y, dentro de cada una, alfabéticamente por asunto, con encabezado de sección por categoría. Búsqueda + filtro por tipo (SP / clase C#).
+- **Cómo se armó:** Consulta directa a `Avisos.notificacionesConsolidadas` vía la API REST de DAB (mismo backend que usa el monitor) agregada por `spOrigen`/`origen` (120 grupos iniciales → 119 tras excluir "CONSULTA ERRORES MASIVO", que resultó ser el estado de error del propio `pa_consultaErroresMasivo`, no una alerta distinta). ~62 orígenes son SPs de SQL (`C:\Proyectos\BSC\SP\*.sql`, analizados en paralelo por 3 sub-agentes); ~56 son clases .NET (`AvisosMarcajes.*`, `AvisosJerarquias.Jerarquia_01..35`, `VerificadorAlertas` — origen real de la categoría "PROCESO VERIFICACION ALERTAS" —, etc.) cuyo código fuente vive en el repo separado `C:\Proyectos\avisos`, documentadas a partir de los asuntos/categorías reales de la BD.
+- **Correcciones aplicadas tras revisión:** (1) La clasificación "envía correo" inicialmente confiaba en el análisis estático del código (que se equivocó para 2 SPs que sí insertan HTML por una rama no vista); se cambió a usar como verdad el HTML real del último registro — y finalmente se **eliminó por completo** esa distinción visual (tag, contadores, filtro) por no aportar valor. (2) Tildes corruptas (`dÃ­a`) en la vista previa del correo: el `<iframe src="data:text/html;base64,...">` no declaraba `charset`, así que el navegador adivinaba mal la codificación pese a que los archivos ya estaban en UTF-8 correcto; se agregó `charset=utf-8` al data URI.
+- **Archivo:** `SP/reporte_alertas_monitor.html` (autocontenido, sin dependencias de servidor — se abre directo desde el explorador). Script generador y datos intermedios de la consulta se mantuvieron fuera del repo (scratchpad de la sesión), no comiteados. Adicional: `SP/alertas_monitor.xlsx` — mismo listado de las 119 alertas en Excel (columnas SP/.NET, nombre, categoría, asunto, destinatarios, fecha y hora de última ejecución, prioridad, registros), a pedido para compartir sin necesidad de abrir el HTML.
+- **Security:** Sin impacto — documento estático de solo lectura, no integrado en la app ni en el pipeline de build/deploy. Contiene datos ya visibles para quien tiene acceso al monitor (destinatarios de correo, asuntos); no expone credenciales ni endpoints nuevos.
+
+---
+
+### [FUNC-035] Tareas: columna "Cargado por" en export XLSX + script de consulta prod
+- **Estado:** Completada
+- **Fecha:** 2026-07-30
+- **Descripcion:** (1) El Excel que se descarga desde el módulo Tareas (botón de exportar del listado) ahora incluye la columna **"Cargado por"** con el correo de quien creó la tarea, entre "Fecha de creación" y "Última actualización Colaborador". (2) Se agregó un script de consulta ad-hoc de solo lectura contra la base Mongo de **producción**, para casos como "¿quién creó/cargó esta tarea?" sin tener que repetir manualmente la conexión SSH cada vez.
+- **Backend:** Sin cambios — `createdBy` ya venía expuesto en `TaskItemDto`/`TaskItemMapper`, solo faltaba mostrarlo en el export del frontend.
+- **Frontend:** `pages/Tasks/Tasks.jsx` — `handleExportXlsx`: nueva key `'Cargado por': t.createdBy` en el mapeo de filas; ancho de columna agregado a `taskColWidths`.
+- **Herramientas:** `scripts/consultar-tareas-prod.sh` — script bash parametrizado (`./scripts/consultar-tareas-prod.sh "texto a buscar"`) que busca por texto en `title`/`description` de `TaskItems` en producción (`cx@192.168.100.9`) y muestra estado, `createdBy`, `createdAt`, líder/colaborador asignado y fecha de entrega. Pide la contraseña SSH de forma interactiva (no se guarda en ningún archivo); documenta en comentarios el workaround necesario para `sshpass` en este entorno (`ssh` intentaba abrir `/dev/tty` directo e ignoraba el prompt interceptado por `sshpass`, mecanismo `SSH_ASKPASS_REQUIRE=force` con script temporal autodestruible).
+- **Despliegue:** Build local + copia a `html/` + restart de `bsc_frontend` para pruebas; pendiente desplegar a producción.
+- **Security:** Sin cambios de superficie de ataque (campo ya expuesto por la API, solo se agrega a la vista de export). El script de consulta es de solo lectura y no persiste credenciales.
 
 ---
 

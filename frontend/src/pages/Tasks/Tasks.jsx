@@ -738,6 +738,7 @@ const Tasks = () => {
         'Observaciones': t.observations || '',
         'Calificacion': t.rating != null ? `${t.rating}%` : 'Pendiente',
         'Fecha de creacion': t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+        'Cargado por': t.createdBy || '',
         'Ultima actualizacion Colaborador': getLastCollaboratorUpdate(t),
       }));
 
@@ -746,7 +747,7 @@ const Tasks = () => {
       const ws = wb.addWorksheet('Tareas');
 
       const taskHeaders = Object.keys(rows[0] || {});
-      const taskColWidths = [30, 40, 22, 25, 25, 20, 18, 18, 35, 14, 18, 30];
+      const taskColWidths = [30, 40, 22, 25, 25, 20, 18, 18, 35, 14, 18, 28, 30];
       ws.columns = taskHeaders.map((h, i) => ({ header: h, key: h, width: taskColWidths[i] ?? 20 }));
 
       const headerRow = ws.getRow(1);
