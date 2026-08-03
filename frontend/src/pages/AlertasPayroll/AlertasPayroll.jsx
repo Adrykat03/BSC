@@ -1964,6 +1964,20 @@ const AlertasDashboard = ({ data }) => {
       legend: { position: 'bottom' },
       tooltip: {
         callbacks: {
+          // Total primero (antes de la línea del segmento y del hint de clic).
+          beforeBody: (tooltipItems) => {
+            const item = tooltipItems[0];
+            const descKey = item ? chartData.datasets[item.datasetIndex]?._descKey : null;
+            // Total de alertas del día/semana/mes (todas las descripciones,
+            // no solo la seleccionada) — solo para reportería, con novedad
+            // y sin novedad; error proceso no cuenta como alerta "llegada".
+            if (!item || !['con_novedad', 'sin_novedad', 'reporteria'].includes(descKey)) return [];
+            const idx = item.dataIndex;
+            const total = chartData.datasets.reduce(
+              (sum, ds) => sum + (Number(ds.data[idx]) || 0), 0,
+            );
+            return [`Total del ${groupTitle.toLowerCase()}: ${total} alertas`];
+          },
           afterBody: () => 'Click en la barra para descargar XLSX',
         },
       },
@@ -2226,6 +2240,21 @@ const AlertasPayroll = () => {
   // Categorías expandidas en modo agrupado (arrancan todas contraídas).
   const [expandedGroups, setExpandedGroups] = useState(() => new Set());
   const [catDescFilter, setCatDescFilter] = useState(() => new Set(DESC_KEYS));
+
+  // "Pegado" horizontal del título de categoría (modo Agrupado) hecho a mano
+  // con JS: `position: sticky; left` NO se aplica de forma confiable en un
+  // elemento dentro de un <td colSpan> (verificado en Chromium — se probó
+  // sticky en el <td> y en un hijo directo, ninguno "pega" horizontalmente,
+  // aunque el sticky vertical del mismo <td> sí funciona). Se compensa
+  // trasladando el botón con `transform: translateX(scrollLeft)` cada vez
+  // que se hace scroll horizontal, con rAF para no saturar de renders.
+  const [groupHeaderShift, setGroupHeaderShift] = useState(0);
+  const groupHeaderShiftRaf = useRef(null);
+  const handleTableScroll = (e) => {
+    const scrollLeft = e.currentTarget.scrollLeft;
+    if (groupHeaderShiftRaf.current) cancelAnimationFrame(groupHeaderShiftRaf.current);
+    groupHeaderShiftRaf.current = requestAnimationFrame(() => setGroupHeaderShift(scrollLeft));
+  };
 
   const [filterDateFrom, setFilterDateFrom] = useState(null);
   const [filterDateTo, setFilterDateTo] = useState(null);
@@ -3073,7 +3102,7 @@ const AlertasPayroll = () => {
                 )}
               </div>
 
-              <div className="table-container payroll-sticky-table">
+              <div className="table-container payroll-sticky-table" onScroll={handleTableScroll}>
                 <table className="table">
                   <thead>
                     <tr className="payroll-header-row">
@@ -3164,11 +3193,21 @@ const AlertasPayroll = () => {
                                 onClick={() => toggleGroup(group.categoria)}
                                 aria-expanded={isExpanded}
                               >
-                                {isExpanded
-                                  ? <ChevronDown size={16} aria-hidden="true" />
-                                  : <ChevronRight size={16} aria-hidden="true" />}
-                                <span className="payroll-group__name">{group.categoria}</span>
-                                <span className="payroll-group__count">{group.rows.length}</span>
+                                {/* Solo este span angosto se desplaza (transform) para simular
+                                    el "pegado" horizontal; el <button> de afuera NO se transforma
+                                    (queda del ancho real de la fila) para no inflar el scrollWidth
+                                    del contenedor — si se transformaba el botón completo (100% del
+                                    colSpan), el área de scroll crecía sin límite al desplazarse. */}
+                                <span
+                                  className="payroll-group__toggle-inner"
+                                  style={groupHeaderShift ? { transform: `translateX(${groupHeaderShift}px)` } : undefined}
+                                >
+                                  {isExpanded
+                                    ? <ChevronDown size={16} aria-hidden="true" />
+                                    : <ChevronRight size={16} aria-hidden="true" />}
+                                  <span className="payroll-group__name">{group.categoria}</span>
+                                  <span className="payroll-group__count">{group.rows.length}</span>
+                                </span>
                               </button>
                             </td>
                           </tr>

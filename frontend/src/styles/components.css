@@ -56,6 +56,9 @@ body {
 
 .layout__main {
   flex: 1;
+  min-width: 0; /* sin esto, un hijo ancho (ej. tabla con columnas congeladas)
+                   fuerza el crecimiento de todo el layout en vez de activar
+                   su propio scroll horizontal interno (bug clásico de flex). */
   margin-left: calc(var(--sidebar-width) + var(--layout-margin));
   transition: margin-left var(--transition-normal);
 }

@@ -151,7 +151,12 @@
 
 /* Cabecera de grupo fija al hacer scroll: queda justo debajo del encabezado
    de columnas (que es sticky en top:0). z-index < 3 (thead) y > filas de datos.
-   box-shadow en lugar de border para que sobreviva al sticky. */
+   box-shadow en lugar de border para que sobreviva al sticky. Solo sticky
+   VERTICAL acá — el sticky horizontal (left:0) en un <td colSpan> (o en un
+   hijo directo suyo) no se aplicó de forma confiable en pruebas (Chromium
+   no lo "pegaba": se movía 1:1 con el scroll pese a computed style correcto).
+   El "pegado" horizontal del botón interno se resuelve con JS (ver
+   `handleTableScroll` / `groupHeaderShift` en AlertasPayroll.jsx). */
 .payroll-sticky-table .payroll-group__header td {
   position: sticky;
   top: var(--payroll-header-h);
@@ -160,25 +165,50 @@
               inset 0 1px 0 var(--color-border-main);
 }
 
+/* El <button> es solo el área de click (ancho real de la fila) y NO se
+   transforma — si se le aplica translateX a algo tan ancho como el colSpan,
+   el navegador extiende el scrollWidth del contenedor por esa misma
+   cantidad (el scroll "overflow" sí contempla las cajas transformadas), y
+   el resultado es un bucle: al hacer scroll el botón se corre, lo que
+   agranda el área desplazable, lo que permite seguir haciendo scroll a un
+   espacio en blanco sin fin. Por eso el translateX vive en el span angosto
+   `.payroll-group__toggle-inner` (ver JSX), no acá. */
 .payroll-group__toggle {
   width: 100%;
   appearance: none;
   border: 0;
   background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.payroll-group__toggle:hover .payroll-group__toggle-inner {
+  background: #E4E6F4; /* opaco: equivalente sólido de --color-bg-hover sobre
+                           --color-bg-main (necesario porque este span se
+                           desplaza por JS sobre el resto de la fila; un
+                           fondo transparente dejaría ver el contenido
+                           detrás al hacer hover con scroll aplicado). */
+}
+
+/* Chip visual (ícono + nombre + contador): ancho al contenido, no a toda la
+   fila. Fondo opaco porque, al desplazarse por JS, pasa por encima del
+   resto de la fila y necesita taparla. z-index sobre las filas de datos. */
+.payroll-sticky-table .payroll-group__toggle-inner {
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  width: fit-content;
+  max-width: 100%;
   padding: var(--spacing-3) var(--spacing-4);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  text-align: left;
-  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  background: var(--color-bg-main);
+  will-change: transform;
   transition: background var(--transition-fast);
-}
-
-.payroll-group__toggle:hover {
-  background: var(--color-bg-hover, rgba(37, 99, 235, 0.06));
 }
 
 .payroll-group__toggle:focus-visible {
@@ -1233,6 +1263,143 @@
 
 .payroll-sticky-table .table tbody tr.payroll-row--critical td:first-child {
   box-shadow: inset 3px 0 0 #ef4444;
+}
+
+/* ==========================================================================
+   Columnas congeladas (sticky horizontal) hasta "Asunto" inclusive, para
+   poder ubicar cada fila (Acciones/Fecha/Estado/Prioridad/Categoría/Asunto)
+   mientras se hace scroll horizontal hacia las columnas de la derecha
+   (Descripción, Notificados, Fecha Resolución, etc.).
+   Anchos fijos + offsets acumulados: __actions(100) → fechaCreacion(150)
+   → estado(130) → prioridad(120) → categoria(170) → asunto(flexible).
+   ========================================================================== */
+.payroll-sticky-table [data-col='__actions'] {
+  position: sticky;
+  left: 0;
+  width: 100px;
+  min-width: 100px;
+  max-width: 100px;
+}
+
+.payroll-sticky-table [data-col='fechaCreacion'] {
+  position: sticky;
+  left: 100px;
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+  white-space: nowrap;
+}
+
+.payroll-sticky-table [data-col='estado'] {
+  position: sticky;
+  left: 250px;
+  width: 130px;
+  min-width: 130px;
+  max-width: 130px;
+  white-space: nowrap;
+}
+
+.payroll-sticky-table [data-col='prioridad'] {
+  position: sticky;
+  left: 380px;
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+  white-space: nowrap;
+}
+
+.payroll-sticky-table [data-col='categoria'] {
+  position: sticky;
+  left: 500px;
+  width: 170px;
+  min-width: 170px;
+  max-width: 170px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "Asunto" es la última columna congelada: su ancho puede seguir siendo
+   flexible (min/max ya definidos más abajo) porque ninguna otra columna
+   congelada depende de su ancho para calcular el offset. */
+.payroll-sticky-table [data-col='asunto'] {
+  position: sticky;
+  left: 670px;
+}
+
+/* Fondo opaco en celdas del cuerpo para que el contenido de las columnas
+   no congeladas no se transparente por debajo al hacer scroll. Las celdas
+   de fila crítica (más específicas) siguen ganando por encima de esto. */
+.payroll-sticky-table .table tbody td[data-col='__actions'],
+.payroll-sticky-table .table tbody td[data-col='fechaCreacion'],
+.payroll-sticky-table .table tbody td[data-col='estado'],
+.payroll-sticky-table .table tbody td[data-col='prioridad'],
+.payroll-sticky-table .table tbody td[data-col='categoria'],
+.payroll-sticky-table .table tbody td[data-col='asunto'] {
+  z-index: 2;
+  background-color: var(--color-bg-paper, #fff);
+}
+
+/* El hover de fila no llega a las celdas congeladas (tienen fondo propio
+   opaco encima); se replica el mismo color acá para que la fila resalte
+   completa, congeladas incluidas. */
+.payroll-sticky-table .table tbody tr:hover td[data-col='__actions'],
+.payroll-sticky-table .table tbody tr:hover td[data-col='fechaCreacion'],
+.payroll-sticky-table .table tbody tr:hover td[data-col='estado'],
+.payroll-sticky-table .table tbody tr:hover td[data-col='prioridad'],
+.payroll-sticky-table .table tbody tr:hover td[data-col='categoria'],
+.payroll-sticky-table .table tbody tr:hover td[data-col='asunto'] {
+  background-color: var(--color-bg-main);
+}
+
+/* Fila crítica: su tinte rojo es semi-transparente (rgba), así que sobre
+   celdas congeladas dejaba pasar el contenido no congelado que se
+   desplaza por debajo (se veía "doble texto" al hacer scroll). Estos
+   overrides usan el equivalente OPACO del mismo tinte (más específicos
+   que las reglas rgba de arriba, por el atributo [data-col] extra, así
+   que ganan sin depender del orden de las reglas). */
+.payroll-sticky-table .table tbody tr.payroll-row--critical td[data-col='__actions'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical td[data-col='fechaCreacion'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical td[data-col='estado'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical td[data-col='prioridad'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical td[data-col='categoria'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical td[data-col='asunto'] {
+  background-color: var(--color-error-bg, #FEE2E2);
+}
+
+.payroll-sticky-table .table tbody tr.payroll-row--critical:hover td[data-col='__actions'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical:hover td[data-col='fechaCreacion'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical:hover td[data-col='estado'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical:hover td[data-col='prioridad'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical:hover td[data-col='categoria'],
+.payroll-sticky-table .table tbody tr.payroll-row--critical:hover td[data-col='asunto'] {
+  background-color: #FCDDDD;
+}
+
+/* Encabezado: además de pegado arriba (ya definido arriba), estas columnas
+   quedan pegadas a la izquierda. z-index más alto que el resto del thead
+   para que se mantengan por encima de las columnas no congeladas al
+   desplazarse horizontalmente. */
+.payroll-sticky-table .table thead tr.payroll-header-row th[data-col='__actions'],
+.payroll-sticky-table .table thead tr.payroll-header-row th[data-col='fechaCreacion'],
+.payroll-sticky-table .table thead tr.payroll-header-row th[data-col='estado'],
+.payroll-sticky-table .table thead tr.payroll-header-row th[data-col='prioridad'],
+.payroll-sticky-table .table thead tr.payroll-header-row th[data-col='categoria'],
+.payroll-sticky-table .table thead tr.payroll-header-row th[data-col='asunto'] {
+  z-index: 4;
+}
+
+/* Borde derecho sutil en el límite del área congelada (columna Asunto),
+   para separar visualmente lo fijo de lo que se desplaza. */
+.payroll-sticky-table .table tbody td[data-col='asunto'] {
+  box-shadow: inset -2px 0 0 var(--color-border-light);
+}
+
+/* En el header se combina con la sombra inferior que ya tienen todos los
+   th sticky (si se pisara con una sola declaración, se perdería el borde
+   inferior de esta columna). */
+.payroll-sticky-table .table thead tr.payroll-header-row th[data-col='asunto'] {
+  box-shadow: inset 0 -1px 0 var(--color-border-light), inset -2px 0 0 var(--color-border-light);
 }
 
 /* ==========================================================================

@@ -4,6 +4,92 @@ Registro cronológico de trabajos, decisiones y fixes relevantes. Orden: más re
 
 ---
 
+## 2026-08-03 — Alertas: columnas congeladas + fix de layout global + bugs en cadena
+
+### Qué se hizo
+
+**1. Total del día en el tooltip de "Alertas vs Tiempo".**
+- Al pasar el cursor sobre un segmento de Reportería/Con novedad/Sin novedad, `beforeBody` del tooltip de Chart.js muestra primero el total de alertas de ese tramo (día/semana/mes, según agrupamiento activo) antes de la línea del segmento y del hint de descarga. Error Proceso queda sin ese total (no se pidió).
+
+**2. Columnas congeladas en la tabla del Listado de Alertas.**
+- Acciones, Fecha, Estado, Prioridad, Categoría y Asunto quedan fijas a la izquierda al hacer scroll horizontal; el resto (Descripción, Notificados, Fecha Resolución, Usuario Resolución, Notas Resolución, Origen) se desplaza por debajo. Anchos fijos con offsets `left` acumulados (100/150/130/120/170/flexible), borde de separación tras Asunto.
+
+### Bug real (el importante): `.layout__main` sin `min-width: 0`
+
+- **Síntoma:** las columnas "congeladas" no se quedaban fijas — se movían con el resto del scroll, como si `position: sticky` no existiera.
+- **Diagnóstico:** en vez de asumir por CSS, se instaló Playwright (el proyecto ya tenía `playwright/screenshot.js` pero sin `node_modules`) y se hizo login real contra la app local para medir. Resultado: `.payroll-sticky-table` (el contenedor con `overflow:auto`) tenía `scrollWidth === clientWidth` — es decir, **no tenía overflow real**, nada que scrollear dentro de sí mismo. Subiendo la medición por la cadena de ancestros: `.layout__main` (flex child de `.layout`, junto al sidebar) medía 2250px de ancho en un viewport de 1400px — el layout entero se había estirado.
+- **Causa raíz:** `.layout__main { flex: 1; ... }` sin `min-width: 0`. Comportamiento por defecto de flexbox: un flex item con contenido ancho adentro (nuestra tabla, con columnas de ancho fijo más rígido que antes) **no se deja achicar** por debajo de su contenido a menos que se le declare `min-width: 0` explícito — entonces en vez de que la tabla scrollee internamente, es TODA la página la que crece para acomodarlo. Bug preexistente (afecta cualquier página con contenido ancho), nunca antes visible porque ninguna tabla había llegado a este ancho mínimo.
+- **Fix:** una línea en `frontend/src/styles/components.css` → `.layout__main { min-width: 0; }`.
+- **Lección:** cuando un contenedor con `overflow:auto` "no scrollea" pese a tener contenido más ancho que su caja, medir `scrollWidth` vs `clientWidth` del contenedor ANTES de sospechar de `position:sticky` o de los anchos de columna — si son iguales, el problema está más arriba en la cadena de layout (casi siempre un flex/grid item sin `min-width:0`), no en el elemento que "no se pega".
+
+### Bugs secundarios (aparecieron al arreglar el bug real, todos verificados con Playwright antes de darlos por resueltos)
+
+1. **Fondo semi-transparente en columnas congeladas de filas críticas.** Las alertas urgentes (prioridad Alta + Con novedad, resaltadas en rojo) usan `background-color: rgba(239,68,68,0.1)` en el `<td>`. Esa regla le ganaba en especificidad CSS a mi fondo opaco pensado para las columnas congeladas, así que el contenido de las columnas no congeladas se veía "flotando" (doble texto) al pasar por debajo durante el scroll. Fix: overrides específicos con el equivalente **opaco** del mismo tinte (`--color-error-bg` = `#FEE2E2`; `#FCDDDD` para el hover), con selectores lo bastante específicos para ganar sin depender del orden de las reglas en el archivo.
+2. **Título de categoría (modo Agrupado) no se congelaba horizontalmente**, aunque su sticky vertical (para quedar debajo del header al hacer scroll hacia abajo) sí funciona. Se probó `position:sticky;left:0` en el `<td colSpan>` de la fila-cabecera y en un `<button>` hijo directo — en ambos casos Chromium reportaba el computed style correcto (`position:sticky`, `left:0px`) pero el elemento se movía 1:1 con el scroll, sin "pegarse" nunca. Se descartó como causa el propio `colSpan`, el `position:sticky` del padre y la ausencia de `transform`/`contain`/`isolation` en toda la cadena de ancestros (se verificó cada uno). Conclusión práctica: limitación puntual de Chromium con sticky horizontal dentro de una celda de tabla con `colSpan` (o un hijo suyo), no reproducible con las reglas normales de CSS. Se resolvió con JS: `onScroll` en el contenedor de la tabla (con `requestAnimationFrame` para no saturar de renders) desplaza un elemento con `transform: translateX(scrollLeft)`.
+3. **La primera versión del fix por JS generaba scroll infinito con espacio en blanco.** El elemento al que se le aplicaba `translateX` era el `<button>` completo, del ancho de toda la fila (colSpan, ~2000px). Un elemento transformado SÍ cuenta para el cálculo del área de scroll ("scrollable overflow") de su contenedor — así que mover ese botón 900px a la derecha hacía que el contenedor reportara 900px MÁS de `scrollWidth`, permitiendo scrollear 900px más, lo que volvía a mover el botón, en bucle. Fix: separar el `<button>` (área de click, ancho real de la fila, **sin** transformar) del `<span>` interno angosto (solo ícono + nombre + contador) que sí lleva el `transform`. Verificado pidiendo `scrollLeft = 5000` (muy por encima del máximo real): el navegador lo recorta correctamente al máximo real y `scrollWidth` se mantiene estable en vez de seguir creciendo.
+
+### Decisiones y trade-offs
+
+- **JS en vez de seguir insistiendo con CSS puro para el sticky del título de grupo.** Después de descartar colspan, sticky del padre y containment de ancestros como causa, seguir buscando una solución 100% CSS tenía retorno decreciente. Un `onScroll` con `transform` es un patrón bien conocido para "sticky" cuando `position:sticky` no es confiable en un caso puntual, y es barato en rendimiento con `requestAnimationFrame` + `will-change:transform`.
+- **Verificar todo con Playwright + login real en vez de razonar solo por CSS.** Este entorno no tiene navegador para probar visualmente. Instalar Playwright (una sola vez, `playwright/` ya existía con un script pero sin dependencias) y automatizar login + mediciones (`getBoundingClientRect`, `scrollWidth`/`clientWidth`, computed styles) permitió encontrar la causa real (el bug de `.layout__main`) en vez de perseguir síntomas en el CSS de la tabla, que en realidad estaba bien desde el principio.
+
+### Pendientes / próximos pasos
+
+- Desplegar a producción (todo probado hasta ahora es build local).
+- Sigue pendiente decidir el resto de SPs modificados/nuevos en `SP/` de sesiones anteriores (no tocados hoy).
+
+---
+
+## 2026-07-30 — Catálogo de Alertas (reporte standalone) + columna "Cargado por" en export de Tareas
+
+### Qué se hizo
+
+**1. Catálogo de Alertas del Monitor — reporte HTML standalone (`SP/reporte_alertas_monitor.html`).**
+- Documento informativo, **no integrado en la app** (mismo estilo visual que `SP/reporte_SP_nomina.html`, un ejemplo provisto por el usuario). Cataloga cada alerta real registrada en `Avisos.notificacionesConsolidadas`: SP de origen o clase .NET, qué hace, categoría/prioridad, asunto y destinatarios del último envío, y vista previa del HTML de correo real.
+- Datos obtenidos consultando `Avisos.notificacionesConsolidadas` vía la API REST de DAB (`bsc_dab:5000/api/NotificacionesConsolidadas`, alcanzable desde el contenedor `bsc_frontend` que tiene `curl`) — 6206 filas agregadas por `spOrigen`/`origen` → 120 alertas distintas.
+- De esas 120: ~62 son SPs de SQL (`C:\Proyectos\BSC\SP\*.sql`; se repartió el análisis de descripciones entre 3 sub-agentes en paralelo para ir más rápido) y ~56 son clases .NET (`AvisosMarcajes.*`, `AvisosJerarquias.Jerarquia_01..35`, `VerificadorAlertas`, etc.) cuyo código fuente **no vive en este repo** sino en `C:\Proyectos\avisos` (proyecto separado del backend de Nómina) — se documentaron a partir de los asuntos/categorías reales de la BD, no del código fuente.
+- Excluida "CONSULTA ERRORES MASIVO": no es una alerta distinta, es el registro de error (catch) del propio `pa_consultaErroresMasivo` — quedó 119.
+- A pedido del usuario: se reordenó por categoría (alfabético) y, dentro de cada categoría, por asunto (alfabético), con encabezado de sección visual por categoría.
+- Se generó además `SP/alertas_monitor.xlsx` con el mismo listado (columnas SP/.NET, nombre, categoría, asunto, destinatarios, fecha y hora de última ejecución, prioridad, registros) para compartir sin abrir el HTML.
+
+**2. Tareas — columna "Cargado por" en el export XLSX.**
+- `Tasks.jsx` → `handleExportXlsx`: nueva columna `'Cargado por': t.createdBy`. El backend ya exponía `createdBy` en `TaskItemDto`/`TaskItemMapper` — cero cambios de backend.
+
+**3. `scripts/consultar-tareas-prod.sh` — consulta ad-hoc de solo lectura contra Mongo de producción.**
+- Nace de un caso real: el usuario pidió validar quién había creado una tarea puntual ("Envío de valores preliminares de pago..."). La base Mongo **local** de desarrollo no sirve para esto — su dato más reciente es de 2026-06-02 y no tiene a los colaboradores de producción (confirmado: 0 resultados buscando "Danilo Cadena" ahí). Hubo que consultar producción directo.
+- El script busca por texto (case-insensitive) en `title` y `description` de `TaskItems` y muestra estado, `createdBy`, `createdAt`, líder/colaborador asignado y fecha de entrega. Pide la contraseña SSH de forma interactiva en cada uso — no la guarda en ningún archivo.
+
+### Decisiones y trade-offs
+
+- **Reporte de alertas fuera de la app, no un endpoint nuevo.** El usuario lo pidió explícitamente como documento aparte ("no debe estar integrado en nomina2"). Evita exponer una superficie nueva en el backend solo para un catálogo de referencia.
+- **Clasificación "envía correo" basada en el HTML real de la BD, no en análisis estático del código.** Ver bug abajo — la primera versión confiaba en si el agente veía un `sp_send_dbmail` en el SP, y eso puede fallar si el agente no lee la rama correcta. La verdad de negocio (¿hay contenido real que mostrar?) siempre gana sobre la inferencia de código. Al final esa distinción se **eliminó del todo** de la UI porque, con 119/120 alertas mostrando "envía correo", ya no aportaba señal.
+- **Excel del catálogo como entregable aparte, generado por script, no a mano.** Con 119 filas de datos reales (asuntos, destinatarios, categorías, fechas) escribirlas a mano habría sido lento y propenso a error de transcripción; se reutilizó la misma data ya extraída para el HTML.
+- **Script de consulta prod interactivo (pide password cada vez) en lugar de guardar credenciales.** Ya hubo un incidente previo de credenciales mal manejadas en este proyecto (ver memoria del asistente); pedir la contraseña en cada ejecución es más trabajo por uso pero cero riesgo de filtración en el repo o en logs.
+
+### Bug encontrado y fix (x2)
+
+- **Síntoma 1:** el reporte mostraba "Sin correo" para 2 SPs (`pa_avisos_biometricosDiel`, `pa_vacacionesPtosE3`) que el usuario confirmó SÍ tenían HTML real en la tabla.
+  - **Causa raíz:** el generador confiaba en el flag `sendsEmail` que devolvió el sub-agente de análisis estático de código — y el agente no vio la rama del SP que sí hace `INSERT` con HTML (multi-rama, reportes condicionados por parámetro).
+  - **Fix:** se cambió la fuente de verdad a `!!sample.descripcionHtml?.trim()` — el HTML real del último registro en BD, no una inferencia de código.
+  - **Lección:** cuando hay datos reales disponibles (la BD), preferirlos sobre análisis estático de código para decidir "¿esto pasa o no?" — el código puede tener ramas que un agente (o una persona) no vea completas; el dato ya resume el resultado real de ejecutar todas las ramas.
+
+- **Síntoma 2:** las tildes en la vista previa del correo salían corruptas (`dÃ­a` en vez de `día`), pese a que los archivos en disco ya estaban en UTF-8 correcto (verificado con grep de los bytes exactos).
+  - **Causa raíz:** el `<iframe src="data:text/html;base64,...">` no declaraba `charset` en el data URI. El navegador, al no tener esa pista y el HTML embebido (el cuerpo del correo del SP) tampoco traer su propio `<meta charset>`, adivinaba mal la codificación de los bytes decodificados del base64.
+  - **Fix:** `data:text/html;charset=utf-8;base64,...`.
+  - **Lección:** un mojibake tipo `Ã­` es casi siempre "UTF-8 leído como Latin-1" — antes de sospechar de los datos/archivos, verificar los bytes en disco (`grep` por la secuencia UTF-8 exacta) para descartar que el problema esté en el punto de renderizado, no en el origen.
+
+- **Síntoma 3 (operativo, no de código):** `sshpass -p 'password' ssh ...` fallaba con `Permission denied` en este entorno (Windows, Git Bash) pese a que la contraseña era correcta (el usuario confirmó que él sí podía conectarse manualmente con la misma).
+  - **Causa raíz:** `ssh -vvv` mostró `read_passphrase: can't open /dev/tty` — el cliente OpenSSH moderno intenta abrir `/dev/tty` directamente para el prompt de password en vez de leer el pipe que `sshpass` (el puerto para Windows, sin pty real) le da.
+  - **Fix:** usar el mecanismo `SSH_ASKPASS` en vez de `sshpass -p`: variable `SSH_ASKPASS_REQUIRE=force` + `SSH_ASKPASS` apuntando a un script temporal (`echo 'password'`) + stdin del `ssh` redirigido de `/dev/null`. El script temporal se borra apenas termina el uso.
+  - **Lección:** en Windows/Git Bash, `sshpass` clásico (que depende de emular un tty) puede no funcionar con versiones recientes de OpenSSH; `SSH_ASKPASS_REQUIRE=force` es el mecanismo soportado oficialmente por OpenSSH ≥ 8.4 para forzar un askpass externo sin tty, y es más confiable en este entorno. Documentado en los comentarios de `scripts/consultar-tareas-prod.sh` para no tener que re-descubrirlo.
+
+### Pendientes / próximos pasos
+
+- El cambio de "Cargado por" en Tareas está probado en build local; falta desplegar a producción (mismo flujo de siempre: build → copiar a `html/` → restart `bsc_frontend`).
+- Quedan sin decisión un grupo de SPs modificados/nuevos en `SP/` de sesiones anteriores (no tocados en esta sesión) y un archivo `nul` suelto en la raíz — pendiente de sesión previa, no relacionado a este trabajo.
+
+---
+
 ## 2026-05-29 — Fix iframe sandbox, manual de usuario Alertas (HTML) y carpeta docs/ al repo
 
 ### Qué se hizo
