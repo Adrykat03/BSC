@@ -145,16 +145,21 @@ public class CollaboratorAvgRating
 public class HighlightLabels
 {
     /// <summary>
-    /// Colaborador con mayor tiempo estimado acumulado en tareas completas.
+    /// Colaborador con mayor score de eficiencia (promedio bayesiano: promedio
+    /// real de calificacion ponderado por volumen de tareas completadas).
     /// </summary>
     public string FastestCollaboratorName { get; set; } = string.Empty;
     public int FastestCollaboratorCompletedCount { get; set; }
     public decimal FastestCollaboratorEstimatedTimeSum { get; set; }
+    public double FastestCollaboratorAvgRating { get; set; }
+    public double FastestCollaboratorScore { get; set; }
 
     /// <summary>
-    /// Líder con mayor tiempo estimado completado.
+    /// Líder con mayor score de eficiencia (misma fórmula, sobre las tareas que gestiona).
     /// </summary>
     public string TopLeaderName { get; set; } = string.Empty;
     public int TopLeaderCompletedCount { get; set; }
     public decimal TopLeaderEstimatedTimeSum { get; set; }
+    public double TopLeaderAvgRating { get; set; }
+    public double TopLeaderScore { get; set; }
 }

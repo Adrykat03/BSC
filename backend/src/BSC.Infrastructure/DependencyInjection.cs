@@ -85,8 +85,13 @@ public static class DependencyInjection
         services.AddHttpClient<IDabAlertasClient, DabAlertasClient>(client =>
         {
             client.BaseAddress = new Uri(dabBase);
-            client.Timeout = TimeSpan.FromSeconds(30);
+            client.Timeout = TimeSpan.FromSeconds(60);
         });
+
+        // Cache en memoria (singleton, compartido entre requests) usado por
+        // DabAlertasClient para no repetir el listado completo de alertas en
+        // cada carga/auto-refresh de todos los usuarios conectados.
+        services.AddMemoryCache();
 
         return services;
     }

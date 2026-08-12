@@ -77,6 +77,23 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
         var bscPattern = bscConfig?.TaskTitlePattern ?? "";
         var bscEmailSet = new HashSet<string>(bscEmails, StringComparer.OrdinalIgnoreCase);
 
+        // "Más eficiente" es mensual por defecto (igual criterio que Estrella del
+        // mes: DueDate, con CreatedAt de respaldo), salvo que el usuario haya
+        // elegido explícitamente un rango de fechas en el Dashboard — en ese caso
+        // se respeta ese rango en vez del mes actual.
+        var highlightTasks = tasks;
+        if (!request.From.HasValue && !request.To.HasValue)
+        {
+            var now = DateTime.UtcNow;
+            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var monthEnd = monthStart.AddMonths(1);
+            highlightTasks = tasks.Where(t =>
+            {
+                var periodo = t.DueDate ?? t.CreatedAt;
+                return periodo >= monthStart && periodo < monthEnd;
+            }).ToList();
+        }
+
         var dashboard = new DashboardDto
         {
             CollaboratorHeatmap = CalculateCollaboratorHeatmap(tasks),
@@ -86,7 +103,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             HistoricReassignedByCollaborator = CalculateHistoricReassigned(tasks),
             LateTasksByCollaborator = CalculateLateTasks(tasks),
             TasksByStatus = CalculateTasksByStatus(tasks),
-            Highlights = CalculateHighlights(tasks),
+            Highlights = CalculateHighlights(highlightTasks),
             CompletionTimeline = CalculateCompletionTimeline(tasks),
             AvgRatingByCollaborator = CalculateAvgRatingByCollaborator(tasks, bscEmailSet, bscPattern),
             BscAvgRatingByCollaborator = CalculateBscAvgRating(tasks, bscEmailSet, bscPattern)
@@ -298,54 +315,96 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
     }
 
     /// <summary>
-    /// Calcula etiquetas destacadas:
-    /// - Colaborador más rápido: menor tiempo promedio (actualTime) en tareas "Completa"
-    /// - Líder top: mayor cantidad de tareas "Completa" gestionadas
+    /// Numero de tareas "de referencia" del promedio bayesiano: mientras mas
+    /// tareas tiene una persona, menos pesa este valor (su propio promedio
+    /// domina); con pocas tareas, el score se acerca al promedio general del
+    /// grupo. Validado contra volumen real de produccion (mediana ~40
+    /// tareas/mes por colaborador, ~31 por lider) — ver CONTEXTO.md.
+    /// </summary>
+    private const int EfficiencyScoreK = 10;
+
+    /// <summary>
+    /// Calcula etiquetas destacadas usando un promedio bayesiano (score = (promedio*n +
+    /// promedioGlobal*K) / (n+K)) sobre el Rating de tareas completadas y calificadas:
+    /// - Colaborador más eficiente: mejor score entre quienes tienen tareas asignadas (AssignedToName)
+    /// - Líder top: mejor score entre quienes gestionan tareas (AssignedLeaderName)
+    /// Evita que 1-2 tareas con calificacion perfecta le ganen a alguien con un
+    /// promedio sostenido sobre muchas tareas.
     /// </summary>
     private static HighlightLabels CalculateHighlights(List<TaskItem> tasks)
     {
         var highlights = new HighlightLabels();
 
-        // Colaborador más eficiente: mayor suma de tiempo estimado en tareas completas
-        var completedTasks = tasks.Where(t => t.Status == TaskStatuses.Completa).ToList();
+        var ratedCompletedTasks = tasks
+            .Where(t => t.Status == TaskStatuses.Completa && t.Rating.HasValue)
+            .ToList();
 
-        var fastestCollaborator = completedTasks
+        var collaboratorGroups = ratedCompletedTasks
             .Where(t => !string.IsNullOrEmpty(t.AssignedToName))
             .GroupBy(t => t.AssignedToName!)
             .Select(g => new
             {
                 Name = g.Key,
                 Count = g.Count(),
+                AvgRating = g.Average(t => t.Rating!.Value),
                 EstimatedTimeSum = g.Sum(t => t.EstimatedTime)
             })
-            .OrderByDescending(x => x.EstimatedTimeSum)
-            .FirstOrDefault();
+            .ToList();
 
-        if (fastestCollaborator != null)
+        if (collaboratorGroups.Count > 0)
         {
+            var globalAvg = collaboratorGroups.Average(x => x.AvgRating);
+            var fastestCollaborator = collaboratorGroups
+                .Select(x => new
+                {
+                    x.Name,
+                    x.Count,
+                    x.AvgRating,
+                    x.EstimatedTimeSum,
+                    Score = (x.AvgRating * x.Count + globalAvg * EfficiencyScoreK) / (x.Count + EfficiencyScoreK)
+                })
+                .OrderByDescending(x => x.Score)
+                .First();
+
             highlights.FastestCollaboratorName = fastestCollaborator.Name;
             highlights.FastestCollaboratorCompletedCount = fastestCollaborator.Count;
             highlights.FastestCollaboratorEstimatedTimeSum = fastestCollaborator.EstimatedTimeSum;
+            highlights.FastestCollaboratorAvgRating = Math.Round(fastestCollaborator.AvgRating, 1);
+            highlights.FastestCollaboratorScore = Math.Round(fastestCollaborator.Score, 1);
         }
 
-        // Líder con mayor tiempo estimado completado
-        var topLeader = completedTasks
+        var leaderGroups = ratedCompletedTasks
             .Where(t => !string.IsNullOrEmpty(t.AssignedLeaderName))
             .GroupBy(t => t.AssignedLeaderName!)
             .Select(g => new
             {
                 Name = g.Key,
                 Count = g.Count(),
+                AvgRating = g.Average(t => t.Rating!.Value),
                 EstimatedTimeSum = g.Sum(t => t.EstimatedTime)
             })
-            .OrderByDescending(x => x.EstimatedTimeSum)
-            .FirstOrDefault();
+            .ToList();
 
-        if (topLeader != null)
+        if (leaderGroups.Count > 0)
         {
+            var globalAvg = leaderGroups.Average(x => x.AvgRating);
+            var topLeader = leaderGroups
+                .Select(x => new
+                {
+                    x.Name,
+                    x.Count,
+                    x.AvgRating,
+                    x.EstimatedTimeSum,
+                    Score = (x.AvgRating * x.Count + globalAvg * EfficiencyScoreK) / (x.Count + EfficiencyScoreK)
+                })
+                .OrderByDescending(x => x.Score)
+                .First();
+
             highlights.TopLeaderName = topLeader.Name;
             highlights.TopLeaderCompletedCount = topLeader.Count;
             highlights.TopLeaderEstimatedTimeSum = topLeader.EstimatedTimeSum;
+            highlights.TopLeaderAvgRating = Math.Round(topLeader.AvgRating, 1);
+            highlights.TopLeaderScore = Math.Round(topLeader.Score, 1);
         }
 
         return highlights;
@@ -358,16 +417,20 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
     /// </summary>
     private static List<CollaboratorCompletionTimeline> CalculateCompletionTimeline(List<TaskItem> tasks)
     {
-        var completedTasks = tasks
-            .Where(t => t.Status == TaskStatuses.Completa && !string.IsNullOrEmpty(t.AssignedToName))
-            .ToList();
-
-        return completedTasks
+        // Se agrupa por TODOS los colaboradores con tareas en el rango (no solo
+        // quienes ya tienen alguna "Completa"), para que el selector del dashboard
+        // pueda ofrecer a cualquiera — el que no completó nada simplemente queda
+        // con una línea vacía/plana en el gráfico.
+        return tasks
+            .Where(t => !string.IsNullOrEmpty(t.AssignedToName))
             .GroupBy(t => t.AssignedToName!)
             .Select(g =>
             {
-                // Para cada tarea, buscar la fecha del último cambio a "Completa"
+                // Para cada tarea COMPLETADA de este colaborador, buscar la fecha
+                // del último cambio a "Completa" (las no completadas no aportan
+                // puntos a la serie, pero el colaborador igual aparece en la lista).
                 var completionDates = g
+                    .Where(t => t.Status == TaskStatuses.Completa)
                     .Select(t =>
                     {
                         var completeEntry = t.StatusHistory?

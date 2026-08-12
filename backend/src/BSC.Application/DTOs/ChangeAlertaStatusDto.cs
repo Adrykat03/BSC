@@ -28,6 +28,15 @@ public class ChangeAlertaStatusResultDto
 {
     public bool Success { get; set; }
     public bool HistorialPersistido { get; set; }
+
+    /// <summary>
+    /// Valores que quedaron aplicados en DAB (los mismos que se enviaron en el
+    /// PATCH). El frontend los usa para actualizar esa fila en la tabla al
+    /// instante, sin tener que volver a traer el listado completo de alertas.
+    /// </summary>
+    public string Estado { get; set; } = string.Empty;
+    public string? NotasResolucion { get; set; }
+    public string UsuarioResolucion { get; set; } = string.Empty;
 }
 
 /// <summary>

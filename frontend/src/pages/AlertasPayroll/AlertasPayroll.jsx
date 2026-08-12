@@ -1522,6 +1522,13 @@ const AlertaModal = ({
             </div>
           </aside>
         </div>
+
+        {saving && (
+          <div className="payroll-saving-overlay" role="status" aria-live="polite">
+            <Loader2 size={28} className="payroll-historial__spinner" aria-hidden="true" />
+            <span>Guardando cambios…</span>
+          </div>
+        )}
       </div>
 
       {adjuntoPreview && createPortal(
@@ -2203,6 +2210,7 @@ const AlertasPayroll = () => {
   const isPrivileged = useMemo(() => isPrivilegedUser(user), [user]);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   const [editingRow, setEditingRow] = useState(null);
@@ -2271,9 +2279,41 @@ const AlertasPayroll = () => {
       .finally(() => setLoading(false));
   };
 
+  // Refresco "silencioso": misma llamada que loadData, pero NO dispara el
+  // gate de `loading` que reemplaza toda la pantalla por "Cargando...".
+  // Lo usan el botón Actualizar, el auto-refresh periódico y el refresco al
+  // volver a la pestaña — así no se pierde el scroll, los grupos expandidos
+  // ni los filtros cada vez que se refresca.
+  const refreshData = () => {
+    setRefreshing(true);
+    return payrollService.getNotificaciones()
+      .then(setData)
+      .catch((err) => setError(err.message))
+      .finally(() => setRefreshing(false));
+  };
+
   useEffect(() => {
     loadData();
   }, []);
+
+  // Auto-refresh cada 60s + al volver a la pestaña (visibilitychange).
+  // Se pausa mientras hay una alerta abierta en el modal de resolución para
+  // no pisarle a alguien las notas que está escribiendo a media edición.
+  useEffect(() => {
+    if (editingRow) return undefined;
+
+    const interval = setInterval(refreshData, 60000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refreshData();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [editingRow]);
 
   // Si el usuario no es privilegiado, nunca debe quedar en la pestaña Dashboard
   // (p. ej. tras cambiar de rol con switchRole).
@@ -2412,22 +2452,38 @@ const AlertasPayroll = () => {
         // DAB OK pero Mongo falló: NO bloqueamos al usuario, mostramos
         // banner dentro del modal y refrescamos lista + historial.
         setHistorialDelayedWarning(true);
-        loadData();
+        refreshData();
         if (idActual) loadHistorial(idActual);
       } else {
+        // Actualizar esa fila en la tabla al instante con los valores que el
+        // backend confirma que ya quedaron guardados (evita esperar un
+        // refetch completo de TODAS las alertas, que era la parte mas lenta
+        // — hasta 3-4s — porque el cache de 15s se invalida con cada cambio).
+        // El auto-refresh (60s / cambio de pestaña) sigue sincronizando en
+        // segundo plano el resto de campos (fechaModificacion, etc.) y
+        // cualquier cambio de otros usuarios.
+        setData((prev) => prev.map((row) => (
+          row.idNotificacion === idActual
+            ? {
+                ...row,
+                estado: response.estado,
+                notasResolucion: response.notasResolucion,
+                usuarioResolucion: response.usuarioResolucion,
+              }
+            : row
+        )));
         await Swal.fire({
           title: 'Guardado',
           text: 'Los cambios se guardaron correctamente.',
           icon: 'success',
-          timer: 1800,
+          timer: 900,
           showConfirmButton: false,
         });
-        // Refrescar lista y cerrar el modal.
         setEditingRow(null);
         setHistorial([]);
         setHistorialDelayedWarning(false);
-        loadData();
         if (idActual) loadHistorial(idActual);
+        refreshData();
       }
     } catch (err) {
       // 5xx (DAB caído / SQL no disponible) — mensaje claro y accionable.
@@ -2564,11 +2620,14 @@ const AlertasPayroll = () => {
     let rows = dateFilteredData;
 
     // Sub-pestaña de la tabla: 'finalizadas' = Resueltas (R) + Cerradas (C);
-    // 'pendientes' = el resto (Activa/En Proceso/Error).
-    rows = rows.filter((row) => {
-      const finalizada = ESTADOS_FINALIZADOS.includes(row.estado);
-      return tableTab === 'finalizadas' ? finalizada : !finalizada;
-    });
+    // 'pendientes' = el resto (Activa/En Proceso/Error); 'todas' = sin filtro
+    // de estado (abiertas y cerradas, todos los estados).
+    if (tableTab !== 'todas') {
+      rows = rows.filter((row) => {
+        const finalizada = ESTADOS_FINALIZADOS.includes(row.estado);
+        return tableTab === 'finalizadas' ? finalizada : !finalizada;
+      });
+    }
 
     const g = globalFilter.trim().toLowerCase();
     if (g) {
@@ -2960,6 +3019,18 @@ const AlertasPayroll = () => {
                     {stats.resueltas + stats.cerradas}
                   </span>
                 </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tableTab === 'todas'}
+                  className={`payroll-subtab ${tableTab === 'todas' ? 'is-active' : ''}`}
+                  onClick={() => setTableTab('todas')}
+                >
+                  Total
+                  <span className="payroll-subtab__count">
+                    {stats.total}
+                  </span>
+                </button>
               </div>
 
               <div className="payroll-toolbar">
@@ -3048,15 +3119,15 @@ const AlertasPayroll = () => {
                 <button
                   type="button"
                   className="btn btn--secondary btn--sm"
-                  onClick={loadData}
-                  disabled={loading}
+                  onClick={refreshData}
+                  disabled={refreshing}
                   data-tooltip="Actualizar datos"
                   aria-label="Actualizar datos"
                 >
                   <RefreshCw
                     size={16}
                     aria-hidden="true"
-                    className={loading ? 'payroll-historial__spinner' : ''}
+                    className={refreshing ? 'payroll-historial__spinner' : ''}
                   /> Actualizar
                 </button>
 

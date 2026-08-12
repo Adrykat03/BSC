@@ -582,7 +582,7 @@ const HighlightCards = ({ highlights }) => {
           </div>
           <div className="highlight-card__detail">
             {highlights.fastestCollaboratorCompletedCount != null
-              ? `${highlights.fastestCollaboratorCompletedCount} tareas · ${highlights.fastestCollaboratorEstimatedTimeSum ?? 0}h estimadas`
+              ? `${highlights.fastestCollaboratorAvgRating}% promedio (${highlights.fastestCollaboratorCompletedCount} tareas) · score ${highlights.fastestCollaboratorScore}`
               : 'Sin datos'}
           </div>
         </div>
@@ -593,13 +593,13 @@ const HighlightCards = ({ highlights }) => {
           <Trophy size={24} />
         </div>
         <div className="highlight-card__content">
-          <div className="highlight-card__label">Líder top en tiempo completado</div>
+          <div className="highlight-card__label">Líder más eficiente</div>
           <div className="highlight-card__value">
             {highlights.topLeaderName || 'N/A'}
           </div>
           <div className="highlight-card__detail">
             {highlights.topLeaderCompletedCount != null
-              ? `${highlights.topLeaderCompletedCount} tareas · ${highlights.topLeaderEstimatedTimeSum ?? 0}h estimadas`
+              ? `${highlights.topLeaderAvgRating}% promedio (${highlights.topLeaderCompletedCount} tareas) · score ${highlights.topLeaderScore}`
               : 'Sin datos'}
           </div>
         </div>

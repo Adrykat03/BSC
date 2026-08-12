@@ -124,6 +124,9 @@ public class ChangeAlertaStatusHandler : IRequestHandler<ChangeAlertaStatusComma
             {
                 Success = true,
                 HistorialPersistido = historialPersistido,
+                Estado = request.NuevoEstado,
+                NotasResolucion = request.Comentario,
+                UsuarioResolucion = request.UsuarioEmail,
             },
             "Estado de alerta actualizado.");
     }

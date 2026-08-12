@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using BSC.Application.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace BSC.Infrastructure.Services;
@@ -16,7 +17,18 @@ public class DabAlertasClient : IDabAlertasClient
 {
     private const string EntityPath = "api/NotificacionesConsolidadas";
 
+    // Cache corto del listado completo (GetAllAsync): todos los usuarios
+    // conectados (carga inicial, boton Actualizar, auto-refresh periodico)
+    // comparten el mismo resultado durante esta ventana en vez de volver a
+    // pedirle a DAB cada uno por su lado. Se invalida al toque cuando alguien
+    // cambia el estado de una alerta (ver InvalidarCache), asi que el margen
+    // de "dato viejo" real es mucho menor a los 15s en el caso que importa
+    // (que alguien vea reflejado SU PROPIO cambio).
+    private const string CacheKeyTodas = "dab:notificaciones:todas";
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(15);
+
     private readonly HttpClient _httpClient;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<DabAlertasClient> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -25,9 +37,10 @@ public class DabAlertasClient : IDabAlertasClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    public DabAlertasClient(HttpClient httpClient, ILogger<DabAlertasClient> logger)
+    public DabAlertasClient(HttpClient httpClient, IMemoryCache cache, ILogger<DabAlertasClient> logger)
     {
         _httpClient = httpClient;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -96,15 +109,43 @@ public class DabAlertasClient : IDabAlertasClient
             throw new HttpRequestException(
                 $"DAB respondio {(int)response.StatusCode} al actualizar notificacion {idNotificacion}.");
         }
+
+        // Invalidar el cache del listado: sin esto, quien acaba de cambiar el
+        // estado (o cualquier otro usuario que refresque) seguiria viendo el
+        // dato viejo hasta que expire la ventana de CacheTtl.
+        _cache.Remove(CacheKeyTodas);
     }
 
     public async Task<IReadOnlyList<JsonObject>> GetAllAsync(CancellationToken cancellationToken = default)
     {
+        if (_cache.TryGetValue(CacheKeyTodas, out IReadOnlyList<JsonObject>? cached) && cached != null)
+        {
+            return cached;
+        }
+
+        var rows = await FetchAllFromDabAsync(cancellationToken);
+
+        // Tamaño (no memoria real, MemoryCache no lo mide por si solo) para que
+        // conviva con SetSize/SizeLimit si en el futuro se configura uno.
+        _cache.Set(CacheKeyTodas, (IReadOnlyList<JsonObject>)rows, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = CacheTtl,
+            Size = 1,
+        });
+
+        return rows;
+    }
+
+    private async Task<List<JsonObject>> FetchAllFromDabAsync(CancellationToken cancellationToken)
+    {
         const int maxPages = 100;
         var rows = new List<JsonObject>();
 
-        // Primera pagina. DAB acepta $orderby + $first; las siguientes vienen por nextLink.
-        string? nextUrl = $"{EntityPath}?$orderby=fechaCreacion desc&$first=100";
+        // Primera pagina. DAB acepta $orderby + $first; las siguientes vienen por
+        // nextLink. $first grande (antes 100) para traer todo en 1-2 llamadas en
+        // vez de ~70 secuenciales: verificado que DAB soporta paginas de miles de
+        // filas sin problema (10000 filas / ~13MB en ~3.6s en un solo request).
+        string? nextUrl = $"{EntityPath}?$orderby=fechaCreacion desc&$first=10000";
 
         for (var page = 0; page < maxPages && !string.IsNullOrEmpty(nextUrl); page++)
         {
